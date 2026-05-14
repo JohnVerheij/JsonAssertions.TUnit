@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>JsonAssertions.TUnit</RootNamespace>
+    <AssemblyName>JsonAssertions.TUnit</AssemblyName>
+    <IsPublishable>false</IsPublishable>
+
+    <!-- Package identity -->
+    <IsPackable>true</IsPackable>
+    <PackageId>JsonAssertions.TUnit</PackageId>
+    <ProductName>JsonAssertions.TUnit</ProductName>
+    <Version>0.0.1</Version>
+    <Authors>John Verheij</Authors>
+    <Copyright>Copyright (c) 2026 John Verheij</Copyright>
+    <Description>TUnit-native JSON assertions for .NET tests. Fluent .Method(...) entry points (generated via TUnit's [GenerateAssertion]) for asserting the presence or absence of a property at a dot-separated JSON path, over a JSON string or a System.Text.Json JsonElement. The 0.0.1 release is an intentionally narrow skeleton that establishes the repository, claims the package identifier, and locks the API style and quality bar; the wider path / value / shape surface ships at 0.1.0. AOT-compatible, trimmable, no runtime reflection.</Description>
+    <PackageTags>assertions;json;tunit;testing;dotnet;aot</PackageTags>
+    <PackageProjectUrl>https://github.com/JohnVerheij/JsonAssertions.TUnit</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>See CHANGELOG.md</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+    <!-- Pre-1.0 suppressions:
+         Proj0212/Proj0213: PackageIcon and PackageIconUrl omitted; will be added by 1.0.0.
+         Proj0241: PackageValidationBaselineVersion is intentionally unset at 0.0.1 - there is
+         no prior published version to validate against. It pins to 0.0.1 starting from 0.0.2,
+         at which point Proj0241 is removed from this list. -->
+    <NoWarn>$(NoWarn);Proj0212;Proj0213;Proj0241</NoWarn>
+
+    <!-- Symbol package + API compat (strict mode per dpfa Proj0249/0250/0251/0252).
+         Baseline validation is enabled from 0.0.2 onward, once 0.0.1 is the published
+         baseline; at 0.0.1 there is nothing to compare against. -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
+    <ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>
+    <ApiCompatEnableRuleCannotChangeParameterName>true</ApiCompatEnableRuleCannotChangeParameterName>
+    <ApiCompatEnableRuleAttributesMustMatch>true</ApiCompatEnableRuleAttributesMustMatch>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- SBOM generation per dpfa Proj0243 (Microsoft.Sbom.Targets pack-time generation) -->
+    <GenerateSBOM>true</GenerateSBOM>
+
+    <!-- AOT / trimming. Lib code uses no reflection, safe for AOT-mode test contexts -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Alphabetical per dpfa Proj0015. System.Text.Json is in-box on net10.0 (part of the
+         shared framework), so the package carries no runtime dependency beyond TUnit. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <PackageReference Include="TUnit.Assertions" />
+    <PackageReference Include="TUnit.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Codifies the no-reflection convention from CONVENTIONS.md as a build-time error.
+         RS0030 fires if any banned API is referenced from production code; combined with
+         TreatWarningsAsErrors=true the build fails. Test projects do not reference this file
+         so reflection-using helpers stay usable in tests. -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../../BannedSymbols.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Use the per-package short README for the nuget.org page. The root README.md is the
+         comprehensive reference rendered by GitHub on the repo home; nuget.org needs a focused
+         'can I use this in 60 seconds' view, so the package ships a shorter README that links
+         out to the full reference on GitHub. -->
+    <None Include="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>

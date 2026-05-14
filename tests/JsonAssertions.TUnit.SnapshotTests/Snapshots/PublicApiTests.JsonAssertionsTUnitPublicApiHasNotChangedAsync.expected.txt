@@ -1,0 +1,59 @@
+[assembly: System.Reflection.AssemblyMetadata("IsAotCompatible", "True")]
+[assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
+[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/JohnVerheij/JsonAssertions.TUnit")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+namespace JsonAssertions
+{
+    public static class JsonPath
+    {
+        public static bool Exists(System.Text.Json.JsonElement element, string path) { }
+    }
+}
+namespace JsonAssertions.TUnit
+{
+    public static class JsonPropertyAssertions
+    {
+        [TUnit.Assertions.Attributes.GenerateAssertion(ExpectationMessage="to not have a JSON property at path {path}")]
+        public static bool DoesNotHaveJsonProperty(this System.Text.Json.JsonElement element, string path) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion(ExpectationMessage="to not have a JSON property at path {path}")]
+        public static bool DoesNotHaveJsonProperty(this string json, string path) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion(ExpectationMessage="to have a JSON property at path {path}")]
+        public static bool HasJsonProperty(this System.Text.Json.JsonElement element, string path) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion(ExpectationMessage="to have a JSON property at path {path}")]
+        public static bool HasJsonProperty(this string json, string path) { }
+    }
+}
+namespace TUnit.Assertions.Extensions
+{
+    public sealed class JsonElement_DoesNotHaveJsonProperty_String_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
+    {
+        public JsonElement_DoesNotHaveJsonProperty_String_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class JsonElement_HasJsonProperty_String_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
+    {
+        public JsonElement_HasJsonProperty_String_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public static class JsonPropertyAssertions
+    {
+        public static TUnit.Assertions.Extensions.JsonElement_DoesNotHaveJsonProperty_String_Assertion DoesNotHaveJsonProperty(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
+        public static TUnit.Assertions.Extensions.String_DoesNotHaveJsonProperty_String_Assertion DoesNotHaveJsonProperty(this TUnit.Assertions.Core.IAssertionSource<string> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
+        public static TUnit.Assertions.Extensions.JsonElement_HasJsonProperty_String_Assertion HasJsonProperty(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
+        public static TUnit.Assertions.Extensions.String_HasJsonProperty_String_Assertion HasJsonProperty(this TUnit.Assertions.Core.IAssertionSource<string> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
+    }
+    public sealed class String_DoesNotHaveJsonProperty_String_Assertion : TUnit.Assertions.Core.Assertion<string>
+    {
+        public String_DoesNotHaveJsonProperty_String_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class String_HasJsonProperty_String_Assertion : TUnit.Assertions.Core.Assertion<string>
+    {
+        public String_HasJsonProperty_String_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
+        protected override string GetExpectation() { }
+    }
+}

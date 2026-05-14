@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/JsonAssertions.TUnit/JsonAssertions.TUnit.csproj" />
+  <Project Path="tests/JsonAssertions.TUnit.Tests/JsonAssertions.TUnit.Tests.csproj" />
+  <Project Path="tests/JsonAssertions.TUnit.SnapshotTests/JsonAssertions.TUnit.SnapshotTests.csproj" />
+</Solution>
