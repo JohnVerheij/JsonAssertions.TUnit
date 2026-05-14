@@ -1,0 +1,33 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Alphabetical to satisfy dpfa Proj0024 (and to make diffs predictable).
+         JsonAssertions.TUnit carries no runtime dependency beyond TUnit: System.Text.Json
+         is in-box on net10.0 (part of the shared framework). The entries below cover the
+         TUnit adapter surface, the test stack, snapshot-test pinning, and pack-time tooling
+         (SBOM, SourceLink). -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="4.14.0" />
+    <PackageVersion Include="Microsoft.Sbom.Targets" Version="4.1.5" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
+    <PackageVersion Include="PublicApiGenerator" Version="11.5.4" />
+    <PackageVersion Include="SnapshotAssertions.TUnit" Version="0.3.0" />
+    <PackageVersion Include="TUnit" Version="1.44.0" />
+    <PackageVersion Include="TUnit.Assertions" Version="1.44.0" />
+    <PackageVersion Include="TUnit.Core" Version="1.44.0" />
+  </ItemGroup>
+
+  <!-- Analyzer pack (applied to every project automatically via GlobalPackageReference) -->
+  <ItemGroup>
+    <GlobalPackageReference Include="DotNetProjectFile.Analyzers" Version="1.14.0" />
+    <GlobalPackageReference Include="Meziantou.Analyzer" Version="3.0.84" />
+    <GlobalPackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
+    <GlobalPackageReference Include="Roslynator.Analyzers" Version="4.15.0" />
+    <GlobalPackageReference Include="SonarAnalyzer.CSharp" Version="10.25.0.139117" />
+  </ItemGroup>
+
+</Project>
