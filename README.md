@@ -134,7 +134,7 @@ Array indexing and wildcard path segments are candidate work for a later release
 ### Out of scope
 
 - **Production-code use** (per the scope blockquote above).
-- **JSON schema validation** (a different problem domain; out of scope).
+- **JSON schema validation** out of scope for this package: it needs a JSON Schema engine (a runtime dependency `System.Text.Json` does not provide) and is a different mental model from path / value / shape assertions. A future opt-in adapter package could add it if demand appears, keeping the schema-engine dependency out of this zero-dependency core.
 - **A JSON serializer or parser.** The package builds on `System.Text.Json`; it does not replace it.
 
 ## Family
