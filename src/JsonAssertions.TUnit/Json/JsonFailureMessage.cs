@@ -1,0 +1,133 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
+
+namespace JsonAssertions;
+
+/// <summary>
+/// Renders failure-message text for the JSON assertions. The boolean / resolution primitives
+/// in <see cref="JsonPath"/> and <see cref="JsonValueComparison"/> remain authoritative for pass / fail;
+/// these helpers produce the human-readable explanation surfaced in the assertion exception
+/// when an assertion fails.
+/// </summary>
+/// <remarks>
+/// <para>The point of the package over a hand-rolled <c>TryGetProperty(...).IsTrue()</c>
+/// helper is that a failure says <em>where</em> on the path resolution stopped. Every
+/// path-resolution failure renders a two-line block: <c>resolved as far as:</c> (the longest
+/// prefix that resolved) and a reason line distinguishing "the object has no such property"
+/// from "the path tried to read a property off a non-object".</para>
+/// <para>Lines are terminated with the literal LF byte so the rendered text is byte-stable
+/// across platforms. Numeric formatting uses <see cref="CultureInfo.InvariantCulture"/>.</para>
+/// <para>Failure-message text is explicitly not part of the stable public surface; callers
+/// pin behaviour against the <see cref="JsonPath"/> / <see cref="JsonValueComparison"/> primitives, not
+/// against full message-text equality. The type is <see langword="internal"/>; the single
+/// shipped assembly carries both this and the adapter, so no <c>[InternalsVisibleTo]</c> is
+/// needed.</para>
+/// </remarks>
+[SuppressMessage(
+    "MeziantouAnalyzer",
+    "MA0182:Unused internal type",
+    Justification = "Consumed by the JsonAssertions.TUnit adapter classes in the same assembly; the rendered text is surfaced in assertion failure messages.")]
+internal static class JsonFailureMessage
+{
+    private const int MaxRenderedStringLength = 60;
+
+    /// <summary>Renders the failure for a positive property-existence assertion: the path did
+    /// not resolve, and the message says how far it got and why it stopped.</summary>
+    public static string PropertyNotFound(string path, JsonPathResolution resolution)
+    {
+        var sb = new StringBuilder();
+        sb.Append("to have a JSON property at path \"").Append(path).Append('"').Append('\n');
+        AppendFailurePoint(sb, resolution);
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a negative property-existence assertion: the path
+    /// resolved when it was asserted not to.</summary>
+    public static string PropertyShouldNotExist(string path, JsonPathResolution resolution)
+    {
+        var sb = new StringBuilder();
+        sb.Append("to have no JSON property at path \"").Append(path).Append('"').Append('\n');
+        sb.Append("  but ").Append(DescribeKind(resolution.Element.ValueKind))
+            .Append(" exists at that path").Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a value-at-path assertion. When the path itself did
+    /// not resolve, the failure-point block is appended; when it resolved but the value did
+    /// not match, the found value is shown against the expected one.</summary>
+    public static string ValueMismatch(string path, JsonPathResolution resolution, string expectedDescription)
+    {
+        var sb = new StringBuilder();
+        sb.Append("to have JSON value ").Append(expectedDescription)
+            .Append(" at path \"").Append(path).Append('"').Append('\n');
+
+        if (resolution.Found)
+        {
+            sb.Append("  found: ").Append(RenderElement(resolution.Element)).Append('\n');
+        }
+        else
+        {
+            AppendFailurePoint(sb, resolution);
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>Appends the two-line "resolved as far as / reason" block for a failed
+    /// resolution.</summary>
+    private static void AppendFailurePoint(StringBuilder sb, JsonPathResolution resolution)
+    {
+        var prefix = resolution.ResolvedPrefix.Length is 0 ? "(root)" : resolution.ResolvedPrefix;
+        sb.Append("  resolved as far as: ").Append(prefix).Append('\n');
+
+        var location = resolution.ResolvedPrefix.Length is 0
+            ? "the root"
+            : "\"" + resolution.ResolvedPrefix + "\"";
+
+        if (resolution.ContainerKind is JsonValueKind.Object)
+        {
+            sb.Append("  no property \"").Append(resolution.FailedSegment)
+                .Append("\" on ").Append(location).Append('\n');
+        }
+        else
+        {
+            sb.Append("  cannot read property \"").Append(resolution.FailedSegment)
+                .Append("\": ").Append(location).Append(" is ")
+                .Append(DescribeKind(resolution.ContainerKind)).Append(", not an object").Append('\n');
+        }
+    }
+
+    /// <summary>Renders a resolved element compactly: scalars by their raw JSON text, objects
+    /// and arrays by kind only (their full text would bloat the message).</summary>
+    private static string RenderElement(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.Object => "an object",
+        JsonValueKind.Array => "an array",
+        JsonValueKind.String => "\"" + Truncate(element.GetString() ?? string.Empty) + "\"",
+        JsonValueKind.Number => element.GetRawText(),
+        JsonValueKind.True => "true",
+        JsonValueKind.False => "false",
+        JsonValueKind.Null => "null",
+        _ => "(undefined)",
+    };
+
+    /// <summary>The indefinite-article kind description used in failure reasons.</summary>
+    private static string DescribeKind(JsonValueKind kind) => kind switch
+    {
+        JsonValueKind.Object => "an Object",
+        JsonValueKind.Array => "an Array",
+        JsonValueKind.String => "a String",
+        JsonValueKind.Number => "a Number",
+        JsonValueKind.True or JsonValueKind.False => "a Boolean",
+        JsonValueKind.Null => "a Null",
+        _ => "an undefined value",
+    };
+
+    /// <summary>Caps a rendered string value so a large payload cannot bloat the message.</summary>
+    private static string Truncate(string value)
+        => value.Length <= MaxRenderedStringLength
+            ? value
+            : value[..MaxRenderedStringLength] + "...";
+}

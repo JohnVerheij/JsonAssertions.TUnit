@@ -14,18 +14,17 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 ---
 
-## Status: v0.0.1 (skeleton release)
+## Status: v0.1.0
 
-The 0.0.1 scope is intentionally narrow. The release exists to establish the repository, claim the `JsonAssertions.TUnit` package identifier on nuget.org, and lock the API style and quality bar before the wider catalog ships at 0.1.0.
-
-It ships one concept: **path existence**. Two fluent entry points, each available over a JSON `string` and a `System.Text.Json.JsonElement`:
+Two concepts: **path existence** and **value-at-path**. Each fluent entry point is available over a JSON `string` and a `System.Text.Json.JsonElement`:
 
 | Entry point | Behaviour |
 |---|---|
 | `HasJsonProperty(string path)` | Asserts a property exists at the dot-separated `path`. |
 | `DoesNotHaveJsonProperty(string path)` | Asserts no property exists at the dot-separated `path`. |
+| `HasJsonValue(string path, string\|bool\|number expected)` | Asserts the value at `path` equals `expected`. |
 
-Consumers needing the full v0.1.0 surface can install 0.0.1 to lock the dependency relationship and watch the CHANGELOG.
+The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
 
 ---
 
@@ -45,11 +44,13 @@ using System.Text.Json;
 [Test]
 public async Task ResponseBodyHasExpectedShape(CancellationToken ct)
 {
-    string json = """{"user":{"name":"alice","roles":["admin"]}}""";
+    string json = """{"user":{"name":"alice","age":30,"active":true}}""";
 
     await Assert.That(json).HasJsonProperty("user.name");
-    await Assert.That(json).HasJsonProperty("user.roles");
     await Assert.That(json).DoesNotHaveJsonProperty("user.email");
+    await Assert.That(json).HasJsonValue("user.name", "alice");
+    await Assert.That(json).HasJsonValue("user.age", 30);
+    await Assert.That(json).HasJsonValue("user.active", true);
 }
 ```
 
@@ -59,7 +60,15 @@ The same entry points are available on a `JsonElement`, for tests that already h
 
 ```csharp
 using var document = JsonDocument.Parse(json);
-await Assert.That(document.RootElement).HasJsonProperty("user.name");
+await Assert.That(document.RootElement).HasJsonValue("user.name", "alice");
+```
+
+When an assertion fails, the message names the failure point rather than just reporting a `false`:
+
+```text
+to have a JSON property at path "user.address.city"
+  resolved as far as: user.address
+  no property "city" on "user.address"
 ```
 
 ## Path syntax
@@ -71,7 +80,7 @@ A path is a dot-separated sequence of property names, navigated from the asserte
 - A path that traverses a non-object value (for example `user.name` when `user` is a string) resolves to "not found" rather than throwing.
 - An empty path, a whitespace path, or a path with an empty segment (a leading, trailing, or doubled dot) throws `ArgumentException`.
 
-Array indexing and wildcard segments are not part of the 0.0.1 surface; see the roadmap below.
+Array indexing and wildcard segments are not part of the 0.1.0 surface; see the roadmap below.
 
 ## Two namespaces
 
@@ -79,10 +88,10 @@ The single package places types in two namespaces, the same shape as the rest of
 
 | Type | Namespace | Auto-imported? |
 |---|---|---|
-| `JsonPath` (framework-agnostic dot-separated path navigation) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
-| `HasJsonProperty()` / `DoesNotHaveJsonProperty()` (source-generated entry points) | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
+| `JsonPath`, `JsonPathResolution`, `JsonValueComparison` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
+| `HasJsonProperty()` / `DoesNotHaveJsonProperty()` / `HasJsonValue()` (source-generated entry points) | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
 
-`JsonAssertions.JsonPath.Exists(JsonElement, string)` is the framework-agnostic primitive; the TUnit entry points are thin `[GenerateAssertion]` wrappers over it. A future package split (a bare-identifier `JsonAssertions` core package plus this adapter) would fall along exactly this namespace seam; shipping the seam now keeps that option open without committing to it.
+`JsonPath.Resolve(JsonElement, string)` is the framework-agnostic primitive: it returns a `JsonPathResolution` carrying the resolved element on success and the failure-point context (how far it got, which segment failed, what kind of value blocked it) on failure. `JsonValueComparison.Matches` compares a resolved element against an expected value. The TUnit entry points are thin `[GenerateAssertion]` wrappers over both. A future package split (a bare-identifier `JsonAssertions` core package plus this adapter) would fall along exactly this namespace seam; shipping the seam now keeps that option open without committing to it.
 
 ## Modern .NET 10+ practices on display
 
@@ -98,21 +107,21 @@ The package is a deliberate showcase of modern .NET conventions:
 This is a 0.x release and the public API may evolve.
 
 - **Additive changes** (new entry points, new input overloads) ship in any patch without breaking ApiCompat.
-- **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md).
-- From 0.0.2 onward, `PackageValidationBaselineVersion` pins to the previous shipped version so ApiCompat breakage is caught at pack time. At 0.0.1 there is no prior baseline to validate against.
+- **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md). The 0.0.1 -> 0.1.0 step evolved the `[GenerateAssertion]` source-method return types from `bool` to `AssertionResult` to enable the path-context failure messages; the generated TUnit chain extensions were unaffected at chain-syntax level.
+- `PackageValidationBaselineVersion` pins to the previous shipped version so ApiCompat breakage is caught at pack time; `CompatibilitySuppressions.xml` records accepted differences.
+- Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` primitives, not against full message-text equality.
 
 The 1.0 milestone signals API stability.
 
-## Roadmap to v0.1.0
+## Roadmap
 
-The wider surface lands at 0.1.0 as a reviewed pull request:
+The next increments, each as a reviewed pull request:
 
-- **Value-at-path** assertions: assert the value at a path equals an expected value.
 - **Shape** assertions: key set, array length, value kinds.
 - **`HttpResponseMessage`** as a first-class entry point, not a convenience wrapper. The bulk of the friction this package targets is HTTP-response-body-shaped.
-- **Failure messages that surface the resolved path context.** This is the load-bearing reason JsonAssertions.TUnit is a package rather than a hand-rolled helper: a bare `TryGetProperty(...).IsTrue()` failing tells you nothing about *where* on the path it failed.
+- Deserialise-then-predicate assertions.
 
-Semantic JSON equality and subset / fragment matching are candidate work for v0.2.0.
+Semantic JSON equality and subset / fragment matching are candidate work for a later release.
 
 ### Out of scope
 

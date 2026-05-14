@@ -14,7 +14,7 @@ namespace Smoke.Consumer;
 [Timeout(10_000)]
 internal sealed class ConsumerSurfaceSmokeTests
 {
-    private const string SampleJson = """{"user":{"name":"alice"}}""";
+    private const string SampleJson = """{"user":{"name":"alice","age":30}}""";
 
     /// <summary>
     /// Pins that <c>HasJsonProperty</c> on a JSON <see cref="string"/> resolves cleanly for an
@@ -51,5 +51,17 @@ internal sealed class ConsumerSurfaceSmokeTests
         using var document = JsonDocument.Parse(SampleJson);
 
         await Assert.That(document.RootElement).HasJsonProperty("user.name");
+    }
+
+    /// <summary>
+    /// Pins that the value-at-path <c>HasJsonValue</c> entry point resolves cleanly for an
+    /// external consumer across its string and numeric overloads.
+    /// </summary>
+    [Test]
+    public async Task HasJsonValueResolvesAndPassesAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(SampleJson).HasJsonValue("user.name", "alice");
+        await Assert.That(SampleJson).HasJsonValue("user.age", 30);
     }
 }

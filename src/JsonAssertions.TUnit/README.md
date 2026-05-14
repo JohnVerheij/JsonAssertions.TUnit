@@ -11,18 +11,17 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 > **Full documentation, design notes, and roadmap:** [github.com/JohnVerheij/JsonAssertions.TUnit](https://github.com/JohnVerheij/JsonAssertions.TUnit)
 
-## Status: v0.0.1 (skeleton release)
+## Status: v0.1.0
 
-The 0.0.1 scope is intentionally narrow. The release exists to establish the repository, claim the `JsonAssertions.TUnit` package identifier on nuget.org, and lock the API style and quality bar before the wider catalog ships at 0.1.0.
-
-It ships one concept: **path existence** over a JSON string or a `JsonElement`.
+Two concepts: **path existence** and **value-at-path**. Each entry point is available over a JSON `string` and a `System.Text.Json.JsonElement`.
 
 | Entry point | Behaviour |
 |---|---|
-| `HasJsonProperty(string path)` | Asserts a property exists at the dot-separated `path`. |
-| `DoesNotHaveJsonProperty(string path)` | Asserts no property exists at the dot-separated `path`. |
+| `HasJsonProperty(path)` | Asserts a property exists at the dot-separated `path`. |
+| `DoesNotHaveJsonProperty(path)` | Asserts no property exists at the dot-separated `path`. |
+| `HasJsonValue(path, expected)` | Asserts the value at `path` equals `expected` (a `string`, `bool`, or number). |
 
-Both are available on a JSON `string` and on a `System.Text.Json.JsonElement`.
+The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: it says *where* on the path resolution stopped, not merely that it did.
 
 ## Install
 
@@ -38,36 +37,46 @@ dotnet add package JsonAssertions.TUnit
 using System.Text.Json;
 
 [Test]
-public async Task ResponseBodyHasUserName(CancellationToken ct)
+public async Task ResponseBodyHasExpectedShape(CancellationToken ct)
 {
-    string json = """{"user":{"name":"alice"}}""";
+    string json = """{"user":{"name":"alice","age":30,"active":true}}""";
 
     await Assert.That(json).HasJsonProperty("user.name");
     await Assert.That(json).DoesNotHaveJsonProperty("user.email");
+    await Assert.That(json).HasJsonValue("user.name", "alice");
+    await Assert.That(json).HasJsonValue("user.age", 30);
+    await Assert.That(json).HasJsonValue("user.active", true);
 }
 ```
 
-The fluent entry points auto-import via `TUnit.Assertions.Extensions`; no extra `using` directive is needed beyond standard TUnit usings.
+The fluent entry points auto-import via `TUnit.Assertions.Extensions`. The same entry points are available on a `JsonElement` for tests that already hold a parsed document.
 
-A leading `$.` JSONPath-style root prefix is accepted and ignored, so `$.user.name` and `user.name` resolve identically.
+When an assertion fails, the message names the failure point:
+
+```text
+to have a JSON property at path "user.address.city"
+  resolved as far as: user.address
+  no property "city" on "user.address"
+```
+
+## Path syntax
+
+A dot-separated sequence of property names, navigated from the asserted element. A leading `$.` JSONPath-style root prefix is accepted and ignored. A path that traverses a non-object value resolves to "not found" rather than throwing. An empty, whitespace, or empty-segment path throws `ArgumentException`. Array indexing and wildcards are not part of the 0.1.0 surface.
 
 ## Two namespaces
 
-The single package places types in two namespaces, the same shape as the rest of the assertion family (a framework-agnostic core plus a TUnit adapter):
+The single package places types in two namespaces, the same shape as the rest of the assertion family:
 
 | Type | Namespace | Auto-imported? |
 |---|---|---|
-| `JsonPath` (framework-agnostic path navigation) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
-| `HasJsonProperty()` / `DoesNotHaveJsonProperty()` (source-generated entry points) | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
+| `JsonPath`, `JsonPathResolution`, `JsonValueComparison` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
+| `HasJsonProperty()` / `DoesNotHaveJsonProperty()` / `HasJsonValue()` (source-generated entry points) | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
 
-## Roadmap to v0.1.0
+## Roadmap
 
-The wider surface lands at 0.1.0 as a reviewed pull request:
-
-- **Value-at-path** assertions (assert the value at a path equals an expected value).
-- **Shape** assertions (key set, array length, value kinds).
-- `HttpResponseMessage` as a first-class entry point.
-- Failure messages that surface the resolved path context, the load-bearing reason this is a package rather than a hand-rolled helper.
+- **Shape assertions** (key set, array length, value kinds).
+- **`HttpResponseMessage`** as a first-class entry point.
+- Semantic JSON equality and subset / fragment matching.
 
 ## Family
 
