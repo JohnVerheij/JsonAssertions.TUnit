@@ -9,6 +9,8 @@
 // exactly that. A regression that hid them behind an explicit namespace would break this
 // build.
 
-global using System.Text.Json;                      // JsonDocument
+global using System.Net.Http;                        // HttpResponseMessage, StringContent
+global using System.Text;                            // Encoding
+global using System.Text.Json;                       // JsonDocument, JsonValueKind
 global using System.Threading;                       // CancellationToken
 global using System.Threading.Tasks;                 // Task

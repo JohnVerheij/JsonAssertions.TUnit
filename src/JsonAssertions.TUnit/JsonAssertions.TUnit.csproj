@@ -11,7 +11,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>JsonAssertions.TUnit</PackageId>
     <ProductName>JsonAssertions.TUnit</ProductName>
-    <Version>0.0.1</Version>
+    <Version>0.1.0</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
     <Description>TUnit-native JSON assertions for .NET tests. Fluent .Method(...) entry points (generated via TUnit's [GenerateAssertion]) for asserting the presence or absence of a property at a dot-separated JSON path, over a JSON string or a System.Text.Json JsonElement. The 0.0.1 release is an intentionally narrow skeleton that establishes the repository, claims the package identifier, and locks the API style and quality bar; the wider path / value / shape surface ships at 0.1.0. AOT-compatible, trimmable, no runtime reflection.</Description>
@@ -23,19 +23,22 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- Pre-1.0 suppressions:
-         Proj0212/Proj0213: PackageIcon and PackageIconUrl omitted; will be added by 1.0.0.
-         Proj0241: PackageValidationBaselineVersion is intentionally unset at 0.0.1 - there is
-         no prior published version to validate against. It pins to 0.0.1 starting from 0.0.2,
-         at which point Proj0241 is removed from this list. -->
-    <NoWarn>$(NoWarn);Proj0212;Proj0213;Proj0241</NoWarn>
+         Proj0212/Proj0213: PackageIcon and PackageIconUrl omitted; will be added by 1.0.0. -->
+    <NoWarn>$(NoWarn);Proj0212;Proj0213</NoWarn>
 
     <!-- Symbol package + API compat (strict mode per dpfa Proj0249/0250/0251/0252).
-         Baseline validation is enabled from 0.0.2 onward, once 0.0.1 is the published
-         baseline; at 0.0.1 there is nothing to compare against. -->
+         PackageValidationBaselineVersion pins to the previous shipped version so ApiCompat
+         catches binary breaks at pack time. The 0.0.1 -> 0.1.0 step intentionally evolves the
+         [GenerateAssertion] source-method return types from bool to AssertionResult to enable
+         the rich path-context failure messages; the generated TUnit chain extensions are
+         unaffected at chain-syntax level. CompatibilitySuppressions.xml captures the accepted
+         differences vs the 0.0.1 baseline. -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>0.0.1</PackageValidationBaselineVersion>
     <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
+    <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
     <ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>
     <ApiCompatEnableRuleCannotChangeParameterName>true</ApiCompatEnableRuleCannotChangeParameterName>
     <ApiCompatEnableRuleAttributesMustMatch>true</ApiCompatEnableRuleAttributesMustMatch>
