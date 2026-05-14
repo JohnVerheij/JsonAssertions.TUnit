@@ -10,6 +10,13 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:JsonAssertions.JsonShape</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
     <Target>T:JsonAssertions.JsonValueComparison</Target>
     <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
     <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
@@ -17,7 +24,105 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:JsonAssertions.TUnit.HttpResponseMessageAssertions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:JsonAssertions.TUnit.JsonShapeAssertions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
     <Target>T:JsonAssertions.TUnit.JsonValueAssertions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_DoesNotHaveJsonProperty_String_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_HasEmptyJsonArray_String_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonArrayLength_String_Int_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonProperty_String_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonValue_String_Bool_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonValue_String_Double_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonValue_String_String_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonValueKind_String_JsonValueKind_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessage_HasNonEmptyJsonArray_String_CancellationToken_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.HttpResponseMessageAssertions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.JsonElement_HasEmptyJsonArray_String_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.JsonElement_HasJsonArrayLength_String_Int_Assertion</Target>
     <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
     <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -45,7 +150,42 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.JsonElement_HasJsonValueKind_String_JsonValueKind_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.JsonElement_HasNonEmptyJsonArray_String_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.JsonShapeAssertions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
     <Target>T:TUnit.Assertions.Extensions.JsonValueAssertions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.String_HasEmptyJsonArray_String_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.String_HasJsonArrayLength_String_Int_Assertion</Target>
     <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
     <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
@@ -67,6 +207,20 @@
   <Suppression>
     <DiagnosticId>CP0001</DiagnosticId>
     <Target>T:TUnit.Assertions.Extensions.String_HasJsonValue_String_String_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.String_HasJsonValueKind_String_JsonValueKind_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.String_HasNonEmptyJsonArray_String_Assertion</Target>
     <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
     <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>

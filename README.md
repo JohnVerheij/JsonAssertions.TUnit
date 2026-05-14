@@ -16,13 +16,16 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 ## Status: v0.1.0
 
-Two concepts: **path existence** and **value-at-path**. Each fluent entry point is available over a JSON `string` and a `System.Text.Json.JsonElement`:
+Property existence, value-at-path, and shape assertions. Each fluent entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document):
 
 | Entry point | Behaviour |
 |---|---|
 | `HasJsonProperty(string path)` | Asserts a property exists at the dot-separated `path`. |
 | `DoesNotHaveJsonProperty(string path)` | Asserts no property exists at the dot-separated `path`. |
 | `HasJsonValue(string path, string\|bool\|number expected)` | Asserts the value at `path` equals `expected`. |
+| `HasJsonArrayLength(string path, int length)` | Asserts the value at `path` is a JSON array of the given length. |
+| `HasNonEmptyJsonArray(string path)` / `HasEmptyJsonArray(string path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
+| `HasJsonValueKind(string path, JsonValueKind kind)` | Asserts the value at `path` is of the given kind. |
 
 The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
 
@@ -48,7 +51,6 @@ public async Task ResponseBodyHasExpectedShape(CancellationToken ct)
 
     await Assert.That(json).HasJsonProperty("user.name");
     await Assert.That(json).DoesNotHaveJsonProperty("user.email");
-    await Assert.That(json).HasJsonValue("user.name", "alice");
     await Assert.That(json).HasJsonValue("user.age", 30);
     await Assert.That(json).HasJsonValue("user.active", true);
 }
@@ -56,12 +58,18 @@ public async Task ResponseBodyHasExpectedShape(CancellationToken ct)
 
 The fluent entry points auto-import via `TUnit.Assertions.Extensions`; no extra `using` directive is needed beyond standard TUnit usings.
 
-The same entry points are available on a `JsonElement`, for tests that already hold a parsed document:
+The same entry points are available on a `JsonElement`, and directly on an `HttpResponseMessage` whose body is read as the JSON document. The `HttpResponseMessage` overloads are asynchronous and take a required `CancellationToken` that flows to the body read:
 
 ```csharp
 using var document = JsonDocument.Parse(json);
 await Assert.That(document.RootElement).HasJsonValue("user.name", "alice");
+
+// Directly on an HTTP response - the body is read and asserted against:
+await Assert.That(response).HasJsonProperty("user.name", ct);
+await Assert.That(response).HasJsonArrayLength("items", 3, ct);
 ```
+
+A response body or string that is not valid JSON fails the assertion with an explained message rather than throwing a raw `JsonException`; a body that cannot be parsed does not vacuously satisfy `DoesNotHaveJsonProperty`.
 
 When an assertion fails, the message names the failure point rather than just reporting a `false`:
 
@@ -88,10 +96,10 @@ The single package places types in two namespaces, the same shape as the rest of
 
 | Type | Namespace | Auto-imported? |
 |---|---|---|
-| `JsonPath`, `JsonPathResolution`, `JsonValueComparison` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
-| `HasJsonProperty()` / `DoesNotHaveJsonProperty()` / `HasJsonValue()` (source-generated entry points) | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
+| `JsonPath`, `JsonPathResolution`, `JsonValueComparison`, `JsonShape` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
+| Source-generated assertion entry points (`HasJsonProperty()`, `HasJsonValue()`, `HasJsonArrayLength()`, ...) | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
 
-`JsonPath.Resolve(JsonElement, string)` is the framework-agnostic primitive: it returns a `JsonPathResolution` carrying the resolved element on success and the failure-point context (how far it got, which segment failed, what kind of value blocked it) on failure. `JsonValueComparison.Matches` compares a resolved element against an expected value. The TUnit entry points are thin `[GenerateAssertion]` wrappers over both. A future package split (a bare-identifier `JsonAssertions` core package plus this adapter) would fall along exactly this namespace seam; shipping the seam now keeps that option open without committing to it.
+`JsonPath.Resolve(JsonElement, string)` is the framework-agnostic primitive: it returns a `JsonPathResolution` carrying the resolved element on success and the failure-point context (how far it got, which segment failed, what kind of value blocked it) on failure. `JsonValueComparison.Matches` compares a resolved element against an expected value, and `JsonShape` provides the array-length / value-kind predicates. The TUnit entry points are thin `[GenerateAssertion]` wrappers over them. A future package split (a bare-identifier `JsonAssertions` core package plus this adapter) would fall along exactly this namespace seam; shipping the seam now keeps that option open without committing to it.
 
 ## Modern .NET 10+ practices on display
 
@@ -109,7 +117,8 @@ This is a 0.x release and the public API may evolve.
 - **Additive changes** (new entry points, new input overloads) ship in any patch without breaking ApiCompat.
 - **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md). The 0.0.1 -> 0.1.0 step evolved the `[GenerateAssertion]` source-method return types from `bool` to `AssertionResult` to enable the path-context failure messages; the generated TUnit chain extensions were unaffected at chain-syntax level.
 - `PackageValidationBaselineVersion` pins to the previous shipped version so ApiCompat breakage is caught at pack time; `CompatibilitySuppressions.xml` records accepted differences.
-- Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` primitives, not against full message-text equality.
+- Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
+- The `HttpResponseMessage` overloads take a *required* `CancellationToken`. They will move to an optional `CancellationToken ct = default` once the TUnit release containing the `[GenerateAssertion]` value-type-default generator fix ships; the current TUnit version emits an invalid `= null` default for value-type optional parameters.
 
 The 1.0 milestone signals API stability.
 
@@ -117,11 +126,10 @@ The 1.0 milestone signals API stability.
 
 The next increments, each as a reviewed pull request:
 
-- **Shape** assertions: key set, array length, value kinds.
-- **`HttpResponseMessage`** as a first-class entry point, not a convenience wrapper. The bulk of the friction this package targets is HTTP-response-body-shaped.
 - Deserialise-then-predicate assertions.
+- Semantic JSON equality and subset / fragment matching.
 
-Semantic JSON equality and subset / fragment matching are candidate work for a later release.
+Array indexing and wildcard path segments are candidate work for a later release.
 
 ### Out of scope
 

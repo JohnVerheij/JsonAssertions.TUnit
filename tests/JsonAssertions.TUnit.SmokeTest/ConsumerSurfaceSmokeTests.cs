@@ -14,7 +14,7 @@ namespace Smoke.Consumer;
 [Timeout(10_000)]
 internal sealed class ConsumerSurfaceSmokeTests
 {
-    private const string SampleJson = """{"user":{"name":"alice","age":30}}""";
+    private const string SampleJson = """{"user":{"name":"alice","age":30},"items":[1,2,3]}""";
 
     /// <summary>
     /// Pins that <c>HasJsonProperty</c> on a JSON <see cref="string"/> resolves cleanly for an
@@ -63,5 +63,37 @@ internal sealed class ConsumerSurfaceSmokeTests
         ct.ThrowIfCancellationRequested();
         await Assert.That(SampleJson).HasJsonValue("user.name", "alice");
         await Assert.That(SampleJson).HasJsonValue("user.age", 30);
+    }
+
+    /// <summary>
+    /// Pins that the shape entry points (<c>HasJsonArrayLength</c>, <c>HasJsonValueKind</c>)
+    /// resolve cleanly for an external consumer.
+    /// </summary>
+    [Test]
+    public async Task ShapeAssertionsResolveAndPassAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(SampleJson).HasJsonArrayLength("items", 3);
+        await Assert.That(SampleJson).HasNonEmptyJsonArray("items");
+        await Assert.That(SampleJson).HasJsonValueKind("items", JsonValueKind.Array);
+    }
+
+    /// <summary>
+    /// Pins that the <see cref="HttpResponseMessage"/> entry point resolves cleanly for an
+    /// external consumer: the body is read and the assertion runs against it. The required
+    /// cancellation token is passed through.
+    /// </summary>
+    [Test]
+    public async Task HttpResponseMessageEntryPointResolvesAndPassesAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var response = new HttpResponseMessage
+        {
+            Content = new StringContent(SampleJson, Encoding.UTF8, "application/json"),
+        };
+
+        await Assert.That(response).HasJsonProperty("user.name", ct);
+        await Assert.That(response).HasJsonValue("user.age", 30, ct);
+        await Assert.That(response).HasJsonArrayLength("items", 3, ct);
     }
 }

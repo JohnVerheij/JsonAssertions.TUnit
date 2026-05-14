@@ -7,19 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - Path-context diagnostics, value-at-path assertions
+## [0.1.0] - 2026-05-14: Value-at-path and shape assertions, an HTTP entry point, and path-context diagnostics
 
-The first feature release. 0.1.0 turns the 0.0.1 skeleton into a real assertion surface: it adds value-at-path assertions, and it rebuilds every assertion's failure message to say *where* on the path resolution stopped. That path-context diagnostic is the load-bearing reason this is a package rather than a hand-rolled `TryGetProperty(...).IsTrue()` helper.
+The first feature release. 0.1.0 turns the 0.0.1 skeleton into a real assertion surface: value-at-path assertions, shape assertions (array length, non-empty / empty array, value kind), and a first-class `HttpResponseMessage` entry point. Every assertion's failure message is rebuilt to say *where* on the path resolution stopped. That path-context diagnostic is the load-bearing reason this is a package rather than a hand-rolled `TryGetProperty(...).IsTrue()` helper.
 
 ### Added (`JsonAssertions`, framework-agnostic core)
 
 - **`JsonPath.Resolve(JsonElement, string)`** returns a `JsonPathResolution` that carries the resolved element on success, and the failure-point context on failure: how far the path resolved (`ResolvedPrefix`), which segment could not be resolved (`FailedSegment`), and the `JsonValueKind` of the element that blocked it (`ContainerKind`, which distinguishes "the object has no such property" from "the path tried to read a property off a non-object").
 - **`JsonPathResolution`** readonly record struct carrying that outcome.
 - **`JsonValueComparison.Matches`** overloads for `string`, `bool`, and `double` (numeric) expected values. A kind mismatch returns `false` rather than throwing, so a caller can render a "found a String, expected a Number" diagnostic. Named `JsonValueComparison` rather than `JsonValue` to avoid colliding with `System.Text.Json.Nodes.JsonValue`.
+- **`JsonShape`** shape predicates: `IsKind`, `IsArrayOfLength`, `IsNonEmptyArray`, `IsEmptyArray`. Kind mismatches return `false` rather than throwing.
 
 ### Added (`JsonAssertions.TUnit`, TUnit adapter)
 
 - **`HasJsonValue(path, expected)`** asserts the value at a dot-separated path. Overloads accept a `string`, a `bool`, or a number (`double`; `int` and `long` literals widen at the call site), over both a JSON `string` and a `JsonElement`.
+- **Shape assertions** `HasJsonArrayLength(path, length)`, `HasNonEmptyJsonArray(path)`, `HasEmptyJsonArray(path)`, and `HasJsonValueKind(path, kind)`, over both a JSON `string` and a `JsonElement`. On failure the message shows the found shape (an array reports its length; any other kind reports its kind).
+- **`HttpResponseMessage` entry point.** Every property / value / shape assertion is also available directly on an `HttpResponseMessage`: the response body is read as text and the assertion runs against it, so a test can write `await Assert.That(response).HasJsonProperty("user.name", ct)` without a separate read-and-parse step. The methods are asynchronous and take a required `CancellationToken` that flows to the body read; the body covers only the JSON payload (status-code assertions are out of scope).
+- **Malformed JSON now fails the assertion** with an explained message ("the asserted value to be parseable JSON / but parsing failed: ...") rather than escaping as a raw `JsonException`. This applies to every JSON-`string` and `HttpResponseMessage` overload. A body that cannot be parsed does not vacuously satisfy `DoesNotHaveJsonProperty`.
 
 ### Changed
 
@@ -28,10 +32,11 @@ The first feature release. 0.1.0 turns the 0.0.1 skeleton into a real assertion 
 
 ### Notes
 
-- Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` primitives, not against full message-text equality.
+- Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
 - The numeric `HasJsonValue` overload reads the element as a `double`; values beyond `double` precision are out of scope for this release.
+- The `HttpResponseMessage` overloads take a *required* `CancellationToken`. They will move to an optional `CancellationToken ct = default` (matching the family convention) once the TUnit release containing the `[GenerateAssertion]` value-type-default generator fix ships; the current TUnit version emits an invalid `= null` default for value-type parameters.
 
-## [0.0.1] - Initial preview: skeleton release establishing repository, package identifier, and quality bar
+## [0.0.1] - 2026-05-14: Initial preview, skeleton release establishing repository, package identifier, and quality bar
 
 First public release. One package: `JsonAssertions.TUnit`, a TUnit-native JSON assertion library built on `System.Text.Json`. .NET 10, AOT-compatible, trimmable, no runtime reflection in the assertion path.
 

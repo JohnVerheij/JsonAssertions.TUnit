@@ -33,6 +33,18 @@ internal static class JsonFailureMessage
 {
     private const int MaxRenderedStringLength = 60;
 
+    /// <summary>Renders the failure for a JSON <see cref="string"/> overload whose input could
+    /// not be parsed at all. A malformed response body is a legitimate runtime scenario, so it
+    /// is surfaced as an explained assertion failure rather than an escaping
+    /// <see cref="JsonException"/>.</summary>
+    public static string ParseFailure(JsonException exception)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the asserted value to be parseable JSON").Append('\n');
+        sb.Append("  but parsing failed: ").Append(exception.Message).Append('\n');
+        return sb.ToString();
+    }
+
     /// <summary>Renders the failure for a positive property-existence assertion: the path did
     /// not resolve, and the message says how far it got and why it stopped.</summary>
     public static string PropertyNotFound(string path, JsonPathResolution resolution)
@@ -66,6 +78,27 @@ internal static class JsonFailureMessage
         if (resolution.Found)
         {
             sb.Append("  found: ").Append(RenderElement(resolution.Element)).Append('\n');
+        }
+        else
+        {
+            AppendFailurePoint(sb, resolution);
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a shape assertion (array length, non-empty / empty
+    /// array, value kind). When the path did not resolve, the failure-point block is appended;
+    /// when it resolved but the element has the wrong shape, the found shape is shown.</summary>
+    public static string ShapeMismatch(string path, JsonPathResolution resolution, string expectedDescription)
+    {
+        var sb = new StringBuilder();
+        sb.Append("to have ").Append(expectedDescription)
+            .Append(" at path \"").Append(path).Append('"').Append('\n');
+
+        if (resolution.Found)
+        {
+            sb.Append("  found: ").Append(RenderShape(resolution.Element)).Append('\n');
         }
         else
         {
@@ -112,6 +145,13 @@ internal static class JsonFailureMessage
         JsonValueKind.Null => "null",
         _ => "(undefined)",
     };
+
+    /// <summary>Renders a resolved element for a shape failure: an array reports its length,
+    /// any other kind reports the kind alone.</summary>
+    private static string RenderShape(JsonElement element)
+        => element.ValueKind is JsonValueKind.Array
+            ? "an array of length " + element.GetArrayLength().ToString(CultureInfo.InvariantCulture)
+            : DescribeKind(element.ValueKind);
 
     /// <summary>The indefinite-article kind description used in failure reasons.</summary>
     private static string DescribeKind(JsonValueKind kind) => kind switch

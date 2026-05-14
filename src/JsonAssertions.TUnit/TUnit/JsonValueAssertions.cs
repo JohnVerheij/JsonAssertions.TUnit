@@ -32,10 +32,7 @@ public static class JsonValueAssertions
     /// <param name="expected">The expected string value.</param>
     [GenerateAssertion]
     public static AssertionResult HasJsonValue(this string json, string path, string expected)
-    {
-        using var document = JsonDocument.Parse(json);
-        return HasJsonValue(document.RootElement, path, expected);
-    }
+        => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
     /// <summary>Asserts the JSON element has the string value <paramref name="expected"/> at
     /// the dot-separated <paramref name="path"/>.</summary>
@@ -58,10 +55,7 @@ public static class JsonValueAssertions
     /// <param name="expected">The expected boolean value.</param>
     [GenerateAssertion]
     public static AssertionResult HasJsonValue(this string json, string path, bool expected)
-    {
-        using var document = JsonDocument.Parse(json);
-        return HasJsonValue(document.RootElement, path, expected);
-    }
+        => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
     /// <summary>Asserts the JSON element has the boolean value <paramref name="expected"/> at
     /// the dot-separated <paramref name="path"/>.</summary>
@@ -88,10 +82,7 @@ public static class JsonValueAssertions
     /// <param name="expected">The expected numeric value.</param>
     [GenerateAssertion]
     public static AssertionResult HasJsonValue(this string json, string path, double expected)
-    {
-        using var document = JsonDocument.Parse(json);
-        return HasJsonValue(document.RootElement, path, expected);
-    }
+        => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
     /// <summary>Asserts the JSON element has the numeric value <paramref name="expected"/> at
     /// the dot-separated <paramref name="path"/>.</summary>

@@ -17,6 +17,13 @@ namespace JsonAssertions
         public bool Found { get; }
         public string ResolvedPrefix { get; }
     }
+    public static class JsonShape
+    {
+        public static bool IsArrayOfLength(System.Text.Json.JsonElement element, int length) { }
+        public static bool IsEmptyArray(System.Text.Json.JsonElement element) { }
+        public static bool IsKind(System.Text.Json.JsonElement element, System.Text.Json.JsonValueKind kind) { }
+        public static bool IsNonEmptyArray(System.Text.Json.JsonElement element) { }
+    }
     public static class JsonValueComparison
     {
         public static bool Matches(System.Text.Json.JsonElement element, bool expected) { }
@@ -26,6 +33,27 @@ namespace JsonAssertions
 }
 namespace JsonAssertions.TUnit
 {
+    public static class HttpResponseMessageAssertions
+    {
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> DoesNotHaveJsonProperty(this System.Net.Http.HttpResponseMessage response, string path, System.Threading.CancellationToken cancellationToken) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> HasEmptyJsonArray(this System.Net.Http.HttpResponseMessage response, string path, System.Threading.CancellationToken cancellationToken) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> HasJsonArrayLength(this System.Net.Http.HttpResponseMessage response, string path, int expectedLength, System.Threading.CancellationToken cancellationToken) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> HasJsonProperty(this System.Net.Http.HttpResponseMessage response, string path, System.Threading.CancellationToken cancellationToken) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> HasJsonValue(this System.Net.Http.HttpResponseMessage response, string path, bool expected, System.Threading.CancellationToken cancellationToken) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> HasJsonValue(this System.Net.Http.HttpResponseMessage response, string path, double expected, System.Threading.CancellationToken cancellationToken) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> HasJsonValue(this System.Net.Http.HttpResponseMessage response, string path, string expected, System.Threading.CancellationToken cancellationToken) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> HasJsonValueKind(this System.Net.Http.HttpResponseMessage response, string path, System.Text.Json.JsonValueKind expectedKind, System.Threading.CancellationToken cancellationToken) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> HasNonEmptyJsonArray(this System.Net.Http.HttpResponseMessage response, string path, System.Threading.CancellationToken cancellationToken) { }
+    }
     public static class JsonPropertyAssertions
     {
         [TUnit.Assertions.Attributes.GenerateAssertion]
@@ -36,6 +64,25 @@ namespace JsonAssertions.TUnit
         public static TUnit.Assertions.Core.AssertionResult HasJsonProperty(this System.Text.Json.JsonElement element, string path) { }
         [TUnit.Assertions.Attributes.GenerateAssertion]
         public static TUnit.Assertions.Core.AssertionResult HasJsonProperty(this string json, string path) { }
+    }
+    public static class JsonShapeAssertions
+    {
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult HasEmptyJsonArray(this System.Text.Json.JsonElement element, string path) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult HasEmptyJsonArray(this string json, string path) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult HasJsonArrayLength(this System.Text.Json.JsonElement element, string path, int expectedLength) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult HasJsonArrayLength(this string json, string path, int expectedLength) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult HasJsonValueKind(this System.Text.Json.JsonElement element, string path, System.Text.Json.JsonValueKind expectedKind) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult HasJsonValueKind(this string json, string path, System.Text.Json.JsonValueKind expectedKind) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult HasNonEmptyJsonArray(this System.Text.Json.JsonElement element, string path) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult HasNonEmptyJsonArray(this string json, string path) { }
     }
     public static class JsonValueAssertions
     {
@@ -55,15 +102,117 @@ namespace JsonAssertions.TUnit
 }
 namespace TUnit.Assertions.Extensions
 {
+    public static class HttpResponseMessageAssertions
+    {
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_DoesNotHaveJsonProperty_String_CancellationToken_Assertion DoesNotHaveJsonProperty<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_HasEmptyJsonArray_String_CancellationToken_Assertion HasEmptyJsonArray<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonArrayLength_String_Int_CancellationToken_Assertion HasJsonArrayLength<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, int expectedLength, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expectedLength")] string? expectedLengthExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonProperty_String_CancellationToken_Assertion HasJsonProperty<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonValue_String_Bool_CancellationToken_Assertion HasJsonValue<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, bool expected, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expected")] string? expectedExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonValue_String_Double_CancellationToken_Assertion HasJsonValue<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, double expected, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expected")] string? expectedExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonValue_String_String_CancellationToken_Assertion HasJsonValue<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, string expected, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expected")] string? expectedExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_HasJsonValueKind_String_JsonValueKind_CancellationToken_Assertion HasJsonValueKind<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, System.Text.Json.JsonValueKind expectedKind, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expectedKind")] string? expectedKindExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2091", Justification="Generic type parameter is only used for property access, not instantiation")]
+        public static TUnit.Assertions.Extensions.HttpResponseMessage_HasNonEmptyJsonArray_String_CancellationToken_Assertion HasNonEmptyJsonArray<TActual>(this TUnit.Assertions.Core.IAssertionSource<TActual> source, string path, System.Threading.CancellationToken cancellationToken, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("cancellationToken")] string? cancellationTokenExpression = null)
+            where TActual : System.Net.Http.HttpResponseMessage { }
+    }
+    public sealed class HttpResponseMessage_DoesNotHaveJsonProperty_String_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_DoesNotHaveJsonProperty_String_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class HttpResponseMessage_HasEmptyJsonArray_String_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_HasEmptyJsonArray_String_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class HttpResponseMessage_HasJsonArrayLength_String_Int_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_HasJsonArrayLength_String_Int_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, int expectedLength, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class HttpResponseMessage_HasJsonProperty_String_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_HasJsonProperty_String_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class HttpResponseMessage_HasJsonValueKind_String_JsonValueKind_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_HasJsonValueKind_String_JsonValueKind_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, System.Text.Json.JsonValueKind expectedKind, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class HttpResponseMessage_HasJsonValue_String_Bool_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_HasJsonValue_String_Bool_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, bool expected, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class HttpResponseMessage_HasJsonValue_String_Double_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_HasJsonValue_String_Double_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, double expected, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class HttpResponseMessage_HasJsonValue_String_String_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_HasJsonValue_String_String_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, string expected, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class HttpResponseMessage_HasNonEmptyJsonArray_String_CancellationToken_Assertion : TUnit.Assertions.Core.Assertion<System.Net.Http.HttpResponseMessage>
+    {
+        public HttpResponseMessage_HasNonEmptyJsonArray_String_CancellationToken_Assertion(TUnit.Assertions.Core.AssertionContext<System.Net.Http.HttpResponseMessage> context, string path, System.Threading.CancellationToken cancellationToken) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Net.Http.HttpResponseMessage> metadata) { }
+        protected override string GetExpectation() { }
+    }
     public sealed class JsonElement_DoesNotHaveJsonProperty_String_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
     {
         public JsonElement_DoesNotHaveJsonProperty_String_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string path) { }
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
         protected override string GetExpectation() { }
     }
+    public sealed class JsonElement_HasEmptyJsonArray_String_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
+    {
+        public JsonElement_HasEmptyJsonArray_String_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class JsonElement_HasJsonArrayLength_String_Int_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
+    {
+        public JsonElement_HasJsonArrayLength_String_Int_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string path, int expectedLength) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
+        protected override string GetExpectation() { }
+    }
     public sealed class JsonElement_HasJsonProperty_String_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
     {
         public JsonElement_HasJsonProperty_String_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class JsonElement_HasJsonValueKind_String_JsonValueKind_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
+    {
+        public JsonElement_HasJsonValueKind_String_JsonValueKind_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string path, System.Text.Json.JsonValueKind expectedKind) { }
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
         protected override string GetExpectation() { }
     }
@@ -85,12 +234,29 @@ namespace TUnit.Assertions.Extensions
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
         protected override string GetExpectation() { }
     }
+    public sealed class JsonElement_HasNonEmptyJsonArray_String_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
+    {
+        public JsonElement_HasNonEmptyJsonArray_String_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
+        protected override string GetExpectation() { }
+    }
     public static class JsonPropertyAssertions
     {
         public static TUnit.Assertions.Extensions.JsonElement_DoesNotHaveJsonProperty_String_Assertion DoesNotHaveJsonProperty(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
         public static TUnit.Assertions.Extensions.String_DoesNotHaveJsonProperty_String_Assertion DoesNotHaveJsonProperty(this TUnit.Assertions.Core.IAssertionSource<string> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
         public static TUnit.Assertions.Extensions.JsonElement_HasJsonProperty_String_Assertion HasJsonProperty(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
         public static TUnit.Assertions.Extensions.String_HasJsonProperty_String_Assertion HasJsonProperty(this TUnit.Assertions.Core.IAssertionSource<string> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
+    }
+    public static class JsonShapeAssertions
+    {
+        public static TUnit.Assertions.Extensions.JsonElement_HasEmptyJsonArray_String_Assertion HasEmptyJsonArray(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
+        public static TUnit.Assertions.Extensions.String_HasEmptyJsonArray_String_Assertion HasEmptyJsonArray(this TUnit.Assertions.Core.IAssertionSource<string> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
+        public static TUnit.Assertions.Extensions.JsonElement_HasJsonArrayLength_String_Int_Assertion HasJsonArrayLength(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, int expectedLength, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expectedLength")] string? expectedLengthExpression = null) { }
+        public static TUnit.Assertions.Extensions.String_HasJsonArrayLength_String_Int_Assertion HasJsonArrayLength(this TUnit.Assertions.Core.IAssertionSource<string> source, string path, int expectedLength, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expectedLength")] string? expectedLengthExpression = null) { }
+        public static TUnit.Assertions.Extensions.JsonElement_HasJsonValueKind_String_JsonValueKind_Assertion HasJsonValueKind(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, System.Text.Json.JsonValueKind expectedKind, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expectedKind")] string? expectedKindExpression = null) { }
+        public static TUnit.Assertions.Extensions.String_HasJsonValueKind_String_JsonValueKind_Assertion HasJsonValueKind(this TUnit.Assertions.Core.IAssertionSource<string> source, string path, System.Text.Json.JsonValueKind expectedKind, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("expectedKind")] string? expectedKindExpression = null) { }
+        public static TUnit.Assertions.Extensions.JsonElement_HasNonEmptyJsonArray_String_Assertion HasNonEmptyJsonArray(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
+        public static TUnit.Assertions.Extensions.String_HasNonEmptyJsonArray_String_Assertion HasNonEmptyJsonArray(this TUnit.Assertions.Core.IAssertionSource<string> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
     }
     public static class JsonValueAssertions
     {
@@ -107,9 +273,27 @@ namespace TUnit.Assertions.Extensions
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
         protected override string GetExpectation() { }
     }
+    public sealed class String_HasEmptyJsonArray_String_Assertion : TUnit.Assertions.Core.Assertion<string>
+    {
+        public String_HasEmptyJsonArray_String_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class String_HasJsonArrayLength_String_Int_Assertion : TUnit.Assertions.Core.Assertion<string>
+    {
+        public String_HasJsonArrayLength_String_Int_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path, int expectedLength) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
+        protected override string GetExpectation() { }
+    }
     public sealed class String_HasJsonProperty_String_Assertion : TUnit.Assertions.Core.Assertion<string>
     {
         public String_HasJsonProperty_String_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class String_HasJsonValueKind_String_JsonValueKind_Assertion : TUnit.Assertions.Core.Assertion<string>
+    {
+        public String_HasJsonValueKind_String_JsonValueKind_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path, System.Text.Json.JsonValueKind expectedKind) { }
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
         protected override string GetExpectation() { }
     }
@@ -128,6 +312,12 @@ namespace TUnit.Assertions.Extensions
     public sealed class String_HasJsonValue_String_String_Assertion : TUnit.Assertions.Core.Assertion<string>
     {
         public String_HasJsonValue_String_String_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path, string expected) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class String_HasNonEmptyJsonArray_String_Assertion : TUnit.Assertions.Core.Assertion<string>
+    {
+        public String_HasNonEmptyJsonArray_String_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path) { }
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
         protected override string GetExpectation() { }
     }

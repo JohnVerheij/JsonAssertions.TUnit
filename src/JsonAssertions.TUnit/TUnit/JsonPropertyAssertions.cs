@@ -28,10 +28,7 @@ public static class JsonPropertyAssertions
     /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>.</param>
     [GenerateAssertion]
     public static AssertionResult HasJsonProperty(this string json, string path)
-    {
-        using var document = JsonDocument.Parse(json);
-        return HasJsonProperty(document.RootElement, path);
-    }
+        => JsonStringSource.Assert(json, root => HasJsonProperty(root, path));
 
     /// <summary>Asserts the JSON element has a property at the dot-separated
     /// <paramref name="path"/>.</summary>
@@ -47,15 +44,13 @@ public static class JsonPropertyAssertions
     }
 
     /// <summary>Asserts the JSON string has no property at the dot-separated
-    /// <paramref name="path"/>.</summary>
+    /// <paramref name="path"/>. A malformed JSON string fails the assertion (a body that
+    /// cannot be parsed must not vacuously satisfy a negative assertion).</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>.</param>
     [GenerateAssertion]
     public static AssertionResult DoesNotHaveJsonProperty(this string json, string path)
-    {
-        using var document = JsonDocument.Parse(json);
-        return DoesNotHaveJsonProperty(document.RootElement, path);
-    }
+        => JsonStringSource.Assert(json, root => DoesNotHaveJsonProperty(root, path));
 
     /// <summary>Asserts the JSON element has no property at the dot-separated
     /// <paramref name="path"/>.</summary>
