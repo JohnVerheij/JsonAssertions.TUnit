@@ -21,9 +21,8 @@ namespace JsonAssertions.TUnit;
 /// <para>Each method is generated into a TUnit assertion chain via the
 /// <c>[GenerateAssertion]</c> source generator. The methods are asynchronous
 /// (<see cref="Task{TResult}"/> of <see cref="AssertionResult"/>) because reading the response
-/// body is asynchronous; the body read flows the supplied <see cref="CancellationToken"/>,
-/// which is required (these are new APIs with no call sites to preserve, and a test almost
-/// always has a token in scope).</para>
+/// body is asynchronous; the body read flows the supplied
+/// <see cref="CancellationToken"/>, which defaults to <see cref="CancellationToken.None"/>.</para>
 /// <para>A response body that is not valid JSON fails the assertion with an explained message
 /// (via <see cref="JsonStringSource"/>) rather than throwing a raw <see cref="JsonException"/>.
 /// The body covers only the JSON payload; status-code assertions are intentionally out of
@@ -42,7 +41,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> HasJsonProperty(
-        this HttpResponseMessage response, string path, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonPropertyAssertions.HasJsonProperty(root, path), cancellationToken);
@@ -55,7 +54,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> DoesNotHaveJsonProperty(
-        this HttpResponseMessage response, string path, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonPropertyAssertions.DoesNotHaveJsonProperty(root, path), cancellationToken);
@@ -69,7 +68,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> HasJsonValue(
-        this HttpResponseMessage response, string path, string expected, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, string expected, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValue(root, path, expected), cancellationToken);
@@ -83,7 +82,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> HasJsonValue(
-        this HttpResponseMessage response, string path, bool expected, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, bool expected, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValue(root, path, expected), cancellationToken);
@@ -97,7 +96,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> HasJsonValue(
-        this HttpResponseMessage response, string path, double expected, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, double expected, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValue(root, path, expected), cancellationToken);
@@ -111,7 +110,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> HasJsonArrayLength(
-        this HttpResponseMessage response, string path, int expectedLength, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, int expectedLength, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonShapeAssertions.HasJsonArrayLength(root, path, expectedLength), cancellationToken);
@@ -124,7 +123,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> HasNonEmptyJsonArray(
-        this HttpResponseMessage response, string path, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonShapeAssertions.HasNonEmptyJsonArray(root, path), cancellationToken);
@@ -137,7 +136,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> HasEmptyJsonArray(
-        this HttpResponseMessage response, string path, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonShapeAssertions.HasEmptyJsonArray(root, path), cancellationToken);
@@ -151,7 +150,7 @@ public static class HttpResponseMessageAssertions
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> HasJsonValueKind(
-        this HttpResponseMessage response, string path, JsonValueKind expectedKind, CancellationToken cancellationToken)
+        this HttpResponseMessage response, string path, JsonValueKind expectedKind, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonShapeAssertions.HasJsonValueKind(root, path, expectedKind), cancellationToken);

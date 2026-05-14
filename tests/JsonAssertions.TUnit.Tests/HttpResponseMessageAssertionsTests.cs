@@ -31,6 +31,16 @@ internal sealed class HttpResponseMessageAssertionsTests
     }
 
     [Test]
+    public async Task HasJsonProperty_WithoutExplicitCancellationToken_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var response = Response(BodyJson);
+
+        // The CancellationToken parameter is optional; omitting it uses CancellationToken.None.
+        await Assert.That(response).HasJsonProperty("user.name");
+    }
+
+    [Test]
     public async Task DoesNotHaveJsonProperty_Absent_Passes(CancellationToken ct)
     {
         using var response = Response(BodyJson);

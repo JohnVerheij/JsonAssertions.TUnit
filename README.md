@@ -37,7 +37,7 @@ The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **fail
 dotnet add package JsonAssertions.TUnit
 ```
 
-**Requirements:** TUnit 1.44.0 or later, .NET 10. `System.Text.Json` is in-box on .NET 10, so the package carries no runtime dependency beyond TUnit. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
+**Requirements:** TUnit 1.44.39 or later, .NET 10. `System.Text.Json` is in-box on .NET 10, so the package carries no runtime dependency beyond TUnit. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
 
 ## Quick start
 
@@ -58,7 +58,7 @@ public async Task ResponseBodyHasExpectedShape(CancellationToken ct)
 
 The fluent entry points auto-import via `TUnit.Assertions.Extensions`; no extra `using` directive is needed beyond standard TUnit usings.
 
-The same entry points are available on a `JsonElement`, and directly on an `HttpResponseMessage` whose body is read as the JSON document. The `HttpResponseMessage` overloads are asynchronous and take a required `CancellationToken` that flows to the body read:
+The same entry points are available on a `JsonElement`, and directly on an `HttpResponseMessage` whose body is read as the JSON document. The `HttpResponseMessage` overloads are asynchronous and take an optional `CancellationToken` that flows to the body read:
 
 ```csharp
 using var document = JsonDocument.Parse(json);
@@ -118,8 +118,6 @@ This is a 0.x release and the public API may evolve.
 - **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md). The 0.0.1 -> 0.1.0 step evolved the `[GenerateAssertion]` source-method return types from `bool` to `AssertionResult` to enable the path-context failure messages; the generated TUnit chain extensions were unaffected at chain-syntax level.
 - `PackageValidationBaselineVersion` pins to the previous shipped version so ApiCompat breakage is caught at pack time; `CompatibilitySuppressions.xml` records accepted differences.
 - Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
-- The `HttpResponseMessage` overloads take a *required* `CancellationToken`. They will move to an optional `CancellationToken ct = default` once the TUnit release containing the `[GenerateAssertion]` value-type-default generator fix ships; the current TUnit version emits an invalid `= null` default for value-type optional parameters.
-
 The 1.0 milestone signals API stability.
 
 ## Roadmap
