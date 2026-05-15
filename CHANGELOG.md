@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Per-version release notes on nuget.org.** A new `Directory.Build.targets` at the repo root auto-extracts the matching `## [<Version>]` section from `CHANGELOG.md` at pack time and feeds it into `<PackageReleaseNotes>`. The Release Notes tab on the nuget.org package page now shows the per-version body verbatim rather than a literal placeholder. nuget.org renders the tab as plaintext with preserved line breaks, not as rendered markdown, and the change applies to releases from this version onward (nupkgs already on nuget.org are immutable).
+
 ### Changed
 
-- **`CONVENTIONS.md` updated to v0.4**: `JsonAssertions.TUnit` is now listed in the family roster (previously the doc named only the original four packages). The file is copied identically across all five repos.
+- **`<PackageReleaseNotes>` fallback.** The csproj fallback used when no matching CHANGELOG section is found is now `$(RepositoryUrl)/releases/tag/v$(Version)` rather than the literal text "See CHANGELOG.md". The URL is auto-linked by nuget.org, so the no-match case still gives consumers a one-click route to the matching GitHub Release notes.
+- **`CONVENTIONS.md` updated to v0.5.** Adds a **CHANGELOG conventions** section (Keep a Changelog 1.1.0 standard headers, user-facing-only content, header order, stylistic rules) and a **`PackageReleaseNotes` auto-extract** convention. Supersedes the v0.4 bump that added `JsonAssertions.TUnit` to the family roster; the v0.5 file remains copied identically across all five family repos.
 
 ## [0.1.0] - 2026-05-14: Value-at-path and shape assertions, an HTTP entry point, and path-context diagnostics
 
