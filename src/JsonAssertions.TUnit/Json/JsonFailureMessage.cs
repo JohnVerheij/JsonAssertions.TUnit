@@ -121,7 +121,9 @@ internal static class JsonFailureMessage
             ? "the root"
             : "\"" + resolution.ResolvedPrefix + "\"";
 
-        var failedSegment = resolution.FailedSegment ?? string.Empty;
+        // FailedSegment is non-null on failed resolutions, which is the only path that
+        // reaches AppendFailurePoint (the Found=true branches short-circuit before this call).
+        var failedSegment = resolution.FailedSegment!;
         var isIndex = failedSegment.StartsWith('[') && failedSegment.EndsWith(']');
 
         if (isIndex)
@@ -160,7 +162,7 @@ internal static class JsonFailureMessage
     {
         JsonValueKind.Object => "an object",
         JsonValueKind.Array => "an array",
-        JsonValueKind.String => "\"" + Truncate(element.GetString() ?? string.Empty) + "\"",
+        JsonValueKind.String => "\"" + Truncate(element.GetString()!) + "\"",
         JsonValueKind.Number => element.GetRawText(),
         JsonValueKind.True => "true",
         JsonValueKind.False => "false",

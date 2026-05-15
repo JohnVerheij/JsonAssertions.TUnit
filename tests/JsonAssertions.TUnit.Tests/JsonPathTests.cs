@@ -263,4 +263,61 @@ internal sealed class JsonPathTests
 
         await Assert.That(() => JsonPath.Resolve(root, "items[-1]")).Throws<ArgumentException>();
     }
+
+    [Test]
+    public async Task Resolve_PropertySegmentDirectlyAfterIndex_ThrowsArgumentException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"items":[{"name":"a"}]}""");
+        var root = document.RootElement;
+
+        // 'items[0]name' is malformed: a property name following an index requires a dot
+        // separator. The walker must reject it rather than silently parse 'name' as another
+        // property segment.
+        await Assert.That(() => JsonPath.Resolve(root, "items[0]name")).Throws<ArgumentException>();
+    }
+
+    [Test]
+    public async Task Resolve_BareDollarFollowedByLetter_ThrowsArgumentException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"user":{}}""");
+        var root = document.RootElement;
+
+        // '$user' is not a valid JSONPath root form: the root reference must be '$', '$.',
+        // or '$['.
+        await Assert.That(() => JsonPath.Resolve(root, "$user")).Throws<ArgumentException>();
+    }
+
+    [Test]
+    public async Task Resolve_LeadingDot_ThrowsArgumentException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"user":{}}""");
+        var root = document.RootElement;
+
+        await Assert.That(() => JsonPath.Resolve(root, ".user")).Throws<ArgumentException>();
+    }
+
+    [Test]
+    public async Task Resolve_TrailingDot_ThrowsArgumentException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"user":{}}""");
+        var root = document.RootElement;
+
+        await Assert.That(() => JsonPath.Resolve(root, "user.")).Throws<ArgumentException>();
+    }
+
+    [Test]
+    public async Task Resolve_DollarDotIndex_StripsRootAndDot(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"user":{"name":"alice"}}""");
+
+        var resolution = JsonPath.Resolve(document.RootElement, "$.user.name");
+
+        await Assert.That(resolution.Found).IsTrue();
+        await Assert.That(resolution.Element.GetString()).IsEqualTo("alice");
+    }
 }

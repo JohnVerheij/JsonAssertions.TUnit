@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using JsonAssertions;
 using TUnit.Assertions.Attributes;
@@ -117,7 +118,10 @@ public static class JsonValueAssertions
     /// elements; receives the element resolved at <paramref name="path"/>.</param>
     [GenerateAssertion]
     public static AssertionResult HasJsonValueMatching(this string json, string path, Func<JsonElement, bool> predicate)
-        => JsonStringSource.Assert(json, root => HasJsonValueMatching(root, path, predicate));
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        return JsonStringSource.Assert(json, root => HasJsonValueMatching(root, path, predicate));
+    }
 
     /// <summary>Asserts the value at <paramref name="path"/> satisfies
     /// <paramref name="predicate"/>.</summary>
@@ -144,7 +148,10 @@ public static class JsonValueAssertions
     /// <param name="candidates">The acceptable string values; ordinal comparison.</param>
     [GenerateAssertion]
     public static AssertionResult HasJsonValueOneOf(this string json, string path, string[] candidates)
-        => JsonStringSource.Assert(json, root => HasJsonValueOneOf(root, path, candidates));
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        return JsonStringSource.Assert(json, root => HasJsonValueOneOf(root, path, candidates));
+    }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a JSON string equal to any of
     /// <paramref name="candidates"/>.</summary>
@@ -171,7 +178,10 @@ public static class JsonValueAssertions
     /// <param name="candidates">The acceptable numeric values.</param>
     [GenerateAssertion]
     public static AssertionResult HasJsonValueOneOf(this string json, string path, double[] candidates)
-        => JsonStringSource.Assert(json, root => HasJsonValueOneOf(root, path, candidates));
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        return JsonStringSource.Assert(json, root => HasJsonValueOneOf(root, path, candidates));
+    }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a JSON number equal to any of
     /// <paramref name="candidates"/>.</summary>
@@ -227,13 +237,14 @@ public static class JsonValueAssertions
     }
 
     /// <summary>Formats a one-of candidate list for failure messages: <c>{ "a", "b" }</c>
-    /// for strings and <c>{ 1, 2 }</c> for numerics.</summary>
+    /// for strings and <c>{ 1, 2 }</c> for numerics. Strings are JSON-escaped so a candidate
+    /// containing a quote, backslash, or control character renders unambiguously.</summary>
     private static string FormatOneOf(string[] candidates)
     {
         var parts = new string[candidates.Length];
         for (var i = 0; i < candidates.Length; i++)
         {
-            parts[i] = "\"" + candidates[i] + "\"";
+            parts[i] = "\"" + EscapeForFailureMessage(candidates[i]) + "\"";
         }
 
         return "one of { " + string.Join(", ", parts) + " }";
@@ -249,5 +260,58 @@ public static class JsonValueAssertions
         }
 
         return "one of { " + string.Join(", ", parts) + " }";
+    }
+
+    /// <summary>Escapes JSON-style structural characters (<c>"</c>, <c>\</c>) and ASCII
+    /// control characters in <paramref name="value"/> so a candidate containing them renders
+    /// unambiguously inside the quoted form of a failure message. AOT-safe (no reflection,
+    /// no <see cref="JsonSerializer"/> dependency).</summary>
+    private static string EscapeForFailureMessage(string value)
+    {
+        var sb = new StringBuilder(value.Length);
+        foreach (var ch in value)
+        {
+            switch (ch)
+            {
+                case '\\':
+                    sb.Append("\\\\");
+                    break;
+                case '"':
+                    sb.Append("\\\"");
+                    break;
+                case '\b':
+                    sb.Append("\\b");
+                    break;
+                case '\f':
+                    sb.Append("\\f");
+                    break;
+                case '\n':
+                    sb.Append("\\n");
+                    break;
+                case '\r':
+                    sb.Append("\\r");
+                    break;
+                case '\t':
+                    sb.Append("\\t");
+                    break;
+                default:
+                    if (ch < ' ')
+                    {
+                        // char-to-int via the implicit char->ushort->int widening avoids the
+                        // explicit-cast lint while preserving the numeric value for the
+                        // \u%04x escape format used by JSON.
+                        var codePoint = Convert.ToInt32(ch);
+                        sb.Append("\\u").Append(codePoint.ToString("x4", CultureInfo.InvariantCulture));
+                    }
+                    else
+                    {
+                        sb.Append(ch);
+                    }
+
+                    break;
+            }
+        }
+
+        return sb.ToString();
     }
 }

@@ -33,7 +33,7 @@ public static class JsonShape
     /// length. A non-string kind returns <see langword="false"/>; an empty JSON string
     /// (<c>""</c>) returns <see langword="false"/>.</summary>
     public static bool IsNonEmptyString(JsonElement element)
-        => element.ValueKind is JsonValueKind.String && (element.GetString()?.Length ?? 0) > 0;
+        => element.ValueKind is JsonValueKind.String && element.GetString()!.Length > 0;
 
     /// <summary>Reports whether <paramref name="element"/> is a JSON boolean of either value.
     /// JSON's <see langword="true"/> and <see langword="false"/> are distinct

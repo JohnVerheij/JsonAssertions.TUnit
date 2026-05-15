@@ -119,4 +119,43 @@ internal sealed class JsonFailureMessageRenderingTests
 
         await Assert.That(ex!.Message).Contains("...");
     }
+
+    [Test]
+    public async Task HasJsonProperty_IndexOutOfRangeOnArray_RendersNoElementAtIndex(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"items":[1,2]}""").HasJsonProperty("items[5]");
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("resolved as far as: items");
+        await Assert.That(ex.Message).Contains("no element at index [5] on \"items\"");
+    }
+
+    [Test]
+    public async Task HasJsonProperty_IndexOnNonArray_RendersCannotIndex(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"user":{"name":"a"}}""").HasJsonProperty("user[0]");
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("cannot index [0]");
+        await Assert.That(ex.Message).Contains("\"user\" is an Object, not an array");
+    }
+
+    [Test]
+    public async Task HasJsonProperty_IndexOutOfRangeAtRoot_RendersRootInLocation(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""[1,2,3]""").HasJsonProperty("[5]");
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("resolved as far as: (root)");
+        await Assert.That(ex.Message).Contains("no element at index [5] on the root");
+    }
 }

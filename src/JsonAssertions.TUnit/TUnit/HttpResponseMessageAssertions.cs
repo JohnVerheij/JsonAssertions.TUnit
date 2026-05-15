@@ -201,6 +201,7 @@ public static class HttpResponseMessageAssertions
         this HttpResponseMessage response, string path, Func<JsonElement, bool> predicate, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(predicate);
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueMatching(root, path, predicate), cancellationToken);
     }
 
@@ -216,6 +217,7 @@ public static class HttpResponseMessageAssertions
         this HttpResponseMessage response, string path, string[] candidates, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(candidates);
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueOneOf(root, path, candidates), cancellationToken);
     }
 
@@ -231,6 +233,7 @@ public static class HttpResponseMessageAssertions
         this HttpResponseMessage response, string path, double[] candidates, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(candidates);
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueOneOf(root, path, candidates), cancellationToken);
     }
 

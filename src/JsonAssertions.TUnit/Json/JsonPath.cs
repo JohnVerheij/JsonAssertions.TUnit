@@ -125,6 +125,18 @@ public static class JsonPath
 
         current = GetArrayElement(current, index);
         prefix.Append(failedSegment);
+
+        // After ']', the only valid continuations are '.', '[', or end-of-path. A bare
+        // property name (e.g. 'items[0]name') is rejected as a malformed path rather than
+        // silently parsed as another property, so a missing '.' surfaces as an argument
+        // error at the call site instead of a silent miss.
+        if (i < path.Length && path[i] is not '.' and not '[')
+        {
+            throw new ArgumentException(
+                "Path segment after ']' must be '.', '[', or end-of-path; a property name following an index requires a dot separator (use 'items[0].name', not 'items[0]name').",
+                nameof(path));
+        }
+
         return null;
     }
 
