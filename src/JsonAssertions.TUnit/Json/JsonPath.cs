@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -253,21 +254,8 @@ public static class JsonPath
 
     /// <summary>Returns the array element at <paramref name="index"/> from
     /// <paramref name="array"/>. <see cref="JsonElement"/> has no random-access indexer, so
-    /// this walks the array enumerator; callers must have already checked bounds.</summary>
+    /// this delegates to <see cref="Enumerable.ElementAt{TSource}(System.Collections.Generic.IEnumerable{TSource}, int)"/>;
+    /// callers must have already checked bounds.</summary>
     private static JsonElement GetArrayElement(JsonElement array, int index)
-    {
-        var i = 0;
-        foreach (var item in array.EnumerateArray())
-        {
-            if (i == index)
-            {
-                return item;
-            }
-
-            i++;
-        }
-
-        // Unreachable: bounds checked at call site.
-        return default;
-    }
+        => array.EnumerateArray().ElementAt(index);
 }
