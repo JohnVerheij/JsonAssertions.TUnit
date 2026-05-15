@@ -9,12 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Per-version release notes on nuget.org.** A new `Directory.Build.targets` at the repo root auto-extracts the matching `## [<Version>]` section from `CHANGELOG.md` at pack time and feeds it into `<PackageReleaseNotes>`. The Release Notes tab on the nuget.org package page now shows the per-version body verbatim rather than a literal placeholder. The extracted body is prefixed with a `View the rendered release notes: <url>` line pointing at the matching GitHub Release, because nuget.org renders the tab as plaintext with preserved line breaks rather than rendered markdown ([NuGet/NuGetGallery#8889](https://github.com/NuGet/NuGetGallery/issues/8889) is the open feature request); the prepended URL gives consumers a one-click route to the rendered-markdown version on GitHub. The change applies to releases from this version onward (nupkgs already on nuget.org are immutable).
+- **`Directory.Build.targets` auto-extracts the per-version section from `CHANGELOG.md` at pack time** and feeds it into `<PackageReleaseNotes>`, so the Release Notes tab on the nuget.org package page shows the per-version body verbatim rather than a literal placeholder. Affects releases from this version onward; nupkgs already on nuget.org are immutable.
+- **Prepended `View the rendered release notes: <url>` line** on the extracted body, pointing at the matching GitHub Release. nuget.org renders the Release Notes tab as plaintext with preserved line breaks rather than rendered markdown ([NuGet/NuGetGallery#8889](https://github.com/NuGet/NuGetGallery/issues/8889) is the open feature request); the prepended URL gives consumers a one-click route to the rendered-markdown version on GitHub.
 
 ### Changed
 
-- **`<PackageReleaseNotes>` fallback.** The csproj fallback used when no matching CHANGELOG section is found is now `$(RepositoryUrl)/releases/tag/v$(Version)` rather than the literal text "See CHANGELOG.md". The URL is auto-linked by nuget.org, so the no-match case still gives consumers a one-click route to the matching GitHub Release notes.
-- **`CONVENTIONS.md` updated to v0.5.** Adds a **CHANGELOG conventions** section (Keep a Changelog 1.1.0 standard headers, user-facing-only content, header order, stylistic rules) and a **`PackageReleaseNotes` auto-extract** convention. Supersedes the v0.4 bump that added `JsonAssertions.TUnit` to the family roster; the v0.5 file remains copied identically across all five family repos.
+- **`<PackageReleaseNotes>` fallback** in `JsonAssertions.TUnit.csproj` is now `$(RepositoryUrl)/releases/tag/v$(Version)` rather than the literal text "See CHANGELOG.md". The URL is auto-linked by nuget.org, so the no-match case still gives consumers a one-click route to the matching GitHub Release notes.
+- **`CONVENTIONS.md` updated to v0.5.** Adds a `CHANGELOG conventions` section (Keep a Changelog 1.1.0 standard headers, user-facing-only content, header order, stylistic rules) and a `PackageReleaseNotes` auto-extract convention. Supersedes the v0.4 bump that added `JsonAssertions.TUnit` to the family roster; the v0.5 file remains copied identically across all five family repos.
 
 ## [0.1.0] - 2026-05-14: Value-at-path and shape assertions, an HTTP entry point, and path-context diagnostics
 

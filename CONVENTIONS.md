@@ -247,8 +247,9 @@ is preserved.
 
 The prepended URL exists because nuget.org renders the Release Notes tab as plaintext-with-line-breaks
 rather than rendered markdown ([NuGet/NuGetGallery#8889](https://github.com/NuGet/NuGetGallery/issues/8889)
-is the open feature request, no progress as of 2026-05). The prepended URL gives consumers a
-one-click route to the rendered-markdown version of the same notes on GitHub.
+is the open feature request; the linked issue is the source of truth for current status). The
+prepended URL gives consumers a one-click route to the rendered-markdown version of the same
+notes on GitHub.
 
 Every csproj's `<PackageReleaseNotes>` carries this fallback for the no-match case:
 
