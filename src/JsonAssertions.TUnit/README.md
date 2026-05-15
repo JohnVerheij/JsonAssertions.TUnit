@@ -11,18 +11,25 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 > **Full documentation, design notes, and roadmap:** [github.com/JohnVerheij/JsonAssertions.TUnit](https://github.com/JohnVerheij/JsonAssertions.TUnit)
 
-## Status: v0.1.0
+## Status: v0.2.0
 
 Each entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document).
 
 | Entry point | Behaviour |
 |---|---|
-| `HasJsonProperty(path)` | Asserts a property exists at the dot-separated `path`. |
-| `DoesNotHaveJsonProperty(path)` | Asserts no property exists at the dot-separated `path`. |
+| `HasJsonProperty(path)` | Asserts a property exists at the path. |
+| `DoesNotHaveJsonProperty(path)` | Asserts no property exists at the path. |
 | `HasJsonValue(path, expected)` | Asserts the value at `path` equals `expected` (a `string`, `bool`, or number). |
+| `HasJsonValueOneOf(path, T[])` | Asserts the value at `path` is one of the given strings or numbers. |
+| `HasJsonValueMatching(path, predicate)` | Asserts the value at `path` satisfies `Func<JsonElement, bool>`. |
+| `HasJsonValueParsableAs<T>(path)` | Asserts the value at `path` is a JSON string parseable as `T` (where `T : IParsable<T>`). |
+| `HasJsonValueKind(path, kind)` | Asserts the value at `path` is of the given `JsonValueKind`. |
+| `HasJsonBoolean(path)` | Asserts the value at `path` is a JSON boolean (`true` or `false`). |
+| `HasNonEmptyJsonString(path)` | Asserts the value at `path` is a non-empty JSON string. |
 | `HasJsonArrayLength(path, length)` | Asserts the value at `path` is a JSON array of the given length. |
 | `HasNonEmptyJsonArray(path)` / `HasEmptyJsonArray(path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
-| `HasJsonValueKind(path, kind)` | Asserts the value at `path` is of the given `JsonValueKind`. |
+
+The path is a dot-separated property navigation with optional `[N]` zero-based bracket indices and an optional leading `$` JSONPath root reference: `user.name`, `items[0].id`, `objects[0].planData[1].pickPlanId`, `$[0]` for a root-array first element. See [the path-syntax notes on GitHub](https://github.com/JohnVerheij/JsonAssertions.TUnit#path-syntax) for the full grammar.
 
 The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
 
