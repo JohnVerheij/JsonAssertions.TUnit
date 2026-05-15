@@ -109,7 +109,9 @@ internal static class JsonFailureMessage
     }
 
     /// <summary>Appends the two-line "resolved as far as / reason" block for a failed
-    /// resolution.</summary>
+    /// resolution. The reason line distinguishes four failure modes: a missing property on an
+    /// object, a property-access on a non-object, an out-of-range index on an array, and an
+    /// index-access on a non-array.</summary>
     private static void AppendFailurePoint(StringBuilder sb, JsonPathResolution resolution)
     {
         var prefix = resolution.ResolvedPrefix.Length is 0 ? "(root)" : resolution.ResolvedPrefix;
@@ -119,14 +121,36 @@ internal static class JsonFailureMessage
             ? "the root"
             : "\"" + resolution.ResolvedPrefix + "\"";
 
+        // FailedSegment is non-null on failed resolutions, which is the only path that
+        // reaches AppendFailurePoint (the Found=true branches short-circuit before this call).
+        var failedSegment = resolution.FailedSegment!;
+        var isIndex = failedSegment.StartsWith('[') && failedSegment.EndsWith(']');
+
+        if (isIndex)
+        {
+            if (resolution.ContainerKind is JsonValueKind.Array)
+            {
+                sb.Append("  no element at index ").Append(failedSegment)
+                    .Append(" on ").Append(location).Append('\n');
+            }
+            else
+            {
+                sb.Append("  cannot index ").Append(failedSegment)
+                    .Append(": ").Append(location).Append(" is ")
+                    .Append(DescribeKind(resolution.ContainerKind)).Append(", not an array").Append('\n');
+            }
+
+            return;
+        }
+
         if (resolution.ContainerKind is JsonValueKind.Object)
         {
-            sb.Append("  no property \"").Append(resolution.FailedSegment)
+            sb.Append("  no property \"").Append(failedSegment)
                 .Append("\" on ").Append(location).Append('\n');
         }
         else
         {
-            sb.Append("  cannot read property \"").Append(resolution.FailedSegment)
+            sb.Append("  cannot read property \"").Append(failedSegment)
                 .Append("\": ").Append(location).Append(" is ")
                 .Append(DescribeKind(resolution.ContainerKind)).Append(", not an object").Append('\n');
         }
@@ -138,7 +162,7 @@ internal static class JsonFailureMessage
     {
         JsonValueKind.Object => "an object",
         JsonValueKind.Array => "an array",
-        JsonValueKind.String => "\"" + Truncate(element.GetString() ?? string.Empty) + "\"",
+        JsonValueKind.String => "\"" + Truncate(element.GetString()!) + "\"",
         JsonValueKind.Number => element.GetRawText(),
         JsonValueKind.True => "true",
         JsonValueKind.False => "false",

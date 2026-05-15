@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 
 namespace JsonAssertions;
@@ -38,4 +39,34 @@ public static class JsonValueComparison
         => element.ValueKind is JsonValueKind.Number
             && element.TryGetDouble(out var actual)
             && actual.Equals(expected);
+
+    /// <summary>Reports whether <paramref name="element"/> is a JSON string equal (ordinal)
+    /// to any of <paramref name="candidates"/>. <see langword="false"/> when the element is
+    /// not a JSON string, or when none of the candidates matches.</summary>
+    public static bool MatchesAny(JsonElement element, params string[] candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        if (element.ValueKind is not JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var captured = element;
+        return Array.Exists(candidates, c => captured.ValueEquals(c));
+    }
+
+    /// <summary>Reports whether <paramref name="element"/> is a JSON number equal to any of
+    /// <paramref name="candidates"/>. Element values beyond <see cref="double"/> precision are
+    /// out of scope for this overload.</summary>
+    public static bool MatchesAny(JsonElement element, params double[] candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        if (element.ValueKind is not JsonValueKind.Number || !element.TryGetDouble(out var actual))
+        {
+            return false;
+        }
+
+        var capturedActual = actual;
+        return Array.Exists(candidates, c => c.Equals(capturedActual));
+    }
 }

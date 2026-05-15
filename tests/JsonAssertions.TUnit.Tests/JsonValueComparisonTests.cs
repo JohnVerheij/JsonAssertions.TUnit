@@ -84,4 +84,62 @@ internal sealed class JsonValueComparisonTests
         ct.ThrowIfCancellationRequested();
         await Assert.That(JsonValueComparison.Matches(Parse("""{"v":"30"}""", "v"), 30d)).IsFalse();
     }
+
+    [Test]
+    public async Task MatchesAny_String_OneCandidateMatches_ReturnsTrue(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonValueComparison.MatchesAny(Parse("""{"v":"b"}""", "v"), "a", "b", "c")).IsTrue();
+    }
+
+    [Test]
+    public async Task MatchesAny_String_NoMatch_ReturnsFalse(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonValueComparison.MatchesAny(Parse("""{"v":"z"}""", "v"), "a", "b", "c")).IsFalse();
+    }
+
+    [Test]
+    public async Task MatchesAny_String_KindMismatch_ReturnsFalse(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonValueComparison.MatchesAny(Parse("""{"v":42}""", "v"), "42")).IsFalse();
+    }
+
+    [Test]
+    public async Task MatchesAny_String_NullCandidates_Throws(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var element = Parse("""{"v":"a"}""", "v");
+        await Assert.That(() => JsonValueComparison.MatchesAny(element, (string[])null!)).Throws<System.ArgumentNullException>();
+    }
+
+    [Test]
+    public async Task MatchesAny_Number_OneCandidateMatches_ReturnsTrue(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonValueComparison.MatchesAny(Parse("""{"v":503}""", "v"), 200d, 503d)).IsTrue();
+    }
+
+    [Test]
+    public async Task MatchesAny_Number_NoMatch_ReturnsFalse(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonValueComparison.MatchesAny(Parse("""{"v":418}""", "v"), 200d, 503d)).IsFalse();
+    }
+
+    [Test]
+    public async Task MatchesAny_Number_KindMismatch_ReturnsFalse(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonValueComparison.MatchesAny(Parse("""{"v":"503"}""", "v"), 503d)).IsFalse();
+    }
+
+    [Test]
+    public async Task MatchesAny_Number_NullCandidates_Throws(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var element = Parse("""{"v":1}""", "v");
+        await Assert.That(() => JsonValueComparison.MatchesAny(element, (double[])null!)).Throws<System.ArgumentNullException>();
+    }
 }

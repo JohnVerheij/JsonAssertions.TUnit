@@ -96,4 +96,46 @@ internal sealed class JsonShapeTests
         ct.ThrowIfCancellationRequested();
         await Assert.That(JsonShape.IsEmptyArray(Parse("""{"v":{}}""", "v"))).IsFalse();
     }
+
+    [Test]
+    public async Task IsNonEmptyString_NonEmpty_ReturnsTrue(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonShape.IsNonEmptyString(Parse("""{"v":"alice"}""", "v"))).IsTrue();
+    }
+
+    [Test]
+    public async Task IsNonEmptyString_Empty_ReturnsFalse(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonShape.IsNonEmptyString(Parse("""{"v":""}""", "v"))).IsFalse();
+    }
+
+    [Test]
+    public async Task IsNonEmptyString_NotAString_ReturnsFalse(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonShape.IsNonEmptyString(Parse("""{"v":42}""", "v"))).IsFalse();
+    }
+
+    [Test]
+    public async Task IsBoolean_True_ReturnsTrue(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonShape.IsBoolean(Parse("""{"v":true}""", "v"))).IsTrue();
+    }
+
+    [Test]
+    public async Task IsBoolean_False_ReturnsTrue(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonShape.IsBoolean(Parse("""{"v":false}""", "v"))).IsTrue();
+    }
+
+    [Test]
+    public async Task IsBoolean_NotABoolean_ReturnsFalse(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(JsonShape.IsBoolean(Parse("""{"v":42}""", "v"))).IsFalse();
+    }
 }

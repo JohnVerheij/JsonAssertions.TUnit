@@ -139,4 +139,50 @@ internal sealed class JsonShapeAssertionsTests
         await Assert.That(ex!.Message).Contains("to have a JSON value of kind Array at path \"name\"");
         await Assert.That(ex.Message).Contains("found: a String");
     }
+
+    [Test]
+    public async Task HasNonEmptyJsonString_NonEmptyString_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(SampleJson).HasNonEmptyJsonString("name");
+    }
+
+    [Test]
+    public async Task HasNonEmptyJsonString_EmptyString_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"name":""}""").HasNonEmptyJsonString("name");
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have a non-empty JSON string at path \"name\"");
+    }
+
+    [Test]
+    public async Task HasJsonBoolean_True_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"active":true}""").HasJsonBoolean("active");
+    }
+
+    [Test]
+    public async Task HasJsonBoolean_False_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"active":false}""").HasJsonBoolean("active");
+    }
+
+    [Test]
+    public async Task HasJsonBoolean_NonBoolean_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(SampleJson).HasJsonBoolean("name");
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have a JSON boolean at path \"name\"");
+        await Assert.That(ex.Message).Contains("found: a String");
+    }
 }

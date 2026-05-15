@@ -28,4 +28,17 @@ public static class JsonShape
     /// elements.</summary>
     public static bool IsEmptyArray(JsonElement element)
         => element.ValueKind is JsonValueKind.Array && element.GetArrayLength() is 0;
+
+    /// <summary>Reports whether <paramref name="element"/> is a JSON string with a non-zero
+    /// length. A non-string kind returns <see langword="false"/>; an empty JSON string
+    /// (<c>""</c>) returns <see langword="false"/>.</summary>
+    public static bool IsNonEmptyString(JsonElement element)
+        => element.ValueKind is JsonValueKind.String && element.GetString()!.Length > 0;
+
+    /// <summary>Reports whether <paramref name="element"/> is a JSON boolean of either value.
+    /// JSON's <see langword="true"/> and <see langword="false"/> are distinct
+    /// <see cref="JsonValueKind"/>s, so a "this field is a bool, either value" assertion
+    /// cannot be expressed via <see cref="IsKind"/> alone.</summary>
+    public static bool IsBoolean(JsonElement element)
+        => element.ValueKind is JsonValueKind.True or JsonValueKind.False;
 }
