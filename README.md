@@ -14,18 +14,23 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 ---
 
-## Status: v0.1.0
+## Status: v0.2.0
 
-Property existence, value-at-path, and shape assertions. Each fluent entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document):
+Property existence, value-at-path, value-predicate, value-one-of, value-parsable-as-`T`, and shape (kind / array-length / non-empty / boolean / non-empty-string) assertions. Each fluent entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document):
 
 | Entry point | Behaviour |
 |---|---|
-| `HasJsonProperty(string path)` | Asserts a property exists at the dot-separated `path`. |
-| `DoesNotHaveJsonProperty(string path)` | Asserts no property exists at the dot-separated `path`. |
+| `HasJsonProperty(string path)` | Asserts a property exists at the path. |
+| `DoesNotHaveJsonProperty(string path)` | Asserts no property exists at the path. |
 | `HasJsonValue(string path, string\|bool\|number expected)` | Asserts the value at `path` equals `expected`. |
+| `HasJsonValueOneOf(string path, string[]\|double[] candidates)` | Asserts the value at `path` is one of the given strings or numbers. |
+| `HasJsonValueMatching(string path, Func<JsonElement, bool> predicate)` | Asserts the value at `path` satisfies the predicate. |
+| `HasJsonValueParsableAs<T>(string path)` *where T : IParsable&lt;T&gt;* | Asserts the value at `path` is a JSON string parseable as `T` (covers `Guid`, `DateTimeOffset`, `Uri`, ...). |
+| `HasJsonValueKind(string path, JsonValueKind kind)` | Asserts the value at `path` is of the given kind. |
+| `HasJsonBoolean(string path)` | Asserts the value at `path` is a JSON boolean (either `true` or `false`). |
+| `HasNonEmptyJsonString(string path)` | Asserts the value at `path` is a non-empty JSON string. |
 | `HasJsonArrayLength(string path, int length)` | Asserts the value at `path` is a JSON array of the given length. |
 | `HasNonEmptyJsonArray(string path)` / `HasEmptyJsonArray(string path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
-| `HasJsonValueKind(string path, JsonValueKind kind)` | Asserts the value at `path` is of the given kind. |
 
 The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
 
@@ -47,12 +52,15 @@ using System.Text.Json;
 [Test]
 public async Task ResponseBodyHasExpectedShape(CancellationToken ct)
 {
-    string json = """{"user":{"name":"alice","age":30,"active":true}}""";
+    string json = """{"user":{"name":"alice","age":30,"active":true,"id":"550e8400-e29b-41d4-a716-446655440000"},"items":[{"name":"x"}],"status":"Healthy"}""";
 
     await Assert.That(json).HasJsonProperty("user.name");
     await Assert.That(json).DoesNotHaveJsonProperty("user.email");
     await Assert.That(json).HasJsonValue("user.age", 30);
     await Assert.That(json).HasJsonValue("user.active", true);
+    await Assert.That(json).HasJsonProperty("items[0].name");
+    await Assert.That(json).HasJsonValueOneOf("status", ["Healthy", "Degraded", "Unhealthy"]);
+    await Assert.That(json).HasJsonValueParsableAs<Guid>("user.id");
 }
 ```
 
@@ -81,14 +89,15 @@ to have a JSON property at path "user.address.city"
 
 ## Path syntax
 
-A path is a dot-separated sequence of property names, navigated from the asserted element (or, for the `string` overload, from the parsed document's root):
+A path is a sequence of dot-separated property names and zero-based bracket indices, navigated from the asserted element (or, for the `string` overload, from the parsed document's root):
 
 - `user.address.city` resolves `user`, then `address`, then `city`.
-- A leading `$.` JSONPath-style root prefix is accepted and ignored, so `$.user.name` and `user.name` resolve identically.
-- A path that traverses a non-object value (for example `user.name` when `user` is a string) resolves to "not found" rather than throwing.
-- An empty path, a whitespace path, or a path with an empty segment (a leading, trailing, or doubled dot) throws `ArgumentException`.
+- `items[0].name` resolves the first element of `items`, then `name` on it. Indices are zero-based, non-negative integers. Property and index segments compose freely (`objects[0].planData[1].pickPlanId`).
+- `$` is the JSONPath root reference: `$` alone resolves to the asserted element itself; `$.user.name` is equivalent to `user.name`; `$[0]` (and bare `[0]`) is equivalent against a root array.
+- A path that traverses a non-object value where a property is expected (or a non-array where an index is expected) resolves to "not found" rather than throwing; the failure message names which segment blocked the resolution.
+- An empty path, a whitespace path, an empty / non-numeric / negative bracket index, an unclosed `[`, a property name directly after `]` without a `.` separator, or a doubled or leading / trailing dot throws `ArgumentException`.
 
-Array indexing and wildcard segments are not part of the 0.1.0 surface; see the roadmap below.
+Wildcard segments (e.g. `[*]`) are not part of the 0.2.0 surface; see the roadmap below.
 
 ## Two namespaces
 
@@ -115,7 +124,7 @@ The package is a deliberate showcase of modern .NET conventions:
 This is a 0.x release and the public API may evolve.
 
 - **Additive changes** (new entry points, new input overloads) ship in any patch without breaking ApiCompat.
-- **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md). The 0.0.1 -> 0.1.0 step evolved the `[GenerateAssertion]` source-method return types from `bool` to `AssertionResult` to enable the path-context failure messages; the generated TUnit chain extensions were unaffected at chain-syntax level.
+- **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md). The 0.0.1 -> 0.1.0 step evolved the `[GenerateAssertion]` source-method return types from `bool` to `AssertionResult` to enable the path-context failure messages; the generated TUnit chain extensions were unaffected at chain-syntax level. The 0.1.0 -> 0.2.0 step was purely additive (new segment forms in the existing path grammar, plus the five new entry points listed above).
 - `PackageValidationBaselineVersion` pins to the previous shipped version so ApiCompat breakage is caught at pack time; `CompatibilitySuppressions.xml` records accepted differences.
 - Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
 The 1.0 milestone signals API stability.
@@ -124,10 +133,8 @@ The 1.0 milestone signals API stability.
 
 The next increments, each as a reviewed pull request:
 
-- Deserialise-then-predicate assertions.
-- Semantic JSON equality and subset / fragment matching.
-
-Array indexing and wildcard path segments are candidate work for a later release.
+- Semantic JSON equality and subset / fragment matching (`IsEquivalentJsonTo`, `ContainsJson`).
+- Wildcard path segments (`items[*]` and similar) when consumer evidence accumulates.
 
 ### Out of scope
 
