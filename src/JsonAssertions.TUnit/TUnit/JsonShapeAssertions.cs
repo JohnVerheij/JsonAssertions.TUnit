@@ -111,4 +111,51 @@ public static class JsonShapeAssertions
             : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(
                 path, resolution, "a JSON value of kind " + expectedKind));
     }
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a non-empty JSON string.</summary>
+    /// <param name="json">The JSON document text.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.name</c>.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasNonEmptyJsonString(this string json, string path)
+        => JsonStringSource.Assert(json, root => HasNonEmptyJsonString(root, path));
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a non-empty JSON string.</summary>
+    /// <param name="element">The JSON element to navigate from.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.name</c>.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasNonEmptyJsonString(this JsonElement element, string path)
+    {
+        var resolution = JsonPath.Resolve(element, path);
+        return resolution.Found && JsonShape.IsNonEmptyString(resolution.Element)
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(path, resolution, "a non-empty JSON string"));
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a JSON boolean (either
+    /// <see langword="true"/> or <see langword="false"/>). JSON's <see langword="true"/> and
+    /// <see langword="false"/> are distinct <see cref="JsonValueKind"/>s, so this is the
+    /// discoverable form of "this field is a boolean, either value" that
+    /// <c>HasJsonValueKind</c> alone cannot express.</summary>
+    /// <param name="json">The JSON document text.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.active</c>.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonBoolean(this string json, string path)
+        => JsonStringSource.Assert(json, root => HasJsonBoolean(root, path));
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a JSON boolean (either
+    /// <see langword="true"/> or <see langword="false"/>).</summary>
+    /// <param name="element">The JSON element to navigate from.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.active</c>.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonBoolean(this JsonElement element, string path)
+    {
+        var resolution = JsonPath.Resolve(element, path);
+        return resolution.Found && JsonShape.IsBoolean(resolution.Element)
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(path, resolution, "a JSON boolean"));
+    }
 }
