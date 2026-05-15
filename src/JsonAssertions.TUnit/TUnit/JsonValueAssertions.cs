@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 using JsonAssertions;
@@ -23,6 +25,10 @@ namespace JsonAssertions.TUnit;
 /// <em>within</em> the document's lifetime, because a <see cref="JsonElement"/> is only valid
 /// while its backing document is alive.
 /// </remarks>
+[SuppressMessage(
+    "Performance",
+    "MA0109:Consider adding an overload with a Span<T> or Memory<T>",
+    Justification = "The one-of overloads take T[] so callers can use a C# 12 collection expression literal (HasJsonValueOneOf(\"status\", [\"Healthy\", \"Degraded\"])); a ReadOnlySpan<T> overload cannot be expressed under TUnit's [GenerateAssertion] source generator (ref struct parameters are unsupported), and assertion call sites do not need the allocation profile a Span overload would provide.")]
 public static class JsonValueAssertions
 {
     /// <summary>Asserts the JSON string has the string value <paramref name="expected"/> at
@@ -97,5 +103,151 @@ public static class JsonValueAssertions
             ? AssertionResult.Passed
             : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(
                 path, resolution, expected.ToString(CultureInfo.InvariantCulture)));
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> satisfies the
+    /// <paramref name="predicate"/>. The predicate sees the resolved
+    /// <see cref="JsonElement"/> and decides pass/fail; failure messages do not surface the
+    /// predicate's intent (use a descriptive call site or wrap the assertion in
+    /// <c>.Because(...)</c>).</summary>
+    /// <param name="json">The JSON document text.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.age</c>.</param>
+    /// <param name="predicate">A predicate that returns <see langword="true"/> for matching
+    /// elements; receives the element resolved at <paramref name="path"/>.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonValueMatching(this string json, string path, Func<JsonElement, bool> predicate)
+        => JsonStringSource.Assert(json, root => HasJsonValueMatching(root, path, predicate));
+
+    /// <summary>Asserts the value at <paramref name="path"/> satisfies
+    /// <paramref name="predicate"/>.</summary>
+    /// <param name="element">The JSON element to navigate from.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.age</c>.</param>
+    /// <param name="predicate">A predicate that returns <see langword="true"/> for matching
+    /// elements.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonValueMatching(this JsonElement element, string path, Func<JsonElement, bool> predicate)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        var resolution = JsonPath.Resolve(element, path);
+        return resolution.Found && predicate(resolution.Element)
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, "a value matching the predicate"));
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a JSON string equal to any of
+    /// <paramref name="candidates"/>. The discoverable form of "value is one of {a, b, c}".</summary>
+    /// <param name="json">The JSON document text.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>health.status</c>.</param>
+    /// <param name="candidates">The acceptable string values; ordinal comparison.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonValueOneOf(this string json, string path, string[] candidates)
+        => JsonStringSource.Assert(json, root => HasJsonValueOneOf(root, path, candidates));
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a JSON string equal to any of
+    /// <paramref name="candidates"/>.</summary>
+    /// <param name="element">The JSON element to navigate from.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>health.status</c>.</param>
+    /// <param name="candidates">The acceptable string values; ordinal comparison.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonValueOneOf(this JsonElement element, string path, string[] candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        var resolution = JsonPath.Resolve(element, path);
+        return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, FormatOneOf(candidates)));
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a JSON number equal to any of
+    /// <paramref name="candidates"/>. Values beyond <see cref="double"/> precision are out of
+    /// scope for this overload.</summary>
+    /// <param name="json">The JSON document text.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>response.code</c>.</param>
+    /// <param name="candidates">The acceptable numeric values.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonValueOneOf(this string json, string path, double[] candidates)
+        => JsonStringSource.Assert(json, root => HasJsonValueOneOf(root, path, candidates));
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a JSON number equal to any of
+    /// <paramref name="candidates"/>.</summary>
+    /// <param name="element">The JSON element to navigate from.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>response.code</c>.</param>
+    /// <param name="candidates">The acceptable numeric values.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonValueOneOf(this JsonElement element, string path, double[] candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        var resolution = JsonPath.Resolve(element, path);
+        return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, FormatOneOf(candidates)));
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a JSON string whose text
+    /// parses as <typeparamref name="T"/> via <see cref="IParsable{T}.TryParse(string, IFormatProvider, out T)"/>
+    /// against <see cref="CultureInfo.InvariantCulture"/>. Covers the "value parses as
+    /// <see cref="Guid"/> / <see cref="DateTimeOffset"/> / <see cref="Uri"/>" pattern without
+    /// committing to a particular parser per call site.</summary>
+    /// <typeparam name="T">The target type implementing <see cref="IParsable{T}"/>.</typeparam>
+    /// <param name="json">The JSON document text.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>order.id</c>.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonValueParsableAs<T>(this string json, string path)
+        where T : IParsable<T>
+        => JsonStringSource.Assert(json, root => HasJsonValueParsableAs<T>(root, path));
+
+    /// <summary>Asserts the value at <paramref name="path"/> is a JSON string whose text
+    /// parses as <typeparamref name="T"/>.</summary>
+    /// <typeparam name="T">The target type implementing <see cref="IParsable{T}"/>.</typeparam>
+    /// <param name="element">The JSON element to navigate from.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>order.id</c>.</param>
+    [GenerateAssertion]
+    public static AssertionResult HasJsonValueParsableAs<T>(this JsonElement element, string path)
+        where T : IParsable<T>
+    {
+        var resolution = JsonPath.Resolve(element, path);
+        var description = "a JSON string parseable as " + typeof(T).Name;
+        if (!resolution.Found || resolution.Element.ValueKind is not JsonValueKind.String)
+        {
+            return AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, description));
+        }
+
+        var raw = resolution.Element.GetString();
+        return raw is not null && T.TryParse(raw, CultureInfo.InvariantCulture, out _)
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, description));
+    }
+
+    /// <summary>Formats a one-of candidate list for failure messages: <c>{ "a", "b" }</c>
+    /// for strings and <c>{ 1, 2 }</c> for numerics.</summary>
+    private static string FormatOneOf(string[] candidates)
+    {
+        var parts = new string[candidates.Length];
+        for (var i = 0; i < candidates.Length; i++)
+        {
+            parts[i] = "\"" + candidates[i] + "\"";
+        }
+
+        return "one of { " + string.Join(", ", parts) + " }";
+    }
+
+    /// <summary>Formats a one-of candidate list of numerics.</summary>
+    private static string FormatOneOf(double[] candidates)
+    {
+        var parts = new string[candidates.Length];
+        for (var i = 0; i < candidates.Length; i++)
+        {
+            parts[i] = candidates[i].ToString(CultureInfo.InvariantCulture);
+        }
+
+        return "one of { " + string.Join(", ", parts) + " }";
     }
 }

@@ -32,6 +32,10 @@ namespace JsonAssertions.TUnit;
     "Usage",
     "VSTHRD200:Use \"Async\" suffix for async methods",
     Justification = "These are [GenerateAssertion] source methods: the method name becomes the fluent chain entry point (Assert.That(response).HasJsonProperty(...)), so an Async suffix would corrupt the assertion surface.")]
+[SuppressMessage(
+    "Performance",
+    "MA0109:Consider adding an overload with a Span<T> or Memory<T>",
+    Justification = "The one-of overloads take T[] so callers can use a C# 12 collection expression literal (HasJsonValueOneOf(\"status\", [\"Healthy\", \"Degraded\"])); a ReadOnlySpan<T> overload cannot be expressed under TUnit's [GenerateAssertion] source generator (ref struct parameters are unsupported), and assertion call sites do not need the allocation profile a Span overload would provide.")]
 public static class HttpResponseMessageAssertions
 {
     /// <summary>Asserts the response body has a JSON property at the dot-separated
@@ -154,6 +158,97 @@ public static class HttpResponseMessageAssertions
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonShapeAssertions.HasJsonValueKind(root, path, expectedKind), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is a
+    /// non-empty JSON string.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.name</c>.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasNonEmptyJsonString(
+        this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonShapeAssertions.HasNonEmptyJsonString(root, path), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is a JSON
+    /// boolean (either <see langword="true"/> or <see langword="false"/>).</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.active</c>.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonBoolean(
+        this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonShapeAssertions.HasJsonBoolean(root, path), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body satisfies
+    /// <paramref name="predicate"/>.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>user.age</c>.</param>
+    /// <param name="predicate">A predicate that returns <see langword="true"/> for matching
+    /// elements.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValueMatching(
+        this HttpResponseMessage response, string path, Func<JsonElement, bool> predicate, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueMatching(root, path, predicate), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is a JSON
+    /// string equal (ordinal) to any of <paramref name="candidates"/>.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>health.status</c>.</param>
+    /// <param name="candidates">The acceptable string values.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValueOneOf(
+        this HttpResponseMessage response, string path, string[] candidates, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueOneOf(root, path, candidates), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is a JSON
+    /// number equal to any of <paramref name="candidates"/>.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>response.code</c>.</param>
+    /// <param name="candidates">The acceptable numeric values.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValueOneOf(
+        this HttpResponseMessage response, string path, double[] candidates, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueOneOf(root, path, candidates), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is a JSON
+    /// string whose text parses as <typeparamref name="T"/> via
+    /// <see cref="IParsable{T}.TryParse(string, IFormatProvider, out T)"/>.</summary>
+    /// <typeparam name="T">The target type implementing <see cref="IParsable{T}"/>.</typeparam>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>order.id</c>.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValueParsableAs<T>(
+        this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
+        where T : IParsable<T>
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueParsableAs<T>(root, path), cancellationToken);
     }
 
     /// <summary>Reads the response body as text and runs <paramref name="assert"/> against the

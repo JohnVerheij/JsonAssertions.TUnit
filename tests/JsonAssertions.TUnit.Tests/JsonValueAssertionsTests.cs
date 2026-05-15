@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -166,5 +167,93 @@ internal sealed class JsonValueAssertionsTests
         }).Throws<AssertionException>();
 
         await Assert.That(ex!.Message).Contains("found: null");
+    }
+
+    [Test]
+    public async Task HasJsonValueMatching_PredicateSucceeds_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(SampleJson).HasJsonValueMatching("user.age", static e => e.GetInt32() >= 18);
+    }
+
+    [Test]
+    public async Task HasJsonValueMatching_PredicateFails_FailsWithExpectedDescription(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(SampleJson).HasJsonValueMatching("user.age", static e => e.GetInt32() < 18);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value a value matching the predicate at path \"user.age\"");
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_StringMatches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"status":"Degraded"}""")
+            .HasJsonValueOneOf("status", ["Healthy", "Degraded", "Unhealthy"]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_StringNotInCandidates_FailsShowingCandidatesAndFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"status":"Critical"}""")
+                .HasJsonValueOneOf("status", ["Healthy", "Degraded", "Unhealthy"]);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value one of { \"Healthy\", \"Degraded\", \"Unhealthy\" } at path \"status\"");
+        await Assert.That(ex.Message).Contains("found: \"Critical\"");
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_NumericMatches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"code":503}""").HasJsonValueOneOf("code", [200d, 503d, 504d]);
+    }
+
+    [Test]
+    public async Task HasJsonValueParsableAs_Guid_StringParses_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"id":"550e8400-e29b-41d4-a716-446655440000"}""")
+            .HasJsonValueParsableAs<Guid>("id");
+    }
+
+    [Test]
+    public async Task HasJsonValueParsableAs_DateTimeOffset_StringParses_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"at":"2026-05-15T08:30:00+02:00"}""").HasJsonValueParsableAs<DateTimeOffset>("at");
+    }
+
+    [Test]
+    public async Task HasJsonValueParsableAs_Guid_StringMalformed_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"id":"not-a-guid"}""").HasJsonValueParsableAs<Guid>("id");
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("a JSON string parseable as Guid");
+        await Assert.That(ex.Message).Contains("found: \"not-a-guid\"");
+    }
+
+    [Test]
+    public async Task HasJsonValueParsableAs_NonStringElement_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"id":42}""").HasJsonValueParsableAs<Guid>("id");
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("a JSON string parseable as Guid");
     }
 }

@@ -131,4 +131,136 @@ internal sealed class JsonPathTests
 
         await Assert.That(() => JsonPath.Resolve(root, "user..name")).Throws<ArgumentException>();
     }
+
+    [Test]
+    public async Task Resolve_ArrayIndex_FindsElement(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"items":[{"id":"a"},{"id":"b"}]}""");
+
+        var resolution = JsonPath.Resolve(document.RootElement, "items[1].id");
+
+        await Assert.That(resolution.Found).IsTrue();
+        await Assert.That(resolution.Element.GetString()).IsEqualTo("b");
+        await Assert.That(resolution.ResolvedPrefix).IsEqualTo("items[1].id");
+    }
+
+    [Test]
+    public async Task Resolve_NestedArrayIndices_FindsElement(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"matrix":[[1,2],[3,4]]}""");
+
+        var resolution = JsonPath.Resolve(document.RootElement, "matrix[1][0]");
+
+        await Assert.That(resolution.Found).IsTrue();
+        await Assert.That(resolution.Element.GetInt32()).IsEqualTo(3);
+        await Assert.That(resolution.ResolvedPrefix).IsEqualTo("matrix[1][0]");
+    }
+
+    [Test]
+    public async Task Resolve_ArrayIndexOutOfRange_ReportsArrayContainerKind(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"items":[{"id":"a"}]}""");
+
+        var resolution = JsonPath.Resolve(document.RootElement, "items[5]");
+
+        await Assert.That(resolution.Found).IsFalse();
+        await Assert.That(resolution.ResolvedPrefix).IsEqualTo("items");
+        await Assert.That(resolution.FailedSegment).IsEqualTo("[5]");
+        await Assert.That(resolution.ContainerKind).IsEqualTo(JsonValueKind.Array);
+    }
+
+    [Test]
+    public async Task Resolve_IndexOnNonArray_ReportsObjectContainerKind(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"user":{"name":"alice"}}""");
+
+        var resolution = JsonPath.Resolve(document.RootElement, "user[0]");
+
+        await Assert.That(resolution.Found).IsFalse();
+        await Assert.That(resolution.ResolvedPrefix).IsEqualTo("user");
+        await Assert.That(resolution.FailedSegment).IsEqualTo("[0]");
+        await Assert.That(resolution.ContainerKind).IsEqualTo(JsonValueKind.Object);
+    }
+
+    [Test]
+    public async Task Resolve_BareDollar_ResolvesToRootElement(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""[1,2,3]""");
+
+        var resolution = JsonPath.Resolve(document.RootElement, "$");
+
+        await Assert.That(resolution.Found).IsTrue();
+        await Assert.That(resolution.Element.ValueKind).IsEqualTo(JsonValueKind.Array);
+        await Assert.That(resolution.ResolvedPrefix).IsEqualTo(string.Empty);
+    }
+
+    [Test]
+    public async Task Resolve_DollarIndex_ResolvesAgainstRootArray(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""[{"id":"a"},{"id":"b"}]""");
+
+        var resolution = JsonPath.Resolve(document.RootElement, "$[1].id");
+
+        await Assert.That(resolution.Found).IsTrue();
+        await Assert.That(resolution.Element.GetString()).IsEqualTo("b");
+        await Assert.That(resolution.ResolvedPrefix).IsEqualTo("[1].id");
+    }
+
+    [Test]
+    public async Task Resolve_BareBracketIndex_ResolvesAgainstRootArray(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""[10,20,30]""");
+
+        var resolution = JsonPath.Resolve(document.RootElement, "[2]");
+
+        await Assert.That(resolution.Found).IsTrue();
+        await Assert.That(resolution.Element.GetInt32()).IsEqualTo(30);
+    }
+
+    [Test]
+    public async Task Resolve_UnclosedBracket_ThrowsArgumentException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"items":[]}""");
+        var root = document.RootElement;
+
+        await Assert.That(() => JsonPath.Resolve(root, "items[0")).Throws<ArgumentException>();
+    }
+
+    [Test]
+    public async Task Resolve_EmptyBracket_ThrowsArgumentException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"items":[]}""");
+        var root = document.RootElement;
+
+        await Assert.That(() => JsonPath.Resolve(root, "items[]")).Throws<ArgumentException>();
+    }
+
+    [Test]
+    public async Task Resolve_NonNumericIndex_ThrowsArgumentException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"items":[]}""");
+        var root = document.RootElement;
+
+        await Assert.That(() => JsonPath.Resolve(root, "items[x]")).Throws<ArgumentException>();
+    }
+
+    [Test]
+    public async Task Resolve_NegativeIndex_ThrowsArgumentException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"items":[]}""");
+        var root = document.RootElement;
+
+        await Assert.That(() => JsonPath.Resolve(root, "items[-1]")).Throws<ArgumentException>();
+    }
 }

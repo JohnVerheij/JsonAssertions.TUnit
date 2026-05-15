@@ -7,15 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-15: Array-indexed paths, root-self, boolean / non-empty-string / matching / one-of / parsable-as<T> assertions, plus the pack-time Release Notes pipeline
+
 ### Added
 
+- **Array-indexed path segments.** `JsonPath.Resolve(element, "items[0].name")` navigates `items` (object property) then index 0 (array element) then `name` (object property). Indices are zero-based, non-negative integers in `[N]` brackets. Mixed property + index segments compose freely (`objects[0].planData[1].pickPlanId`). Closes the #1 friction surfaced by the v0.1.0 adoption survey.
+- **`$` JSONPath root-self.** `JsonPath.Resolve(element, "$")` resolves to the supplied element itself. `$.user.name` is equivalent to `user.name`; `$[0]` is equivalent to `[0]`. A bare `[0]` against a root array also works without the `$` prefix. Closes the "no path to assert root-array shape" gap surfaced by the v0.1.0 adoption survey.
+- **`HasNonEmptyJsonString(path)`** on `string` and `JsonElement` (and `HttpResponseMessage` for the async HTTP entry point). Asserts the value at `path` is a JSON string of non-zero length. A non-string kind or an empty `""` string fails.
+- **`HasJsonBoolean(path)`** on `string`, `JsonElement`, and `HttpResponseMessage`. Asserts the value at `path` is a JSON boolean (either `true` or `false`). `JsonValueKind.True` and `.False` are distinct kinds, so this is the discoverable form of "this field is a bool, either value" that `HasJsonValueKind` alone cannot express.
+- **`HasJsonValueMatching(path, Func<JsonElement, bool> predicate)`** on `string`, `JsonElement`, and `HttpResponseMessage`. Asserts the value at `path` satisfies a consumer-supplied predicate. Covers the ~¼ of value assertions that are not exact-equality (numeric inequalities, complex shape checks).
+- **`HasJsonValueOneOf(path, string[])`** and **`HasJsonValueOneOf(path, double[])`** on `string`, `JsonElement`, and `HttpResponseMessage`. The discoverable form for "value is one of {Healthy, Degraded, Unhealthy}" or "code is one of {200, 503, 504}". Callers pass a C# 12 collection-expression literal: `HasJsonValueOneOf("status", ["Healthy", "Degraded"])`.
+- **`HasJsonValueParsableAs<T>(path) where T : IParsable<T>`** on `string`, `JsonElement`, and `HttpResponseMessage`. Asserts the value at `path` is a JSON string whose text parses as `T` via `T.TryParse(value, CultureInfo.InvariantCulture, out _)`. Covers the "value parses as `Guid` / `DateTimeOffset` / `Uri`" pattern without committing to a particular parser per call site.
+- **`JsonShape.IsNonEmptyString(JsonElement)`** and **`JsonShape.IsBoolean(JsonElement)`** framework-agnostic predicates in the `JsonAssertions` core, matching the family pattern (core predicate + TUnit-adapter assertion).
+- **`JsonValueComparison.MatchesAny(JsonElement, string[])`** and **`JsonValueComparison.MatchesAny(JsonElement, double[])`** framework-agnostic comparison primitives in the `JsonAssertions` core.
 - **`Directory.Build.targets` auto-extracts the per-version section from `CHANGELOG.md` at pack time** and feeds it into `<PackageReleaseNotes>`, so the Release Notes tab on the nuget.org package page shows the per-version body verbatim rather than a literal placeholder. Affects releases from this version onward; nupkgs already on nuget.org are immutable.
 - **Prepended `View the rendered release notes: <url>` line** on the extracted body, pointing at the matching GitHub Release. nuget.org renders the Release Notes tab as plaintext with preserved line breaks rather than rendered markdown ([NuGet/NuGetGallery#8889](https://github.com/NuGet/NuGetGallery/issues/8889) is the open feature request); the prepended URL gives consumers a one-click route to the rendered-markdown version on GitHub.
 
 ### Changed
 
+- **`JsonPath.Resolve` failure-point context for array failures.** An out-of-range index on an array, or an index access on a non-array, now surfaces in `FailedSegment` as `[N]` (matching the resolved-prefix syntax) and renders a tailored reason line in the failure message: `no element at index [N] on "items"` for an array out-of-range; `cannot index [N]: "user" is an Object, not an array` for an index access on a non-array.
 - **`<PackageReleaseNotes>` fallback** in `JsonAssertions.TUnit.csproj` is now `$(RepositoryUrl)/releases/tag/v$(Version)` rather than the literal text "See CHANGELOG.md". The URL is auto-linked by nuget.org, so the no-match case still gives consumers a one-click route to the matching GitHub Release notes.
 - **`CONVENTIONS.md` updated to v0.5.** Adds a `CHANGELOG conventions` section (Keep a Changelog 1.1.0 standard headers, user-facing-only content, header order, stylistic rules) and a `PackageReleaseNotes` auto-extract convention. Supersedes the v0.4 bump that added `JsonAssertions.TUnit` to the family roster; the v0.5 file remains copied identically across all five family repos.
+- **`CODE_OF_CONDUCT.md` upgraded to Contributor Covenant v3.0** from v2.1. The maintainer contact link is now the GitHub profile URL (https://github.com/JohnVerheij) rather than a private email address, since GitHub keeps the primary email private.
+- **`PackageValidationBaselineVersion` set to `0.1.0`.** ApiCompat now validates the additive v0.2.0 surface against the v0.1.0 baseline; `CompatibilitySuppressions.xml` is regenerated to capture the accepted additive differences from v0.1.0.
+- **Package description** revised to drop the v0.0.1 / v0.1.0 sequencing narrative and describe the current shipped surface verbatim.
 
 ## [0.1.0] - 2026-05-14: Value-at-path and shape assertions, an HTTP entry point, and path-context diagnostics
 
@@ -89,6 +104,7 @@ Semantic JSON equality and subset / fragment matching are candidate work for v0.
 - Source Link, deterministic builds, embedded PDB.
 - TUnit dependency pinned to **1.44.0**.
 
-[Unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.2.0
 [0.1.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.1.0
 [0.0.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.0.1
