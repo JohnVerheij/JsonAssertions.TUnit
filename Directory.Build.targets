@@ -23,6 +23,7 @@
     <ParameterGroup>
       <ChangelogPath ParameterType="System.String" Required="true" />
       <Version       ParameterType="System.String" Required="true" />
+      <RepositoryUrl ParameterType="System.String" Required="false" />
       <Notes         ParameterType="System.String" Output="true" />
       <Found         ParameterType="System.Boolean" Output="true" />
     </ParameterGroup>
@@ -45,7 +46,19 @@
         {
             return true;
         }
-        Notes = match.Groups["body"].Value.Trim('\r', '\n', ' ', '\t');
+        var body = match.Groups["body"].Value.Trim('\r', '\n', ' ', '\t');
+        if (!string.IsNullOrEmpty(RepositoryUrl))
+        {
+            // nuget.org renders the Release Notes tab as plaintext-with-line-breaks rather
+            // than rendered markdown (NuGet/NuGetGallery#8889 is the open feature request).
+            // Prepending the matching GitHub Release URL gives consumers a one-click route to
+            // the rendered-markdown version while keeping the extracted body inline below.
+            Notes = "View the rendered release notes: " + RepositoryUrl + "/releases/tag/v" + Version + "\n\n" + body;
+        }
+        else
+        {
+            Notes = body;
+        }
         Found = true;
         return true;
       ]]></Code>
@@ -55,7 +68,9 @@
   <Target Name="SetPackageReleaseNotesFromChangelog"
           BeforeTargets="GenerateNuspec"
           Condition="'$(IsPackable)' == 'true' AND '$(Version)' != '' AND Exists('$(MSBuildThisFileDirectory)CHANGELOG.md')">
-    <ExtractChangelogSection ChangelogPath="$(MSBuildThisFileDirectory)CHANGELOG.md" Version="$(Version)">
+    <ExtractChangelogSection ChangelogPath="$(MSBuildThisFileDirectory)CHANGELOG.md"
+                             Version="$(Version)"
+                             RepositoryUrl="$(RepositoryUrl)">
       <Output TaskParameter="Notes" PropertyName="_ChangelogNotes" />
       <Output TaskParameter="Found" PropertyName="_ChangelogFound" />
     </ExtractChangelogSection>

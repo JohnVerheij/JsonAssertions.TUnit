@@ -240,9 +240,15 @@ notes on nuget.org.
 
 The mechanism is a `RoslynCodeTaskFactory` inline C# task that runs `BeforeTargets="GenerateNuspec"`:
 it reads `CHANGELOG.md`, matches `^## \[<Version>\]`, captures the body up to the next
-`## [` or end-of-file, and overrides `PackageReleaseNotes` when a section is found. When no
-matching section is found, the task emits an MSBuild Warning and the csproj fallback is
-preserved.
+`## [` or end-of-file, prepends a `View the rendered release notes: <url>` line pointing at
+the matching GitHub Release, and overrides `PackageReleaseNotes` when a section is found.
+When no matching section is found, the task emits an MSBuild Warning and the csproj fallback
+is preserved.
+
+The prepended URL exists because nuget.org renders the Release Notes tab as plaintext-with-line-breaks
+rather than rendered markdown ([NuGet/NuGetGallery#8889](https://github.com/NuGet/NuGetGallery/issues/8889)
+is the open feature request, no progress as of 2026-05). The prepended URL gives consumers a
+one-click route to the rendered-markdown version of the same notes on GitHub.
 
 Every csproj's `<PackageReleaseNotes>` carries this fallback for the no-match case:
 

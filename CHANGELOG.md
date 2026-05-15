@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Per-version release notes on nuget.org.** A new `Directory.Build.targets` at the repo root auto-extracts the matching `## [<Version>]` section from `CHANGELOG.md` at pack time and feeds it into `<PackageReleaseNotes>`. The Release Notes tab on the nuget.org package page now shows the per-version body verbatim rather than a literal placeholder. nuget.org renders the tab as plaintext with preserved line breaks, not as rendered markdown, and the change applies to releases from this version onward (nupkgs already on nuget.org are immutable).
+- **Per-version release notes on nuget.org.** A new `Directory.Build.targets` at the repo root auto-extracts the matching `## [<Version>]` section from `CHANGELOG.md` at pack time and feeds it into `<PackageReleaseNotes>`. The Release Notes tab on the nuget.org package page now shows the per-version body verbatim rather than a literal placeholder. The extracted body is prefixed with a `View the rendered release notes: <url>` line pointing at the matching GitHub Release, because nuget.org renders the tab as plaintext with preserved line breaks rather than rendered markdown ([NuGet/NuGetGallery#8889](https://github.com/NuGet/NuGetGallery/issues/8889) is the open feature request); the prepended URL gives consumers a one-click route to the rendered-markdown version on GitHub. The change applies to releases from this version onward (nupkgs already on nuget.org are immutable).
 
 ### Changed
 
