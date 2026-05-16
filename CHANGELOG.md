@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Adopted `CONVENTIONS.md` v0.6.** New family-wide architectural invariants: the **Cross-package references rule** (no sibling family package may appear as a `PackageReference` in another sibling's production `.csproj`; composition happens at the consumer's call site via standard delegates) and the **Naming invariant** (no sibling-package-name prefix — `Snapshot*`, `Log*`, `Math*`, `Time*`, `Json*` — may appear in another sibling's public API surface, including typenames, method names, and extension method names). Both invariants are pack-time-enforced from v0.3.0 onward; `JsonAssertions.TUnit` is the first package to ship the enforcement infrastructure (NuGet dependency-list scan + PublicAPI prefix scan). The 4 sibling repos adopt the same `CONVENTIONS.md` v0.6 in separate PRs after v0.3.0 merges.
+
 ## [0.2.0] - 2026-05-15: Array-indexed paths, root-self, boolean / non-empty-string / matching / one-of / parsable-as<T> assertions, plus the pack-time Release Notes pipeline
 
 ### Added
