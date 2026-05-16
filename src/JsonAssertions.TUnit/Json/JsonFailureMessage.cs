@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
@@ -32,6 +33,57 @@ namespace JsonAssertions;
 internal static class JsonFailureMessage
 {
     private const int MaxRenderedStringLength = 60;
+    private const int MaxResponseBodyLength = 256;
+
+    /// <summary>Renders the failure for an HTTP-response status-code mismatch: the response did
+    /// not have the expected status. Includes a truncated body to aid diagnosis (a 400 response
+    /// frequently carries a structured error in its body).</summary>
+    public static string ResponseStatusMismatch(
+        System.Net.HttpStatusCode expected, System.Net.HttpStatusCode actual, string body)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the response to have status ")
+            .Append(Convert.ToInt32(expected, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture))
+            .Append(' ').Append(expected).Append('\n');
+        sb.Append("  but got: ")
+            .Append(Convert.ToInt32(actual, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture))
+            .Append(' ').Append(actual).Append('\n');
+        if (body.Length > 0)
+        {
+            sb.Append("  body: ").Append(TruncateBody(body)).Append('\n');
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for an HTTP-response-body deserialization error: the status
+    /// matched but the body could not be parsed via the supplied <see cref="System.Text.Json.Serialization.Metadata.JsonTypeInfo{T}"/>.</summary>
+    public static string ResponseDeserializationFailed(string typeName, string body, JsonException exception)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the response body to deserialize as ").Append(typeName).Append('\n');
+        sb.Append("  but parsing failed: ").Append(exception.Message).Append('\n');
+        sb.Append("  body: ").Append(TruncateBody(body)).Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for an HTTP-response-body structural-value mismatch: the
+    /// status matched and the body deserialized, but the resulting value did not equal the
+    /// expected one under <see cref="object.Equals(object, object)"/>.</summary>
+    public static string ResponseValueMismatch<T>(string typeName, T? actual, T expected)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the response body to deserialize to a ").Append(typeName)
+            .Append(" structurally equal to: ")
+            .Append(expected?.ToString() ?? "null").Append('\n');
+        sb.Append("  but got: ").Append(actual?.ToString() ?? "null").Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Caps a response-body string so a large payload cannot bloat the message.</summary>
+    private static string TruncateBody(string body)
+        => body.Length <= MaxResponseBodyLength
+            ? body
+            : body[..MaxResponseBodyLength] + "...";
 
     /// <summary>Renders the failure for a JSON <see cref="string"/> overload whose input could
     /// not be parsed at all. A malformed response body is a legitimate runtime scenario, so it

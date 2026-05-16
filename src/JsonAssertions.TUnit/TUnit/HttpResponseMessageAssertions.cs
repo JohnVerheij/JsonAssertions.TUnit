@@ -1,7 +1,9 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using JsonAssertions;
@@ -252,6 +254,59 @@ public static class HttpResponseMessageAssertions
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueParsableAs<T>(root, path), cancellationToken);
+    }
+
+    /// <summary>Asserts the response has the expected HTTP status code AND the body
+    /// deserializes (via the supplied <paramref name="jsonTypeInfo"/>) to a value structurally
+    /// equal to <paramref name="expected"/> under <see cref="object.Equals(object, object)"/>.
+    /// AOT-clean: the supplied <see cref="JsonTypeInfo{T}"/> is the source-generated entry for
+    /// <typeparamref name="T"/> in the consumer's <c>JsonSerializerContext</c>; the assertion
+    /// uses no runtime reflection. Failure messages include the response body (truncated at
+    /// 256 chars) so the diagnostic surfaces the structured-error shape for non-200 responses
+    /// and the actual JSON shape for deserialization failures.</summary>
+    /// <typeparam name="T">The expected response-body type.</typeparam>
+    /// <param name="response">The HTTP response.</param>
+    /// <param name="expectedStatus">The expected HTTP status code.</param>
+    /// <param name="jsonTypeInfo">The <see cref="JsonTypeInfo{T}"/> for AOT-clean deserialization.</param>
+    /// <param name="expected">The expected deserialized value (compared by <see cref="object.Equals(object, object)"/>).</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    /// <returns>A passed assertion when status and value both match; otherwise a failed assertion
+    /// with a body-aware diagnostic message.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    [GenerateAssertion]
+    public static async Task<AssertionResult> HasJsonResponse<T>(
+        this HttpResponseMessage response,
+        HttpStatusCode expectedStatus,
+        JsonTypeInfo<T> jsonTypeInfo,
+        T expected,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(jsonTypeInfo);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+        if (response.StatusCode != expectedStatus)
+        {
+            return AssertionResult.Failed(
+                JsonFailureMessage.ResponseStatusMismatch(expectedStatus, response.StatusCode, body));
+        }
+
+        T? actual;
+        try
+        {
+            actual = JsonSerializer.Deserialize(body, jsonTypeInfo);
+        }
+        catch (JsonException ex)
+        {
+            return AssertionResult.Failed(
+                JsonFailureMessage.ResponseDeserializationFailed(jsonTypeInfo.Type.Name, body, ex));
+        }
+
+        return Equals(actual, expected)
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(
+                JsonFailureMessage.ResponseValueMismatch(jsonTypeInfo.Type.Name, actual, expected));
     }
 
     /// <summary>Reads the response body as text and runs <paramref name="assert"/> against the

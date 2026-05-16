@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`HasJsonResponse<T>(HttpStatusCode, JsonTypeInfo<T>, T expected, CancellationToken)`** on `HttpResponseMessage`. Combined HTTP status + AOT-clean deserialization + structural-equality assertion in one chain. Collapses the common 4-6 line `response.EnsureSuccessStatusCode() + body-read + Deserialize + AreEqual` pattern into a single fluent call. AOT-clean: the supplied `JsonTypeInfo<T>` is the source-generated entry from the consumer's `JsonSerializerContext`; no runtime reflection. Failure messages include the response body (truncated at 256 chars) so the diagnostic surfaces the structured-error shape for non-200 responses and the actual JSON shape for deserialization failures. Status-only and predicate overloads (`HasJsonResponse` overloads B + C) are deferred to a later version pending consumer demand.
+
 ### Changed
 
 - **Adopted `CONVENTIONS.md` v0.6.** New family-wide architectural invariants: the **Cross-package references rule** (no sibling family package may appear as a `PackageReference` in another sibling's production `.csproj`; composition happens at the consumer's call site via standard delegates) and the **Naming invariant** (no sibling-package-name prefix — `Snapshot*`, `Log*`, `Math*`, `Time*`, `Json*` — may appear in another sibling's public API surface, including typenames, method names, and extension method names). Both invariants are pack-time-enforced from v0.3.0 onward; `JsonAssertions.TUnit` is the first package to ship the enforcement infrastructure (NuGet dependency-list scan + PublicAPI prefix scan). The 4 sibling repos adopt the same `CONVENTIONS.md` v0.6 in separate PRs after v0.3.0 merges.
