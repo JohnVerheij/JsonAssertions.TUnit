@@ -21,25 +21,33 @@ namespace JsonAssertions;
 /// from "the path tried to read a property off a non-object".</para>
 /// <para>Lines are terminated with the literal LF byte so the rendered text is byte-stable
 /// across platforms. Numeric formatting uses <see cref="CultureInfo.InvariantCulture"/>.</para>
-/// <para>Failure-message text is explicitly not part of the stable public surface; callers
-/// pin behaviour against the <see cref="JsonPath"/> / <see cref="JsonValueComparison"/> primitives, not
-/// against full message-text equality. The type is <see langword="internal"/>; the single
-/// shipped assembly carries both this and the adapter, so no <c>[InternalsVisibleTo]</c> is
-/// needed.</para>
+/// <para><strong>Public surface (extension point for consumer-authored typed JSON assertions):</strong>
+/// the four path-family factories (<see cref="PropertyNotFound(string, JsonPathResolution)"/>,
+/// <see cref="ValueMismatch(string, JsonPathResolution, string)"/>,
+/// <see cref="ShapeMismatch(string, JsonPathResolution, string)"/>, and
+/// <see cref="ParseFailure(JsonException)"/>) are part of the v0.3.0+ stable public API.
+/// Consumers writing their own typed JSON assertions can compose these factories with their
+/// custom <c>[GenerateAssertion]</c> methods to produce failure messages that match the
+/// package's diagnostic style. Family-pattern consistency: mirrors
+/// <c>MathAssertions.MathFailureMessage</c>.</para>
+/// <para><strong>Internal surface:</strong> HTTP-response, ProblemDetails, and roundtrip-specific
+/// factories stay <see langword="internal"/>. Those failure modes are bound to the specific
+/// assertions that produce them (no extension value); keeping them internal preserves
+/// future-flexibility on the message text for context-specific failures.</para>
+/// <para>The exact rendered text of the public factories may evolve in minor versions
+/// (added punctuation, reworded reason lines); consumers should pin tests against the
+/// outcome (pass / fail) and key tokens (e.g. the path), not against full message equality.</para>
 /// </remarks>
-[SuppressMessage(
-    "MeziantouAnalyzer",
-    "MA0182:Unused internal type",
-    Justification = "Consumed by the JsonAssertions.TUnit adapter classes in the same assembly; the rendered text is surfaced in assertion failure messages.")]
-internal static class JsonFailureMessage
+public static class JsonFailureMessage
 {
     private const int MaxRenderedStringLength = 60;
     private const int MaxResponseBodyLength = 256;
 
     /// <summary>Renders the failure for an HTTP-response status-code mismatch: the response did
     /// not have the expected status. Includes a truncated body to aid diagnosis (a 400 response
-    /// frequently carries a structured error in its body).</summary>
-    public static string ResponseStatusMismatch(
+    /// frequently carries a structured error in its body).
+    /// <em>Internal: bound to <c>HasJsonResponse</c>; not part of the stable public surface.</em></summary>
+    internal static string ResponseStatusMismatch(
         System.Net.HttpStatusCode expected, System.Net.HttpStatusCode actual, string body)
     {
         var sb = new StringBuilder();
@@ -57,8 +65,9 @@ internal static class JsonFailureMessage
     }
 
     /// <summary>Renders the failure for an HTTP-response-body deserialization error: the status
-    /// matched but the body could not be parsed via the supplied <see cref="System.Text.Json.Serialization.Metadata.JsonTypeInfo{T}"/>.</summary>
-    public static string ResponseDeserializationFailed(string typeName, string body, JsonException exception)
+    /// matched but the body could not be parsed via the supplied <see cref="System.Text.Json.Serialization.Metadata.JsonTypeInfo{T}"/>.
+    /// <em>Internal: bound to <c>HasJsonResponse</c>; not part of the stable public surface.</em></summary>
+    internal static string ResponseDeserializationFailed(string typeName, string body, JsonException exception)
     {
         var sb = new StringBuilder();
         sb.Append("the response body to deserialize as ").Append(typeName).Append('\n');
@@ -69,8 +78,9 @@ internal static class JsonFailureMessage
 
     /// <summary>Renders the failure for an HTTP-response-body structural-value mismatch: the
     /// status matched and the body deserialized, but the resulting value did not equal the
-    /// expected one under <see cref="object.Equals(object, object)"/>.</summary>
-    public static string ResponseValueMismatch<T>(string typeName, T? actual, T expected)
+    /// expected one under <see cref="object.Equals(object, object)"/>.
+    /// <em>Internal: bound to <c>HasJsonResponse</c>; not part of the stable public surface.</em></summary>
+    internal static string ResponseValueMismatch<T>(string typeName, T? actual, T expected)
     {
         var sb = new StringBuilder();
         sb.Append("the response body to deserialize to a ").Append(typeName)
@@ -80,7 +90,8 @@ internal static class JsonFailureMessage
         return sb.ToString();
     }
 
-    /// <summary>Caps a response-body string so a large payload cannot bloat the message.</summary>
+    /// <summary>Caps a response-body string so a large payload cannot bloat the message.
+    /// <em>Internal helper.</em></summary>
     private static string TruncateBody(string body)
         => body.Length <= MaxResponseBodyLength
             ? body
@@ -88,8 +99,9 @@ internal static class JsonFailureMessage
 
     /// <summary>Renders the failure for a round-trip mismatch: the value serialized to
     /// <paramref name="json1"/>, but after deserialize-then-reserialize it produced
-    /// <paramref name="json2"/>. The two strings are shown side-by-side for diagnosis.</summary>
-    public static string RoundtripMismatch(string json1, string json2)
+    /// <paramref name="json2"/>. The two strings are shown side-by-side for diagnosis.
+    /// <em>Internal: bound to <c>RoundtripsCleanlyVia</c>; not part of the stable public surface.</em></summary>
+    internal static string RoundtripMismatch(string json1, string json2)
     {
         var sb = new StringBuilder();
         sb.Append("the value to round-trip cleanly through the supplied JsonTypeInfo").Append('\n');
@@ -100,8 +112,9 @@ internal static class JsonFailureMessage
     }
 
     /// <summary>Renders the failure for a round-trip deserialization error: the first
-    /// serialization succeeded but deserializing the result via the same context failed.</summary>
-    public static string RoundtripDeserializationFailed(string json, JsonException exception)
+    /// serialization succeeded but deserializing the result via the same context failed.
+    /// <em>Internal: bound to <c>RoundtripsCleanlyVia</c>; not part of the stable public surface.</em></summary>
+    internal static string RoundtripDeserializationFailed(string json, JsonException exception)
     {
         var sb = new StringBuilder();
         sb.Append("the value to round-trip cleanly through the supplied JsonTypeInfo").Append('\n');
@@ -112,8 +125,9 @@ internal static class JsonFailureMessage
 
     /// <summary>Renders the failure for a round-trip that deserialized to <see langword="null"/>:
     /// the serialization succeeded but the deserialized value is null, so the second pass
-    /// cannot proceed.</summary>
-    public static string RoundtripDeserializedToNull(string json)
+    /// cannot proceed.
+    /// <em>Internal: bound to <c>RoundtripsCleanlyVia</c>; not part of the stable public surface.</em></summary>
+    internal static string RoundtripDeserializedToNull(string json)
     {
         var sb = new StringBuilder();
         sb.Append("the value to round-trip cleanly through the supplied JsonTypeInfo").Append('\n');
@@ -124,8 +138,9 @@ internal static class JsonFailureMessage
 
     /// <summary>Renders the failure for a response that did not return the RFC 7807
     /// <c>application/problem+json</c> Content-Type, which is required for
-    /// <c>MatchesProblemDetails</c> conformance.</summary>
-    public static string ProblemDetailsContentTypeMismatch(string? actualContentType, string body)
+    /// <c>MatchesProblemDetails</c> conformance.
+    /// <em>Internal: bound to <c>MatchesProblemDetails</c>; not part of the stable public surface.</em></summary>
+    internal static string ProblemDetailsContentTypeMismatch(string? actualContentType, string body)
     {
         var sb = new StringBuilder();
         sb.Append("the response Content-Type to be \"application/problem+json\" (RFC 7807)").Append('\n');
@@ -139,8 +154,9 @@ internal static class JsonFailureMessage
 
     /// <summary>Renders the failure for a response body that did not deserialize as
     /// ProblemDetails (typically because the body is not valid JSON, or its shape is too far
-    /// off the RFC 7807 schema to satisfy STJ).</summary>
-    public static string ProblemDetailsParseFailed(string body, JsonException exception)
+    /// off the RFC 7807 schema to satisfy STJ).
+    /// <em>Internal: bound to <c>MatchesProblemDetails</c>; not part of the stable public surface.</em></summary>
+    internal static string ProblemDetailsParseFailed(string body, JsonException exception)
     {
         var sb = new StringBuilder();
         sb.Append("the response body to deserialize as RFC 7807 ProblemDetails").Append('\n');
@@ -151,8 +167,9 @@ internal static class JsonFailureMessage
 
     /// <summary>Renders the failure for a ProblemDetails-field mismatch: at least one
     /// asserted field (status / title / detail / type / instance) did not match the value
-    /// the consumer specified. All mismatched fields are reported in one message.</summary>
-    public static string ProblemDetailsFieldMismatch(IReadOnlyList<(string Field, string? Expected, string? Actual)> mismatches)
+    /// the consumer specified. All mismatched fields are reported in one message.
+    /// <em>Internal: bound to <c>MatchesProblemDetails</c>; not part of the stable public surface.</em></summary>
+    internal static string ProblemDetailsFieldMismatch(IReadOnlyList<(string Field, string? Expected, string? Actual)> mismatches)
     {
         var sb = new StringBuilder();
         sb.Append("the ProblemDetails to match all specified fields").Append('\n');
@@ -166,8 +183,9 @@ internal static class JsonFailureMessage
 
     /// <summary>Renders the failure for a ValidationProblemDetails-errors mismatch: the
     /// errors dictionary did not contain the expected fields, or specific field-error
-    /// messages did not match.</summary>
-    public static string ValidationErrorsMismatch(
+    /// messages did not match.
+    /// <em>Internal: bound to <c>MatchesValidationProblemDetails</c>; not part of the stable public surface.</em></summary>
+    internal static string ValidationErrorsMismatch(
         IReadOnlyDictionary<string, string[]> expected,
         IReadOnlyDictionary<string, string[]>? actual)
     {
@@ -199,6 +217,7 @@ internal static class JsonFailureMessage
     /// <see cref="JsonException"/>.</summary>
     public static string ParseFailure(JsonException exception)
     {
+        ArgumentNullException.ThrowIfNull(exception);
         var sb = new StringBuilder();
         sb.Append("the asserted value to be parseable JSON").Append('\n');
         sb.Append("  but parsing failed: ").Append(exception.Message).Append('\n');
@@ -209,6 +228,7 @@ internal static class JsonFailureMessage
     /// not resolve, and the message says how far it got and why it stopped.</summary>
     public static string PropertyNotFound(string path, JsonPathResolution resolution)
     {
+        ArgumentNullException.ThrowIfNull(path);
         var sb = new StringBuilder();
         sb.Append("to have a JSON property at path \"").Append(path).Append('"').Append('\n');
         AppendFailurePoint(sb, resolution);
@@ -219,6 +239,7 @@ internal static class JsonFailureMessage
     /// resolved when it was asserted not to.</summary>
     public static string PropertyShouldNotExist(string path, JsonPathResolution resolution)
     {
+        ArgumentNullException.ThrowIfNull(path);
         var sb = new StringBuilder();
         sb.Append("to have no JSON property at path \"").Append(path).Append('"').Append('\n');
         sb.Append("  but ").Append(DescribeKind(resolution.Element.ValueKind))
@@ -231,6 +252,8 @@ internal static class JsonFailureMessage
     /// not match, the found value is shown against the expected one.</summary>
     public static string ValueMismatch(string path, JsonPathResolution resolution, string expectedDescription)
     {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(expectedDescription);
         var sb = new StringBuilder();
         sb.Append("to have JSON value ").Append(expectedDescription)
             .Append(" at path \"").Append(path).Append('"').Append('\n');
@@ -252,6 +275,8 @@ internal static class JsonFailureMessage
     /// when it resolved but the element has the wrong shape, the found shape is shown.</summary>
     public static string ShapeMismatch(string path, JsonPathResolution resolution, string expectedDescription)
     {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(expectedDescription);
         var sb = new StringBuilder();
         sb.Append("to have ").Append(expectedDescription)
             .Append(" at path \"").Append(path).Append('"').Append('\n');
