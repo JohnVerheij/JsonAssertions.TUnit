@@ -86,6 +86,42 @@ internal static class JsonFailureMessage
             ? body
             : body[..MaxResponseBodyLength] + "...";
 
+    /// <summary>Renders the failure for a round-trip mismatch: the value serialized to
+    /// <paramref name="json1"/>, but after deserialize-then-reserialize it produced
+    /// <paramref name="json2"/>. The two strings are shown side-by-side for diagnosis.</summary>
+    public static string RoundtripMismatch(string json1, string json2)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the value to round-trip cleanly through the supplied JsonTypeInfo").Append('\n');
+        sb.Append("  but the serialized form drifted between trips:").Append('\n');
+        sb.Append("  first:  ").Append(json1).Append('\n');
+        sb.Append("  second: ").Append(json2).Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a round-trip deserialization error: the first
+    /// serialization succeeded but deserializing the result via the same context failed.</summary>
+    public static string RoundtripDeserializationFailed(string json, JsonException exception)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the value to round-trip cleanly through the supplied JsonTypeInfo").Append('\n');
+        sb.Append("  but deserializing the first-pass JSON failed: ").Append(exception.Message).Append('\n');
+        sb.Append("  first-pass JSON: ").Append(json).Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a round-trip that deserialized to <see langword="null"/>:
+    /// the serialization succeeded but the deserialized value is null, so the second pass
+    /// cannot proceed.</summary>
+    public static string RoundtripDeserializedToNull(string json)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the value to round-trip cleanly through the supplied JsonTypeInfo").Append('\n');
+        sb.Append("  but deserializing the first-pass JSON produced null").Append('\n');
+        sb.Append("  first-pass JSON: ").Append(json).Append('\n');
+        return sb.ToString();
+    }
+
     /// <summary>Renders the failure for a response that did not return the RFC 7807
     /// <c>application/problem+json</c> Content-Type, which is required for
     /// <c>MatchesProblemDetails</c> conformance.</summary>
