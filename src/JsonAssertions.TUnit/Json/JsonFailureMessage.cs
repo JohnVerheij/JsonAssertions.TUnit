@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
@@ -84,6 +85,77 @@ internal static class JsonFailureMessage
         => body.Length <= MaxResponseBodyLength
             ? body
             : body[..MaxResponseBodyLength] + "...";
+
+    /// <summary>Renders the failure for a response that did not return the RFC 7807
+    /// <c>application/problem+json</c> Content-Type, which is required for
+    /// <c>MatchesProblemDetails</c> conformance.</summary>
+    public static string ProblemDetailsContentTypeMismatch(string? actualContentType, string body)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the response Content-Type to be \"application/problem+json\" (RFC 7807)").Append('\n');
+        sb.Append("  but got: ").Append(actualContentType ?? "(none)").Append('\n');
+        if (body.Length > 0)
+        {
+            sb.Append("  body: ").Append(TruncateBody(body)).Append('\n');
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a response body that did not deserialize as
+    /// ProblemDetails (typically because the body is not valid JSON, or its shape is too far
+    /// off the RFC 7807 schema to satisfy STJ).</summary>
+    public static string ProblemDetailsParseFailed(string body, JsonException exception)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the response body to deserialize as RFC 7807 ProblemDetails").Append('\n');
+        sb.Append("  but parsing failed: ").Append(exception.Message).Append('\n');
+        sb.Append("  body: ").Append(TruncateBody(body)).Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a ProblemDetails-field mismatch: at least one
+    /// asserted field (status / title / detail / type / instance) did not match the value
+    /// the consumer specified. All mismatched fields are reported in one message.</summary>
+    public static string ProblemDetailsFieldMismatch(IReadOnlyList<(string Field, string? Expected, string? Actual)> mismatches)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the ProblemDetails to match all specified fields").Append('\n');
+        foreach (var (field, expected, actual) in mismatches)
+        {
+            sb.Append("  ").Append(field).Append(": expected ").Append(expected ?? "null")
+                .Append(", got ").Append(actual ?? "null").Append('\n');
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a ValidationProblemDetails-errors mismatch: the
+    /// errors dictionary did not contain the expected fields, or specific field-error
+    /// messages did not match.</summary>
+    public static string ValidationErrorsMismatch(
+        IReadOnlyDictionary<string, string[]> expected,
+        IReadOnlyDictionary<string, string[]>? actual)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the ValidationProblemDetails errors to contain the specified entries").Append('\n');
+        if (actual is null)
+        {
+            sb.Append("  but the response had no \"errors\" property").Append('\n');
+            return sb.ToString();
+        }
+
+        foreach (var kvp in expected)
+        {
+            if (!actual.TryGetValue(kvp.Key, out var actualMessages))
+            {
+                sb.Append("  missing field \"").Append(kvp.Key).Append('"').Append('\n');
+                continue;
+            }
+            sb.Append("  field \"").Append(kvp.Key).Append("\": expected [")
+                .AppendJoin(", ", kvp.Value).Append("], got [")
+                .AppendJoin(", ", actualMessages).Append(']').Append('\n');
+        }
+        return sb.ToString();
+    }
 
     /// <summary>Renders the failure for a JSON <see cref="string"/> overload whose input could
     /// not be parsed at all. A malformed response body is a legitimate runtime scenario, so it
