@@ -20,6 +20,8 @@ namespace JsonAssertions;
 internal sealed class ValidationProblemDetailsMirror : ProblemDetailsMirror
 {
     /// <summary>The validation errors, keyed by field name (ASP.NET Core convention).</summary>
+    /// <remarks>Uses <c>get; set;</c> to match <see cref="ProblemDetailsMirror"/>'s accessor
+    /// pattern. See that type's remarks for why <c>init</c> is avoided.</remarks>
     [JsonPropertyName("errors")]
-    public Dictionary<string, string[]>? Errors { get; init; }
+    public Dictionary<string, string[]>? Errors { get; set; }
 }

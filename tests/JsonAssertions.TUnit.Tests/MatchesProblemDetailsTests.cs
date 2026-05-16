@@ -144,6 +144,26 @@ internal sealed class MatchesProblemDetailsTests
     }
 
     [Test]
+    public async Task MatchesProblemDetails_ExtensionMembers_CapturedAndIgnoredByCurrentAssertion(CancellationToken ct)
+    {
+        // RFC 7807 §3.2 extension members: ProblemDetails responses can carry custom fields
+        // beyond the standard type/title/status/detail/instance set. The mirror captures
+        // these into the Extensions dictionary via [JsonExtensionData] so the deserialization
+        // is loss-free; the assertion path doesn't yet expose a WithExtension(...) chain method
+        // (deferred to v0.3.1 / v0.4.0), so unknown fields don't break the current shape match.
+        const string bodyWithExtensions = """
+            {"type":"https://example.com/probs/x","title":"Test","status":400,"detail":"d",
+             "traceId":"abc123","validationStage":"model-binding"}
+            """;
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, bodyWithExtensions);
+
+        // Asserts status only. The extension members (traceId, validationStage) are captured
+        // by the mirror's Extensions dictionary on deserialization but the current public
+        // surface does not assert on them, so they do not affect this pass.
+        await Assert.That(response).MatchesProblemDetails(status: 400, cancellationToken: ct);
+    }
+
+    [Test]
     public async Task MatchesValidationProblemDetails_MissingErrorField_Fails(CancellationToken ct)
     {
         var real = new ValidationProblemDetails(new Dictionary<string, string[]>(System.StringComparer.Ordinal)
@@ -158,7 +178,9 @@ internal sealed class MatchesProblemDetailsTests
         var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
         {
             ["FieldX"] = FieldXMessages,
-            ["FieldY"] = FieldYMessages,  // not present in actual
+            // FieldY is in the expected dictionary but absent in the actual response;
+            // the assertion must surface that as a failure.
+            ["FieldY"] = FieldYMessages,
         };
 
         var ex = await Assert.That(async () =>
