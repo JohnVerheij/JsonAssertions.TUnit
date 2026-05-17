@@ -8,15 +8,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 
-TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.That(...)` pipeline for asserting against `System.Text.Json` documents. AOT-compatible, trimmable, no runtime reflection in the assertion path.
+TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.That(...)` pipeline for asserting against `System.Text.Json` documents, HTTP response bodies (including RFC 7807 ProblemDetails), and the registration state of source-generated `JsonSerializerContext` instances. AOT-compatible, trimmable, no runtime reflection in the assertion path.
 
 > **Scope:** Test projects only. Not intended for production code.
 
 ---
 
-## Status: v0.2.0
+## Status: v0.3.0
 
-Property existence, value-at-path, value-predicate, value-one-of, value-parsable-as-`T`, and shape (kind / array-length / non-empty / boolean / non-empty-string) assertions. Each fluent entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document):
+Property existence, value-at-path, value-predicate, value-one-of, value-parsable-as-`T`, shape (kind / array-length / non-empty / boolean / non-empty-string), HTTP-response JSON assertions (status + AOT-clean deserialization + structural equality, RFC 7807 ProblemDetails, ValidationProblemDetails), AOT-context regression assertions (`RoundtripsCleanlyVia` and `HasJsonTypeInfoFor` via the `AsJsonContext` bridge), and a canonicalising-renderer (`JsonRenderers.ReformatJson`) for composition with `SnapshotAssertions.TUnit` at the consumer's call site. Each fluent entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document):
 
 | Entry point | Behaviour |
 |---|---|
@@ -31,8 +31,16 @@ Property existence, value-at-path, value-predicate, value-one-of, value-parsable
 | `HasNonEmptyJsonString(string path)` | Asserts the value at `path` is a non-empty JSON string. |
 | `HasJsonArrayLength(string path, int length)` | Asserts the value at `path` is a JSON array of the given length. |
 | `HasNonEmptyJsonArray(string path)` / `HasEmptyJsonArray(string path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
+| `HasJsonResponse<T>(HttpStatusCode, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + structural equality in one chain. |
+| `MatchesProblemDetails(int status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields. |
+| `MatchesValidationProblemDetails(int status, IReadOnlyDictionary<string, string[]> errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |
+| `RoundtripsCleanlyVia<T>(JsonTypeInfo<T>)` on any `T` | Asserts serialize → deserialize → re-serialize is byte-identical via the supplied source-generated `JsonTypeInfo<T>`. |
+| `AsJsonContext().HasJsonTypeInfoFor<T>()` on a `JsonSerializerContext`-typed source | Asserts the supplied source-generated context registers a `JsonTypeInfo<T>` for `T`. |
+| `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` *(static factory)* | Returns `Func<string, string>` that canonicalises a JSON string via the consumer's `JsonSerializerContext`. Composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` at the consumer's call site without coupling the packages. |
 
 The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
+
+The AOT-context regression assertions (`HasJsonTypeInfoFor`, `RoundtripsCleanlyVia`) pair together as a CI gate to keep a source-generated `JsonSerializerContext` in sync with the consumer's domain types — see the dedicated section below.
 
 ---
 
@@ -97,7 +105,40 @@ A path is a sequence of dot-separated property names and zero-based bracket indi
 - A path that traverses a non-object value where a property is expected (or a non-array where an index is expected) resolves to "not found" rather than throwing; the failure message names which segment blocked the resolution.
 - An empty path, a whitespace path, an empty / non-numeric / negative bracket index, an unclosed `[`, a property name directly after `]` without a `.` separator, or a doubled or leading / trailing dot throws `ArgumentException`.
 
-Wildcard segments (e.g. `[*]`) are not part of the 0.2.0 surface; see the roadmap below.
+Wildcard segments (e.g. `[*]`) are not part of the 0.3.0 surface; see the roadmap below.
+
+## Context registration: `HasJsonTypeInfoFor` and the `AsJsonContext` bridge
+
+`HasJsonTypeInfoFor<T>()` asserts that a source-generated `JsonSerializerContext` registers a `JsonTypeInfo<T>` for `T`. It catches the regression class where a domain type has been added to the codebase but the `[JsonSerializable(typeof(NewType))]` attribute has not been added to the context — before any runtime serialization touches the unregistered type.
+
+Pair it with `RoundtripsCleanlyVia` for full AOT coverage of a typed context. `RoundtripsCleanlyVia` verifies that a value round-trips cleanly through a typed context; `HasJsonTypeInfoFor` verifies that the context knows about the type at all. A consumer adopting both gets a complete "my serializer context is in sync with my domain types" CI gate.
+
+The call site reaches the assertion through a one-method bridge, `AsJsonContext()`:
+
+```csharp
+[Test]
+public async Task SerializerContextRegistersAllDomainTypes()
+{
+    await Assert.That(MyJsonContext.Default).AsJsonContext().HasJsonTypeInfoFor<UserDto>();
+    await Assert.That(MyJsonContext.Default).AsJsonContext().HasJsonTypeInfoFor<OrderDto>();
+    await Assert.That(MyJsonContext.Default).AsJsonContext().HasJsonTypeInfoFor<HealthCheckResponse>();
+}
+```
+
+`AsJsonContext()` produces an `IJsonContextAssertionSource` whose `Context` is statically typed at `JsonSerializerContext`. The bridge exists because `Assert.That(MyJsonContext.Default)` returns an assertion source typed at the concrete subtype (`IAssertionSource<MyJsonContext>`), and C# does not allow partial generic-type-argument inference: a method generic on the receiver type and an explicit type to assert against (`HasJsonTypeInfoFor<T, TContext>`) would force the consumer to write both arguments at every call site. The bridge moves the receiver type out of the leaf assertion's signature, restoring the single-explicit-generic shape (`HasJsonTypeInfoFor<MyDto>()`) the consumer expects.
+
+The bridge is a zero-cost upcast: it wraps the existing `AssertionContext<TContext>` and uses TUnit's existing `Map` to view it at the `JsonSerializerContext` base. No reflection, AOT-clean, one O(1) lookup against the context's type registry when the assertion runs.
+
+The pattern composes with the standard TUnit chain: `await Assert.That(MyJsonContext.Default).AsJsonContext().HasJsonTypeInfoFor<MyDto>().And.<...>`.
+
+Failure messages identify the missing type and the context by name, with a hint to add the missing attribute:
+
+```text
+to register JsonTypeInfo<DateTime>
+the JsonSerializerContext to have a JsonTypeInfo registered for DateTime
+  but MyJsonContext.GetTypeInfo(typeof(DateTime)) returned null
+  hint: add [JsonSerializable(typeof(DateTime))] to MyJsonContext
+```
 
 ## Two namespaces
 
@@ -124,7 +165,7 @@ The package is a deliberate showcase of modern .NET conventions:
 This is a 0.x release and the public API may evolve.
 
 - **Additive changes** (new entry points, new input overloads) ship in any patch without breaking ApiCompat.
-- **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md). The 0.0.1 -> 0.1.0 step evolved the `[GenerateAssertion]` source-method return types from `bool` to `AssertionResult` to enable the path-context failure messages; the generated TUnit chain extensions were unaffected at chain-syntax level. The 0.1.0 -> 0.2.0 step was purely additive (new segment forms in the existing path grammar, plus the five new entry points listed above).
+- **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md). The 0.0.1 -> 0.1.0 step evolved the `[GenerateAssertion]` source-method return types from `bool` to `AssertionResult` to enable the path-context failure messages; the generated TUnit chain extensions were unaffected at chain-syntax level. The 0.1.0 -> 0.2.0 step was purely additive (new segment forms in the existing path grammar, plus the five new entry points listed above). The 0.2.0 -> 0.3.0 step was purely additive too (HTTP-response JSON, RFC 7807 ProblemDetails / ValidationProblemDetails, AOT-context regression assertions `RoundtripsCleanlyVia` and `HasJsonTypeInfoFor`, the `JsonRenderers` canonicalising-renderer factory, and the promotion of `JsonFailureMessage` from internal to public as a curated extension point for consumer-authored typed assertions).
 - `PackageValidationBaselineVersion` pins to the previous shipped version so ApiCompat breakage is caught at pack time; `CompatibilitySuppressions.xml` records accepted differences.
 - Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
 The 1.0 milestone signals API stability.

@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace JsonAssertions;
 
@@ -133,6 +134,21 @@ public static class JsonFailureMessage
         sb.Append("the value to round-trip cleanly through the supplied JsonTypeInfo").Append('\n');
         sb.Append("  but deserializing the first-pass JSON produced null").Append('\n');
         sb.Append("  first-pass JSON: ").Append(json).Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a <see cref="JsonSerializerContext"/> that has no
+    /// <see cref="System.Text.Json.Serialization.Metadata.JsonTypeInfo{T}"/> registered for the
+    /// asserted type. <em>Internal: bound to <c>HasJsonTypeInfoFor</c>; not part of the stable
+    /// public surface.</em></summary>
+    internal static string JsonTypeInfoMissing(string typeName, string contextTypeName)
+    {
+        var sb = new StringBuilder();
+        sb.Append("the JsonSerializerContext to have a JsonTypeInfo registered for ").Append(typeName).Append('\n');
+        sb.Append("  but ").Append(contextTypeName).Append(".GetTypeInfo(typeof(")
+            .Append(typeName).Append(")) returned null").Append('\n');
+        sb.Append("  hint: add [JsonSerializable(typeof(").Append(typeName)
+            .Append("))] to ").Append(contextTypeName).Append('\n');
         return sb.ToString();
     }
 

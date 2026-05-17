@@ -51,8 +51,8 @@ A **coordinated disclosure** (public CVE filing + advisory + patched release) is
 
 | Version line | Status | Receives security fixes |
 |---|---|---|
-| `0.2.x` | **Current** | ✅ Yes |
-| `< 0.2.0` | Superseded by the current line | ❌ No |
+| `0.3.x` | **Current** | ✅ Yes |
+| `< 0.3.0` | Superseded by the current line | ❌ No |
 
 This table is updated alongside each release that bumps the current line. Coverage of older lines for security-only fixes follows the [.NET LTS / STS rotation](CONVENTIONS.md#tfm-policy): when the package's TFM changes at a major-version boundary, security fixes for the previous line continue to ship for one minor cycle.
 
@@ -86,7 +86,7 @@ To set expectations correctly:
 
 Every release shipped to nuget.org and GitHub Releases carries cryptographic supply-chain attestations stored in GitHub's public transparency log. A security-conscious consumer can verify the chain end-to-end before adopting:
 
-Replace `<version>` (e.g. `0.2.0`) with the artifact you downloaded:
+Replace `<version>` (e.g. `0.3.0`) with the artifact you downloaded:
 
 ```bash
 # Verify SLSA v1.0 build provenance: was this nupkg built from this audited source tree?
