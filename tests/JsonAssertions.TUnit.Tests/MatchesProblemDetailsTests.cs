@@ -164,6 +164,65 @@ internal sealed class MatchesProblemDetailsTests
     }
 
     [Test]
+    public async Task MatchesProblemDetails_BodyIsLiteralJsonNull_FailsWithFieldDiagnostic(CancellationToken ct)
+    {
+        // Body deserializes to a null ProblemDetailsMirror; the assertion still walks the field
+        // comparisons (every mirror?.X check exercises the null-mirror branch) and reports the
+        // status mismatch.
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, "null");
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesProblemDetails(
+                status: 400,
+                title: "expected title",
+                detail: "expected detail",
+                type: "expected-type",
+                instance: "/expected",
+                cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("status");
+    }
+
+    [Test]
+    public async Task MatchesProblemDetails_NoContentTypeHeader_FailsWithContentTypeDiagnostic(CancellationToken ct)
+    {
+        // Build a response with NO Content-Type header at all; the assertion's null-conditional
+        // on Headers.ContentType?.MediaType walks the null branch.
+        var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("""{"status":400}""", Encoding.UTF8),
+        };
+        // Strip the auto-set Content-Type that StringContent adds.
+        response.Content.Headers.ContentType = null;
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesProblemDetails(status: 400, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("application/problem+json");
+        response.Dispose();
+    }
+
+    [Test]
+    public async Task MatchesProblemDetails_EmptyBody_FailsWithParseDiagnostic(CancellationToken ct)
+    {
+        // Empty body + correct Content-Type: the deserialization throws JsonException; the
+        // failure message renders ProblemDetailsParseFailed without a body-preview line
+        // (covers the body.Length > 0 false branch).
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, string.Empty);
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesProblemDetails(status: 400, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("parsing failed");
+    }
+
+    [Test]
     public async Task MatchesProblemDetails_MixedCaseContentType_Passes(CancellationToken ct)
     {
         // HTTP RFC 9110 §8.3.2: media-type tokens are case-insensitive. A response with
