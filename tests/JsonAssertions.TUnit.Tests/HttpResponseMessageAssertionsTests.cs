@@ -125,4 +125,47 @@ internal sealed class HttpResponseMessageAssertionsTests
         await Assert.That(ex!.Message).Contains("parseable JSON");
         await Assert.That(ex.Message).Contains("but parsing failed:");
     }
+
+    [Test]
+    public async Task HasNonEmptyJsonString_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response(BodyJson);
+        await Assert.That(response).HasNonEmptyJsonString("user.name", ct);
+    }
+
+    [Test]
+    public async Task HasJsonBoolean_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response(BodyJson);
+        await Assert.That(response).HasJsonBoolean("user.active", ct);
+    }
+
+    [Test]
+    public async Task HasJsonValueMatching_PredicateSatisfied_Passes(CancellationToken ct)
+    {
+        using var response = Response(BodyJson);
+        await Assert.That(response).HasJsonValueMatching(
+            "user.age",
+            static element => element.GetInt32() > 18,
+            ct);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_String_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response(BodyJson);
+        await Assert.That(response).HasJsonValueOneOf("user.name", ["alice", "bob", "carol"], ct);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Number_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response(BodyJson);
+        await Assert.That(response).HasJsonValueOneOf("user.age", [25.0, 30.0, 35.0], ct);
+    }
+
+    // HasJsonValueParsableAs<T>(HttpResponseMessage, ...) — known F8 gap. The TUnit
+    // [GenerateAssertion] generator skips emitting the IAssertionSource<HttpResponseMessage>
+    // extension when the source method carries `where T : IParsable<T>`. Tracked upstream as
+    // thomhurst/TUnit#5934/#5935; closes when that release ships and the dependency is bumped.
 }

@@ -11,7 +11,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>JsonAssertions.TUnit</PackageId>
     <ProductName>JsonAssertions.TUnit</ProductName>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
     <Description>TUnit-native JSON assertions for .NET tests. Fluent .Method(...) entry points (generated via TUnit's [GenerateAssertion]) for asserting paths, values, and shapes against a JSON string, a System.Text.Json JsonElement, or an HttpResponseMessage. Supports nested property navigation, zero-based array indices (items[0].id), and the JSONPath root reference ($, $.user, $[0]); ships value-at-path, kind, array-shape, non-empty-string, boolean, predicate, one-of, and IParsable&lt;T&gt;-via-string assertions. AOT-compatible, trimmable, no runtime reflection.</Description>
@@ -32,15 +32,14 @@
 
     <!-- Symbol package + API compat (strict mode per dpfa Proj0249/0250/0251/0252).
          PackageValidationBaselineVersion pins to the previous shipped version so ApiCompat
-         catches binary breaks at pack time. The 0.0.1 -> 0.1.0 step intentionally evolves the
-         [GenerateAssertion] source-method return types from bool to AssertionResult to enable
-         the rich path-context failure messages; the generated TUnit chain extensions are
-         unaffected at chain-syntax level. CompatibilitySuppressions.xml captures the accepted
-         differences vs the 0.0.1 baseline. -->
+         catches binary breaks at pack time. Each minor version bumps the baseline to the
+         immediately previous shipped version; CompatibilitySuppressions.xml is regenerated
+         alongside to capture the accepted additive surface from that baseline. Current baseline:
+         0.2.0 (validates the additive v0.3.0 surface). -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.1.0</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.2.0</PackageValidationBaselineVersion>
     <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
     <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
     <ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>

@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using JsonAssertions;
@@ -252,6 +255,243 @@ public static class HttpResponseMessageAssertions
     {
         ArgumentNullException.ThrowIfNull(response);
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueParsableAs<T>(root, path), cancellationToken);
+    }
+
+    /// <summary>Asserts the response has the expected HTTP status code AND the body
+    /// deserializes (via the supplied <paramref name="jsonTypeInfo"/>) to a value structurally
+    /// equal to <paramref name="expected"/> under <see cref="object.Equals(object, object)"/>.
+    /// AOT-clean: the supplied <see cref="JsonTypeInfo{T}"/> is the source-generated entry for
+    /// <typeparamref name="T"/> in the consumer's <c>JsonSerializerContext</c>; the assertion
+    /// uses no runtime reflection. Failure messages include the response body (truncated at
+    /// 256 chars) so the diagnostic surfaces the structured-error shape for non-200 responses
+    /// and the actual JSON shape for deserialization failures.</summary>
+    /// <typeparam name="T">The expected response-body type.</typeparam>
+    /// <param name="response">The HTTP response.</param>
+    /// <param name="expectedStatus">The expected HTTP status code.</param>
+    /// <param name="jsonTypeInfo">The <see cref="JsonTypeInfo{T}"/> for AOT-clean deserialization.</param>
+    /// <param name="expected">The expected deserialized value (compared by <see cref="object.Equals(object, object)"/>).</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    /// <returns>A passed assertion when status and value both match; otherwise a failed assertion
+    /// with a body-aware diagnostic message.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    [GenerateAssertion]
+    public static async Task<AssertionResult> HasJsonResponse<T>(
+        this HttpResponseMessage response,
+        HttpStatusCode expectedStatus,
+        JsonTypeInfo<T> jsonTypeInfo,
+        T expected,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(jsonTypeInfo);
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+        if (response.StatusCode != expectedStatus)
+        {
+            return AssertionResult.Failed(
+                JsonFailureMessage.ResponseStatusMismatch(expectedStatus, response.StatusCode, body));
+        }
+
+        T? actual;
+        try
+        {
+            actual = JsonSerializer.Deserialize(body, jsonTypeInfo);
+        }
+        catch (JsonException ex)
+        {
+            return AssertionResult.Failed(
+                JsonFailureMessage.ResponseDeserializationFailed(jsonTypeInfo.Type.Name, body, ex));
+        }
+
+        return Equals(actual, expected)
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(
+                JsonFailureMessage.ResponseValueMismatch(jsonTypeInfo.Type.Name, actual, expected));
+    }
+
+    /// <summary>Asserts the response is a valid RFC 7807 ProblemDetails (Content-Type
+    /// <c>application/problem+json</c>, deserializable shape) and that each specified field
+    /// matches. Unspecified fields are not asserted; pass <see langword="null"/> to skip a field.
+    /// Internal mirror type avoids the <c>Microsoft.AspNetCore.Mvc.Abstractions</c> dependency
+    /// (Apache 2.0) so the package stays MIT-clean and AOT-clean.</summary>
+    /// <param name="response">The HTTP response.</param>
+    /// <param name="status">The expected <c>status</c> field value.</param>
+    /// <param name="title">The expected <c>title</c> field value, or <see langword="null"/> to skip.</param>
+    /// <param name="detail">The expected <c>detail</c> field value, or <see langword="null"/> to skip.</param>
+    /// <param name="type">The expected <c>type</c> URI field value, or <see langword="null"/> to skip.</param>
+    /// <param name="instance">The expected <c>instance</c> URI field value, or <see langword="null"/> to skip.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static async Task<AssertionResult> MatchesProblemDetails(
+        this HttpResponseMessage response,
+        int status,
+        string? title = null,
+        string? detail = null,
+        string? type = null,
+        string? instance = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        var contentTypeCheck = await ReadAndValidateProblemDetailsContentTypeAsync(response, cancellationToken).ConfigureAwait(false);
+        if (contentTypeCheck.Failure is not null)
+        {
+            return AssertionResult.Failed(contentTypeCheck.Failure);
+        }
+
+        ProblemDetailsMirror? mirror;
+        try
+        {
+            mirror = JsonSerializer.Deserialize(contentTypeCheck.Body, ProblemDetailsMirrorJsonContext.Default.ProblemDetailsMirror);
+        }
+        catch (JsonException ex)
+        {
+            return AssertionResult.Failed(JsonFailureMessage.ProblemDetailsParseFailed(contentTypeCheck.Body, ex));
+        }
+
+        return CompareProblemDetailsFields(mirror, status, title, detail, type, instance);
+    }
+
+    /// <summary>Asserts the response is a valid RFC 7807 ValidationProblemDetails (the
+    /// ProblemDetails extension with an <c>errors</c> dictionary mapping field names to
+    /// validation messages, the ASP.NET Core convention). Both the base ProblemDetails fields
+    /// and the <paramref name="errors"/> dictionary are asserted.</summary>
+    /// <param name="response">The HTTP response.</param>
+    /// <param name="status">The expected <c>status</c> field value.</param>
+    /// <param name="errors">The expected validation errors keyed by field name. Every key in
+    /// this dictionary must appear in the response's errors dict with matching values.</param>
+    /// <param name="title">The expected <c>title</c> field value, or <see langword="null"/> to skip.</param>
+    /// <param name="detail">The expected <c>detail</c> field value, or <see langword="null"/> to skip.</param>
+    /// <param name="type">The expected <c>type</c> URI field value, or <see langword="null"/> to skip.</param>
+    /// <param name="instance">The expected <c>instance</c> URI field value, or <see langword="null"/> to skip.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static async Task<AssertionResult> MatchesValidationProblemDetails(
+        this HttpResponseMessage response,
+        int status,
+        IReadOnlyDictionary<string, string[]> errors,
+        string? title = null,
+        string? detail = null,
+        string? type = null,
+        string? instance = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(errors);
+
+        var contentTypeCheck = await ReadAndValidateProblemDetailsContentTypeAsync(response, cancellationToken).ConfigureAwait(false);
+        if (contentTypeCheck.Failure is not null)
+        {
+            return AssertionResult.Failed(contentTypeCheck.Failure);
+        }
+
+        ValidationProblemDetailsMirror? mirror;
+        try
+        {
+            mirror = JsonSerializer.Deserialize(contentTypeCheck.Body, ProblemDetailsMirrorJsonContext.Default.ValidationProblemDetailsMirror);
+        }
+        catch (JsonException ex)
+        {
+            return AssertionResult.Failed(JsonFailureMessage.ProblemDetailsParseFailed(contentTypeCheck.Body, ex));
+        }
+
+        var fieldsResult = CompareProblemDetailsFields(mirror, status, title, detail, type, instance);
+        if (!fieldsResult.IsPassed)
+        {
+            return fieldsResult;
+        }
+
+        return CompareValidationErrors(mirror?.Errors, errors);
+    }
+
+    /// <summary>Reads the response body and verifies the Content-Type matches RFC 7807's
+    /// <c>application/problem+json</c>. Returns the body for subsequent deserialization and a
+    /// pre-rendered failure message if the Content-Type is wrong.</summary>
+    private static async Task<(string Body, string? Failure)> ReadAndValidateProblemDetailsContentTypeAsync(
+        HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var contentType = response.Content.Headers.ContentType?.MediaType;
+        // Media-type tokens are case-insensitive per RFC 9110 §8.3.2; a valid Application/Problem+Json must match.
+        return string.Equals(contentType, "application/problem+json", StringComparison.OrdinalIgnoreCase)
+            ? (body, null)
+            : (body, JsonFailureMessage.ProblemDetailsContentTypeMismatch(contentType, body));
+    }
+
+    /// <summary>Compares the specified ProblemDetails fields against the deserialized mirror,
+    /// collecting all mismatches into a single failure message.</summary>
+    private static AssertionResult CompareProblemDetailsFields(
+        ProblemDetailsMirror? mirror, int status, string? title, string? detail, string? type, string? instance)
+    {
+        var mismatches = new List<(string Field, string? Expected, string? Actual)>();
+
+        if (mirror?.Status != status)
+        {
+            mismatches.Add(("status", status.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                mirror?.Status?.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        if (title is not null && !string.Equals(mirror?.Title, title, StringComparison.Ordinal))
+        {
+            mismatches.Add(("title", title, mirror?.Title));
+        }
+        if (detail is not null && !string.Equals(mirror?.Detail, detail, StringComparison.Ordinal))
+        {
+            mismatches.Add(("detail", detail, mirror?.Detail));
+        }
+        if (type is not null && !string.Equals(mirror?.Type, type, StringComparison.Ordinal))
+        {
+            mismatches.Add(("type", type, mirror?.Type));
+        }
+        if (instance is not null && !string.Equals(mirror?.Instance, instance, StringComparison.Ordinal))
+        {
+            mismatches.Add(("instance", instance, mirror?.Instance));
+        }
+
+        return mismatches.Count is 0
+            ? AssertionResult.Passed
+            : AssertionResult.Failed(JsonFailureMessage.ProblemDetailsFieldMismatch(mismatches));
+    }
+
+    /// <summary>Compares the actual ValidationProblemDetails <c>errors</c> dictionary against
+    /// the expected one. Every key in <paramref name="expected"/> must appear in
+    /// <paramref name="actual"/> with matching value arrays.</summary>
+    private static AssertionResult CompareValidationErrors(
+        Dictionary<string, string[]>? actual,
+        IReadOnlyDictionary<string, string[]> expected)
+    {
+        if (actual is null && expected.Count > 0)
+        {
+            return AssertionResult.Failed(JsonFailureMessage.ValidationErrorsMismatch(expected, actual: null));
+        }
+
+        var hasMismatch = false;
+        foreach (var kvp in expected)
+        {
+            if (!actual!.TryGetValue(kvp.Key, out var actualMessages))
+            {
+                hasMismatch = true;
+                break;
+            }
+            if (actualMessages.Length != kvp.Value.Length)
+            {
+                hasMismatch = true;
+                break;
+            }
+            for (var i = 0; i < kvp.Value.Length; i++)
+            {
+                if (!string.Equals(actualMessages[i], kvp.Value[i], StringComparison.Ordinal))
+                {
+                    hasMismatch = true;
+                    break;
+                }
+            }
+            if (hasMismatch) break;
+        }
+
+        return hasMismatch
+            ? AssertionResult.Failed(JsonFailureMessage.ValidationErrorsMismatch(expected, actual))
+            : AssertionResult.Passed;
     }
 
     /// <summary>Reads the response body as text and runs <paramref name="assert"/> against the
