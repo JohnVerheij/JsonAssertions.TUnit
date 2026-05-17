@@ -4,6 +4,12 @@ Rules for how code is written across the assertion family (`LogAssertions.TUnit`
 `SnapshotAssertions.TUnit`, `TimeAssertions.TUnit`, `MathAssertions.TUnit`, and
 `JsonAssertions.TUnit`). The same file is copied identically into each repo.
 
+**Document version:** v0.6 (2026-05-16). Changes from v0.5: added the **Cross-package
+references rule** and the **Naming invariant** as family-wide architectural invariants.
+Both are pack-time-enforced via NuGet dependency list scan + PublicAPI prefix scan;
+`JsonAssertions.TUnit` v0.3.0 is the first package to ship the enforcement infrastructure;
+the 4 sibling repos adopt the same `CONVENTIONS.md` v0.6 immediately after v0.3.0 merges.
+
 **Document version:** v0.5 (2026-05-15). Changes from v0.4: added the **CHANGELOG conventions**
 section (Keep a Changelog 1.1.0 standard headers, user-facing-only content, header order,
 stylistic rules) and the **`PackageReleaseNotes` auto-extract** convention that ties the
@@ -133,6 +139,63 @@ reasons but are hidden from IntelliSense.
 Sibling family packages publish their text renderers under the shared `SnapshotAssertions.Render` namespace in their own assemblies. The shape is namespace-shared, not type-shared: each package owns its renderer types, and the types co-exist by sharing the namespace name across assemblies. Cross-assembly partial classes do not compose, so no package publishes a "renderer hub" static class for siblings to extend.
 
 `SnapshotAssertions` itself reserves the namespace via an internal anchor type. The convention exists to give consumers a single `using SnapshotAssertions.Render;` directive that surfaces renderer entry points from every family package present in the test project.
+
+## Cross-package references rule
+
+No sibling family package may appear as a `PackageReference` in another sibling's
+production `.csproj`. Composition patterns are implemented via pure functions returning
+standard delegates / types (`Func<T, string>`, `Func<T, bool>`, BCL types) that the
+consumer calls into the sibling package at their own call site.
+
+Test projects MAY reference sibling packages to integration-verify the composition
+end-to-end. Concretely:
+
+| Project layer | Sibling-package reference allowed? |
+|---|---|
+| `src/<Family>.csproj` (core production) | NO |
+| `src/<Family>.TUnit.csproj` (adapter production) | NO |
+| `tests/<Family>.Tests/` (framework-agnostic core tests) | YES — sibling CORE packages only; sibling adapters NOT allowed (would defeat the framework-agnostic positioning) |
+| `tests/<Family>.TUnit.Tests/` (adapter tests) | YES — any sibling package (core or adapter) |
+| `tests/<Family>.AotConsumer/` (AOT smoke test) | YES — any sibling package |
+
+Pack-time CI validation enforces the production-side rule: the NuGet package's
+dependency list (verified at pack time + on nuget.org) must NOT contain any
+sibling-family package as a dependency. Test-project sibling references are
+conventions, not pack-time enforced, but reviewable in PR.
+
+## Naming invariant
+
+No sibling-package-name prefix may appear in another sibling's public API.
+
+- `Snapshot...` typenames and member names belong to `SnapshotAssertions` only
+- `Log...` typenames and member names belong to `LogAssertions` only
+- `Math...` typenames and member names belong to `MathAssertions` only
+- `Time...` typenames and member names belong to `TimeAssertions` only
+- `Json...` typenames and member names belong to `JsonAssertions` only
+
+Applies to typenames AND method names AND extension method names in the
+package's PublicAPI surface. The family's verb-naming convention is what's
+being protected — extension methods are still public API and follow the
+same rule.
+
+Bounded exceptions (strict whitelist):
+
+- BCL types are fine as parameter / return types anywhere (e.g.,
+  `JsonTypeInfo<T>` from `System.Text.Json` doesn't trip the rule because
+  its leading prefix is `Json*` AND it's BCL-shipped, not family-branded)
+- Internal types within a package may use any name if not exposed publicly
+- Additional exceptions require explicit `CONVENTIONS.md` entry with
+  justification. Initial v0.6 whitelist: empty. Each future exception is
+  considered case-by-case and added explicitly.
+
+Composition between packages happens via standard BCL types and delegates
+(`Func<T, string>`, `IDisposable`, etc.), never via sibling-branded types
+appearing in another package's surface.
+
+Pack-time CI validation enforces this: the package's PublicAPI snapshot
+must not contain `Snapshot*`, `Log*`, `Math*`, `Time*`, or `Json*` as a
+leading prefix on typenames, method names, or extension method names
+exposed publicly (with the strict whitelist above).
 
 ## No reflection policy
 
