@@ -1,8 +1,25 @@
 # Code conventions
 
 Rules for how code is written across the assertion family (`LogAssertions.TUnit`,
-`SnapshotAssertions.TUnit`, `TimeAssertions.TUnit`, `MathAssertions.TUnit`, and
-`JsonAssertions.TUnit`). The same file is copied identically into each repo.
+`SnapshotAssertions.TUnit`, `TimeAssertions.TUnit`, `MathAssertions.TUnit`,
+`JsonAssertions.TUnit`, and `SseAssertions.TUnit`). The same file is copied identically
+into each repo.
+
+**Document version:** v0.7 (2026-05-17). Changes from v0.6:
+
+- **Family roster expanded to six packages.** `SseAssertions.TUnit` joins as the sixth
+  member, handling Server-Sent Events (SSE) as a strict-scope-distinct domain from
+  `JsonAssertions.TUnit`. The cap revision 5 → 6 was justified by strict-scope analysis on
+  a known-distinct domain (per the per-package scope policy below), not by adoption-growth
+  reasoning. The cap is reviewed before each revision; the goal is "high-quality niche",
+  not exhaustive ecosystem coverage.
+- **Per-package strict-scope policy formalised.** Each package has an explicit scope
+  statement that bounds what domain it asserts on; the policy keeps the family decoupled
+  by domain and prevents scope creep between packages. See the new "Per-package strict-scope
+  policy" section below.
+- **Core+adapter packaging rule clarified.** Each family package chooses single-package or
+  core+adapter at v0.0.1; the choice is per-package and is documented in each package's
+  README. See the new "Core+adapter packaging rule" section below.
 
 **Document version:** v0.6 (2026-05-16). Changes from v0.5: added the **Cross-package
 references rule** and the **Naming invariant** as family-wide architectural invariants.
@@ -172,6 +189,7 @@ No sibling-package-name prefix may appear in another sibling's public API.
 - `Math...` typenames and member names belong to `MathAssertions` only
 - `Time...` typenames and member names belong to `TimeAssertions` only
 - `Json...` typenames and member names belong to `JsonAssertions` only
+- `Sse...` typenames and member names belong to `SseAssertions` only
 
 Applies to typenames AND method names AND extension method names in the
 package's PublicAPI surface. The family's verb-naming convention is what's
@@ -193,9 +211,66 @@ Composition between packages happens via standard BCL types and delegates
 appearing in another package's surface.
 
 Pack-time CI validation enforces this: the package's PublicAPI snapshot
-must not contain `Snapshot*`, `Log*`, `Math*`, `Time*`, or `Json*` as a
-leading prefix on typenames, method names, or extension method names
-exposed publicly (with the strict whitelist above).
+must not contain `Snapshot*`, `Log*`, `Math*`, `Time*`, `Json*`, or
+`Sse*` as a leading prefix on typenames, method names, or extension
+method names exposed publicly (with the strict whitelist above).
+
+## Per-package strict-scope policy
+
+Each family package has an explicit scope statement that bounds what
+domain it asserts on. Scope boundaries are enforced by the **Naming
+invariant** above (no sibling-prefix leakage) and the **Cross-package
+references rule** (no sibling-package `PackageReference` in production).
+Each package's README opens with its scope statement under the
+test-projects-only blockquote.
+
+| Package | Scope statement |
+|---|---|
+| `LogAssertions.TUnit` | Captured log records: levels, messages, properties, exception types, ordering. Composed via `Func<LogRecord, bool>` predicates. |
+| `SnapshotAssertions.TUnit` | Deterministic text-snapshot matching against committed `.snapshot` files. Format-agnostic; assertion target is the produced string. |
+| `TimeAssertions.TUnit` | `TimeProvider`-based timing assertions and the `WithinTimeBudget(TimeSpan)` cross-cutting modifier. Determinism via `FakeTimeProvider`. |
+| `MathAssertions.TUnit` | Approximate-numeric and geometric tolerance: `IsApproximatelyEqualTo(value, tolerance)`, pose / vector / matrix tolerance. |
+| `JsonAssertions.TUnit` | JSON content assertions over `System.Text.Json`: path / value / shape on `JsonDocument`, HTTP-response JSON, and `JsonSerializerContext`-registered types. |
+| `SseAssertions.TUnit` | Server-Sent Events wire-format assertions: event-count, field shape (`event:`, `data:`, `id:`, `retry:`), and stream content validation. |
+
+The policy goal is "high-quality niche per package", not exhaustive
+ecosystem coverage. Domains that fall outside the per-package scope
+statements are out of family scope; they are not folded into an existing
+package. The roster cap is reviewed before each revision and currently
+sits at six; revisions require a strict-scope-distinct domain (per this
+section) and are not driven by adoption-growth reasoning.
+
+## Core+adapter packaging rule
+
+Family packages choose one of two shapes at v0.0.1, documented in each
+package's README:
+
+| Package | Shape |
+|---|---|
+| `LogAssertions.TUnit` | core (`LogAssertions`) + adapter (`LogAssertions.TUnit`) |
+| `SnapshotAssertions.TUnit` | core (`SnapshotAssertions`) + adapter (`SnapshotAssertions.TUnit`) |
+| `TimeAssertions.TUnit` | core (`TimeAssertions`) + adapter (`TimeAssertions.TUnit`) |
+| `MathAssertions.TUnit` | core (`MathAssertions`) + adapter (`MathAssertions.TUnit`) |
+| `JsonAssertions.TUnit` | single-package (only `JsonAssertions.TUnit`) |
+| `SseAssertions.TUnit` | core (`SseAssertions`) + adapter (`SseAssertions.TUnit`) |
+
+**Core+adapter** ships the framework-agnostic primitives (parsers,
+comparison enums, failure-message factories, deterministic renderers) in
+a sibling `<Package>` core nupkg, and the TUnit-coupled assertion
+methods + `[GenerateAssertion]` entry points in `<Package>.TUnit`. Five
+of six packages take this shape because the core primitives have value
+outside the TUnit adapter (consumer-level composition, sibling-test
+reuse, framework-agnostic test reuse).
+
+**Single-package** ships only `<Package>.TUnit` with no separate core.
+`JsonAssertions.TUnit` is the sole single-package member: the
+JSON-comparison primitives are thin enough that splitting would produce
+a near-empty core, and `System.Text.Json` already provides the
+deterministic primitives.
+
+The choice is per-package and is reviewed at v0.0.1; once shipped, the
+shape is fixed. A single-package member adding a separate core later
+would be a major-version bump and a CHANGELOG `### BREAKING` callout.
 
 ## No reflection policy
 
