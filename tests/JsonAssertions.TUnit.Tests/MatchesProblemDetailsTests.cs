@@ -164,6 +164,247 @@ internal sealed class MatchesProblemDetailsTests
     }
 
     [Test]
+    public async Task MatchesProblemDetails_MixedCaseContentType_Passes(CancellationToken ct)
+    {
+        // HTTP RFC 9110 §8.3.2: media-type tokens are case-insensitive. A response with
+        // Application/Problem+Json must satisfy the RFC 7807 content-type check.
+        var real = new ProblemDetails { Status = 400, Title = "Bad request" };
+        var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent(SerializeReal(real), Encoding.UTF8),
+        };
+        response.Content.Headers.ContentType = new MediaTypeHeaderValue("Application/Problem+Json");
+
+        await Assert.That(response).MatchesProblemDetails(status: 400, cancellationToken: ct);
+        response.Dispose();
+    }
+
+    [Test]
+    public async Task MatchesProblemDetails_BodyNotValidJson_FailsWithParseDiagnostic(CancellationToken ct)
+    {
+        // Body has the correct content-type but is not valid JSON; the assertion must surface
+        // the parse failure via ProblemDetailsParseFailed.
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, "{not-json");
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesProblemDetails(status: 400, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("deserialize as RFC 7807 ProblemDetails");
+        await Assert.That(ex.Message).Contains("parsing failed");
+    }
+
+    [Test]
+    public async Task MatchesProblemDetails_TitleAndDetailMismatch_FailsWithBothFields(CancellationToken ct)
+    {
+        // Multiple non-matching fields are reported in a single failure message.
+        var real = new ProblemDetails
+        {
+            Status = 400,
+            Title = "Actual title",
+            Detail = "Actual detail",
+        };
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(real));
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesProblemDetails(
+                status: 400,
+                title: "Expected title",
+                detail: "Expected detail",
+                cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("title");
+        await Assert.That(ex.Message).Contains("detail");
+        await Assert.That(ex.Message).Contains("Expected title");
+        await Assert.That(ex.Message).Contains("Expected detail");
+    }
+
+    [Test]
+    public async Task MatchesProblemDetails_TypeAndInstanceMismatch_FailsWithBothFields(CancellationToken ct)
+    {
+        var real = new ProblemDetails
+        {
+            Status = 400,
+            Type = "actual-type",
+            Instance = "/actual/instance",
+        };
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(real));
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesProblemDetails(
+                status: 400,
+                type: "expected-type",
+                instance: "/expected/instance",
+                cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("type");
+        await Assert.That(ex.Message).Contains("instance");
+    }
+
+    [Test]
+    public async Task MatchesValidationProblemDetails_NoErrorsProperty_FailsExplicitly(CancellationToken ct)
+    {
+        // Response body is plain ProblemDetails (no "errors" property at all); the assertion
+        // must surface the absent-errors case via the dedicated diagnostic branch.
+        var real = new ProblemDetails { Status = 400, Title = "No errors here" };
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(real));
+
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = FieldXMessages,
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("no \"errors\" property");
+    }
+
+    [Test]
+    public async Task MatchesValidationProblemDetails_ContentTypeWrong_FailsWithContentTypeDiagnostic(CancellationToken ct)
+    {
+        // Validation-flavor of the content-type check: bad Content-Type on the response, expect
+        // the same diagnostic the non-validation path produces.
+        var real = new ValidationProblemDetails(new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = FieldXMessages,
+        })
+        {
+            Status = 400,
+        };
+        var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent(SerializeReal(real), Encoding.UTF8, "application/json"),
+        };
+
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = FieldXMessages,
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("application/problem+json");
+        response.Dispose();
+    }
+
+    [Test]
+    public async Task MatchesValidationProblemDetails_BodyNotValidJson_FailsWithParseDiagnostic(CancellationToken ct)
+    {
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, "{not-json");
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = FieldXMessages,
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("parsing failed");
+    }
+
+    [Test]
+    public async Task MatchesValidationProblemDetails_StatusMismatch_FailsEarlyBeforeErrorsCheck(CancellationToken ct)
+    {
+        // When the base ProblemDetails fields don't match, the assertion short-circuits with
+        // the field-mismatch diagnostic and never inspects the errors dictionary.
+        var real = new ValidationProblemDetails(new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = FieldXMessages,
+        })
+        {
+            Status = 500,
+        };
+        using var response = ProblemResponse(HttpStatusCode.InternalServerError, SerializeReal(real));
+
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = FieldXMessages,
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("status: expected 400");
+    }
+
+    [Test]
+    public async Task MatchesValidationProblemDetails_ErrorMessageCountDiffers_FailsWithFieldDiagnostic(CancellationToken ct)
+    {
+        // Same field name but different number of error messages should fail; the assertion
+        // walks the actual messages vs expected and detects the length mismatch.
+        var actualOne = new[] { "first" };
+        var expectedTwo = new[] { "first", "second" };
+        var real = new ValidationProblemDetails(new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = actualOne,
+        })
+        {
+            Status = 400,
+        };
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(real));
+
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = expectedTwo,
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("FieldX");
+    }
+
+    [Test]
+    public async Task MatchesValidationProblemDetails_MessageMismatch_FailsWithBothMessages(CancellationToken ct)
+    {
+        var actualMessages = new[] { "actual error" };
+        var expectedMessages = new[] { "expected error" };
+        var real = new ValidationProblemDetails(new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = actualMessages,
+        })
+        {
+            Status = 400,
+        };
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(real));
+
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = expectedMessages,
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("FieldX");
+    }
+
+    [Test]
     public async Task MatchesValidationProblemDetails_MissingErrorField_Fails(CancellationToken ct)
     {
         var real = new ValidationProblemDetails(new Dictionary<string, string[]>(System.StringComparer.Ordinal)

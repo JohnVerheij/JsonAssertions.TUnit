@@ -32,11 +32,10 @@
 
     <!-- Symbol package + API compat (strict mode per dpfa Proj0249/0250/0251/0252).
          PackageValidationBaselineVersion pins to the previous shipped version so ApiCompat
-         catches binary breaks at pack time. The 0.0.1 -> 0.1.0 step intentionally evolves the
-         [GenerateAssertion] source-method return types from bool to AssertionResult to enable
-         the rich path-context failure messages; the generated TUnit chain extensions are
-         unaffected at chain-syntax level. CompatibilitySuppressions.xml captures the accepted
-         differences vs the 0.0.1 baseline. -->
+         catches binary breaks at pack time. Each minor version bumps the baseline to the
+         immediately previous shipped version; CompatibilitySuppressions.xml is regenerated
+         alongside to capture the accepted additive surface from that baseline. Current baseline:
+         0.2.0 (validates the additive v0.3.0 surface). -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>

@@ -43,6 +43,23 @@ internal sealed partial class HasJsonTypeInfoForTests
         await Assert.That(ex.Message).Contains("[JsonSerializable(typeof(DateTime))]");
     }
 
+    [Test]
+    public async Task HasJsonTypeInfoFor_NullContext_FailsWithNullDiagnostic(CancellationToken ct)
+    {
+        // Edge case: the receiver itself is a null JsonSerializerContext. AsJsonContext wraps it
+        // into the IJsonContextAssertionSource; the leaf assertion's CheckAsync sees a null value
+        // and surfaces the "Actual value is null" branch.
+        ct.ThrowIfCancellationRequested();
+        ContextRegistrationJsonContext? nullContext = null;
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(nullContext).AsJsonContext().HasJsonTypeInfoFor<RegisteredDto>();
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("null");
+    }
+
     /// <summary>A domain type registered in the test context.</summary>
     internal sealed record RegisteredDto(int Id, string Name);
 

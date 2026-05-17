@@ -48,10 +48,6 @@ public static class JsonRoundtripAssertions
     public static AssertionResult RoundtripsCleanlyVia<T>(this T value, JsonTypeInfo<T> jsonTypeInfo)
     {
         ArgumentNullException.ThrowIfNull(jsonTypeInfo);
-        if (value is null)
-        {
-            return AssertionResult.Failed("the value to be non-null for round-trip assertion\n  but got: null\n");
-        }
 
         var json1 = JsonSerializer.Serialize(value, jsonTypeInfo);
 
@@ -65,12 +61,14 @@ public static class JsonRoundtripAssertions
             return AssertionResult.Failed(JsonFailureMessage.RoundtripDeserializationFailed(json1, ex));
         }
 
-        if (roundtripped is null)
+        // A null input legitimately round-trips through STJ as "null" → null → "null"; only flag the
+        // pathological case where a non-null value deserialized back to null (serializer corruption).
+        if (value is not null && roundtripped is null)
         {
             return AssertionResult.Failed(JsonFailureMessage.RoundtripDeserializedToNull(json1));
         }
 
-        var json2 = JsonSerializer.Serialize(roundtripped, jsonTypeInfo);
+        var json2 = JsonSerializer.Serialize(roundtripped!, jsonTypeInfo);
 
         return string.Equals(json1, json2, StringComparison.Ordinal)
             ? AssertionResult.Passed

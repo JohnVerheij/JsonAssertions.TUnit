@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated **`CONVENTIONS.md` to v0.6**, adding the family-wide **Cross-package references rule** (no sibling family package may appear as a `PackageReference` in another sibling's production `.csproj`; composition happens at the consumer's call site via standard delegates) and the **Naming invariant** (no sibling-package-name prefix — `Snapshot*`, `Log*`, `Math*`, `Time*`, `Json*` — may appear in another sibling's public API surface, including typenames, method names, and extension method names). Both invariants are pack-time-enforced from v0.3.0 onward; `JsonAssertions.TUnit` ships the enforcement infrastructure (NuGet dependency-list scan + PublicAPI prefix scan) in this version. The 4 sibling repos adopt the same `CONVENTIONS.md` v0.6 in separate PRs after v0.3.0 merges.
 - Set **`PackageValidationBaselineVersion`** to `0.2.0`. ApiCompat now validates the additive v0.3.0 surface against the v0.2.0 baseline; `CompatibilitySuppressions.xml` is regenerated to capture the accepted additive differences (the new HTTP-response, AOT-context, renderer, and bridge surfaces, plus `JsonFailureMessage`'s internal-to-public promotion).
+- Changed **`RoundtripsCleanlyVia<T>`** to accept `null` payloads. A null value legitimately survives the round-trip through STJ (`null` → `"null"` → `null`); the previous early-rejection branch was removed. A non-null value that deserializes back to null (serializer corruption) still fails via the dedicated diagnostic.
+
+### Fixed
+
+- Fixed **`MatchesProblemDetails`** and **`MatchesValidationProblemDetails`** content-type comparison to be case-insensitive (RFC 9110 §8.3.2 media-type tokens). A response with `Application/Problem+Json` or any other case variant now correctly satisfies the RFC 7807 content-type check, where the previous ordinal comparison required exact `application/problem+json`.
 
 ## [0.2.0] - 2026-05-15: Array-indexed paths, root-self, boolean / non-empty-string / matching / one-of / parsable-as<T> assertions, plus the pack-time Release Notes pipeline
 

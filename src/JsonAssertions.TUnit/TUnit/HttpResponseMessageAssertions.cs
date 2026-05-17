@@ -413,7 +413,8 @@ public static class HttpResponseMessageAssertions
     {
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         var contentType = response.Content.Headers.ContentType?.MediaType;
-        return string.Equals(contentType, "application/problem+json", StringComparison.Ordinal)
+        // Media-type tokens are case-insensitive per RFC 9110 §8.3.2; a valid Application/Problem+Json must match.
+        return string.Equals(contentType, "application/problem+json", StringComparison.OrdinalIgnoreCase)
             ? (body, null)
             : (body, JsonFailureMessage.ProblemDetailsContentTypeMismatch(contentType, body));
     }
