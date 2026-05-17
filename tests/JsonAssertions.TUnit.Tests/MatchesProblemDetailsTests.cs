@@ -328,6 +328,29 @@ internal sealed class MatchesProblemDetailsTests
     }
 
     [Test]
+    public async Task MatchesValidationProblemDetails_BodyIsLiteralJsonNull_FailsWithErrorsDiagnostic(CancellationToken ct)
+    {
+        // Body deserializes to a null mirror; CompareValidationErrors receives mirror?.Errors
+        // which is null. The expected errors dictionary is non-empty, so the null-errors branch
+        // of CompareValidationErrors fires.
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, "null");
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = FieldXMessages,
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        // Status diagnostic fires first (mirror?.Status is null != 400); the test name reflects
+        // the deeper-truth (literal-null body) but the message is the status-level diagnostic.
+        await Assert.That(ex!.Message).Contains("status");
+    }
+
+    [Test]
     public async Task MatchesValidationProblemDetails_ContentTypeWrong_FailsWithContentTypeDiagnostic(CancellationToken ct)
     {
         // Validation-flavor of the content-type check: bad Content-Type on the response, expect

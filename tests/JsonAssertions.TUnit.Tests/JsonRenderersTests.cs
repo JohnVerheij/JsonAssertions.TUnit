@@ -59,6 +59,19 @@ internal sealed partial class JsonRenderersTests
         await Assert.That(third).IsEqualTo(first);
     }
 
+    [Test]
+    public async Task ReformatJson_LiteralNullInput_CanonicalisesToNullLiteral(CancellationToken ct)
+    {
+        // Input is the JSON literal "null"; the renderer must short-circuit to the "null"
+        // literal rather than serializing default(T).
+        ct.ThrowIfCancellationRequested();
+        var renderer = JsonRenderers.ReformatJson(RendererTestJsonContext.Default.RendererTestDto);
+
+        var canonical = renderer("null");
+
+        await Assert.That(canonical).IsEqualTo("null");
+    }
+
     /// <summary>A small record used as the renderer's deserialization target.</summary>
     internal sealed record RendererTestDto(int Id, string Name);
 

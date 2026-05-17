@@ -60,6 +60,25 @@ internal sealed partial class HasJsonTypeInfoForTests
         await Assert.That(ex!.Message).Contains("null");
     }
 
+    [Test]
+    public async Task HasJsonTypeInfoFor_LazyEvaluationThrows_FailsWithThrewDiagnostic(CancellationToken ct)
+    {
+        // Edge case: the receiver is a Func that throws during lazy evaluation. The leaf
+        // assertion's CheckAsync sees metadata.Exception set and surfaces the "threw ..." branch.
+        ct.ThrowIfCancellationRequested();
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(() => ThrowingContextFactory()).AsJsonContext().HasJsonTypeInfoFor<RegisteredDto>();
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("threw");
+        await Assert.That(ex.Message).Contains("InvalidOperationException");
+
+        static ContextRegistrationJsonContext ThrowingContextFactory()
+            => throw new System.InvalidOperationException("simulated evaluation failure");
+    }
+
     /// <summary>A domain type registered in the test context.</summary>
     internal sealed record RegisteredDto(int Id, string Name);
 

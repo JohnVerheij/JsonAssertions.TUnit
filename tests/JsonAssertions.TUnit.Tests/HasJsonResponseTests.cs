@@ -79,6 +79,40 @@ internal sealed partial class HasJsonResponseTests
     }
 
     [Test]
+    public async Task HasJsonResponse_BodyIsLiteralJsonNull_FailsWithNullActualDiagnostic(CancellationToken ct)
+    {
+        // Body deserializes to null; actual?.ToString() ?? "null" walks the null-coalescing
+        // "null" branch on the actual side.
+        using var response = Response(HttpStatusCode.OK, "null");
+        var expected = new TestDto(42, "alice");
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).HasJsonResponse(HttpStatusCode.OK, TestJsonContext.Default.TestDto, expected, ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("null");
+    }
+
+    [Test]
+    public async Task HasJsonResponse_LongMalformedBody_FailsWithTruncatedDiagnostic(CancellationToken ct)
+    {
+        // Response body > 256 chars; the failure message must truncate via TruncateBody's
+        // body > MaxResponseBodyLength branch.
+        var longInvalid = "{ " + new string('x', 300);
+        using var response = Response(HttpStatusCode.OK, longInvalid);
+        var expected = new TestDto(42, "alice");
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).HasJsonResponse(HttpStatusCode.OK, TestJsonContext.Default.TestDto, expected, ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("...");
+        await Assert.That(ex.Message).Contains("parsing failed");
+    }
+
+    [Test]
     public async Task HasJsonResponse_WithoutExplicitCancellationToken_Passes(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
