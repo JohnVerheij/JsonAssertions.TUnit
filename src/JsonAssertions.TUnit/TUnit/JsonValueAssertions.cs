@@ -134,6 +134,22 @@ public static class JsonValueAssertions
     public static AssertionResult HasJsonValueMatching(this JsonElement element, string path, Func<JsonElement, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
+
+        if (JsonPath.ContainsWildcard(path))
+        {
+            // A `[*]` path requires the predicate to hold on every expanded element; report the
+            // first that is missing or fails the predicate. An empty array passes vacuously.
+            foreach (var expanded in JsonPath.ResolveAll(element, path))
+            {
+                if (!expanded.Found || !predicate(expanded.Element))
+                {
+                    return AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, expanded, "a value matching the predicate"));
+                }
+            }
+
+            return AssertionResult.Passed;
+        }
+
         var resolution = JsonPath.Resolve(element, path);
         return resolution.Found && predicate(resolution.Element)
             ? AssertionResult.Passed

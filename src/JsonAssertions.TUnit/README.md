@@ -34,8 +34,9 @@ Each path / value / shape entry point is available over a JSON `string`, a `Syst
 | `RoundtripsCleanlyVia<T>(JsonTypeInfo<T>)` on any `T` | Asserts serialize → deserialize → re-serialize is byte-identical via the supplied source-generated `JsonTypeInfo<T>`. |
 | `AsJsonContext().HasJsonTypeInfoFor<T>()` on a `JsonSerializerContext`-typed source | Asserts the supplied source-generated context registers a `JsonTypeInfo<T>` for `T`. |
 | `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` *(static factory)* | Returns `Func<string, string>` that canonicalises a JSON string via the consumer's `JsonSerializerContext`; composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` at the consumer's call site. |
+| `JsonCanonicalizer.Canonicalize(json, opts)` *(static, v0.4.0+)* | Typeless structural canonical form (sorted keys, stable indent, all fields preserved) with `[*]`-aware `ScrubPath` scrubbing of volatile values; for pinning a whole response shape as a snapshot. Needs no `JsonSerializerContext` (unlike `ReformatJson<T>`) and keeps unknown fields. |
 
-The path is a dot-separated property navigation with optional `[N]` zero-based bracket indices and an optional leading `$` JSONPath root reference: `user.name`, `items[0].id`, `objects[0].planData[1].pickPlanId`, `$[0]` for a root-array first element. See [the path-syntax notes on GitHub](https://github.com/JohnVerheij/JsonAssertions.TUnit#path-syntax) for the full grammar.
+The path is a dot-separated property navigation with optional `[N]` zero-based bracket indices and an optional leading `$` JSONPath root reference: `user.name`, `items[0].id`, `objects[0].planData[1].pickPlanId`, `$[0]` for a root-array first element. The `[*]` wildcard (v0.4.0+) matches every element of an array on `HasJsonProperty` and `HasJsonValueMatching` (`items[*].id`). See [the path-syntax notes on GitHub](https://github.com/JohnVerheij/JsonAssertions.TUnit#path-syntax) for the full grammar.
 
 The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
 
@@ -93,7 +94,6 @@ The single package places types in two namespaces, the same shape as the rest of
 ## Roadmap
 
 - Semantic JSON equality and subset / fragment matching (`IsEquivalentJsonTo`, `ContainsJson`).
-- Wildcard path segments (`items[*]` and similar) when consumer evidence accumulates.
 
 ## Family
 

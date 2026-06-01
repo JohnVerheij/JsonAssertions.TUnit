@@ -4,6 +4,19 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace JsonAssertions
 {
+    public sealed class JsonCanonicalizeOptions
+    {
+        public JsonCanonicalizeOptions() { }
+        public System.Collections.Generic.IReadOnlyList<string> ScrubPaths { get; }
+        public string ScrubToken { get; }
+        public JsonAssertions.JsonCanonicalizeOptions ScrubPath(string path) { }
+        public JsonAssertions.JsonCanonicalizeOptions WithScrubToken(string token) { }
+    }
+    public static class JsonCanonicalizer
+    {
+        public static string Canonicalize(string json) { }
+        public static string Canonicalize(string json, System.Action<JsonAssertions.JsonCanonicalizeOptions>? configure) { }
+    }
     public static class JsonFailureMessage
     {
         public static string ParseFailure(System.Text.Json.JsonException exception) { }
@@ -14,8 +27,10 @@ namespace JsonAssertions
     }
     public static class JsonPath
     {
+        public static bool ContainsWildcard(string path) { }
         public static bool Exists(System.Text.Json.JsonElement element, string path) { }
         public static JsonAssertions.JsonPathResolution Resolve(System.Text.Json.JsonElement element, string path) { }
+        public static System.Collections.Generic.IReadOnlyList<JsonAssertions.JsonPathResolution> ResolveAll(System.Text.Json.JsonElement element, string path) { }
     }
     public readonly struct JsonPathResolution : System.IEquatable<JsonAssertions.JsonPathResolution>
     {

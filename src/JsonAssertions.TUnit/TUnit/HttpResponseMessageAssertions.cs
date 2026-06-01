@@ -486,7 +486,8 @@ public static class HttpResponseMessageAssertions
                     break;
                 }
             }
-            if (hasMismatch) break;
+            if (hasMismatch)
+                break;
         }
 
         return hasMismatch
