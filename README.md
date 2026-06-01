@@ -181,7 +181,7 @@ The single-location assertions (`HasJsonValue`, `HasJsonValueOneOf`, `HasJsonVal
 
 ## Entry points
 
-The full v0.3.0 entry-point catalog is in the Status table at the top of this file. The summary below organizes them by domain.
+The full entry-point catalog is in the Status table at the top of this file. The summary below organizes them by domain.
 
 **Path / value / shape (over JSON `string`, `JsonElement`, and `HttpResponseMessage`):**
 
