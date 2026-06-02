@@ -221,8 +221,7 @@ public static class JsonValueComparison
         return element.ValueKind switch
         {
             JsonValueKind.Number => element.TryGetInt32(out value),
-            JsonValueKind.String => element.GetString() is { } raw
-                && int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
+            JsonValueKind.String => int.TryParse(element.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
             _ => false,
         };
     }
@@ -236,8 +235,7 @@ public static class JsonValueComparison
         return element.ValueKind switch
         {
             JsonValueKind.Number => element.TryGetUInt32(out value),
-            JsonValueKind.String => element.GetString() is { } raw
-                && uint.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
+            JsonValueKind.String => uint.TryParse(element.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
             _ => false,
         };
     }
@@ -250,8 +248,7 @@ public static class JsonValueComparison
         return element.ValueKind switch
         {
             JsonValueKind.Number => element.TryGetInt64(out value),
-            JsonValueKind.String => element.GetString() is { } raw
-                && long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
+            JsonValueKind.String => long.TryParse(element.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
             _ => false,
         };
     }
@@ -265,8 +262,7 @@ public static class JsonValueComparison
         return element.ValueKind switch
         {
             JsonValueKind.Number => element.TryGetUInt64(out value),
-            JsonValueKind.String => element.GetString() is { } raw
-                && ulong.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
+            JsonValueKind.String => ulong.TryParse(element.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
             _ => false,
         };
     }
