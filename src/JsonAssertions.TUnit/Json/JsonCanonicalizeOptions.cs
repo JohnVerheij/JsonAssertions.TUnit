@@ -15,8 +15,9 @@ public sealed class JsonCanonicalizeOptions
 
     /// <summary>The JSON paths registered for scrubbing, in registration order. Each is resolved
     /// (wildcards expanded) against the document; every value it targets is replaced with
-    /// <see cref="ScrubToken"/>.</summary>
-    public IReadOnlyList<string> ScrubPaths => _scrubPaths;
+    /// <see cref="ScrubToken"/>. Returned as a read-only view; register paths through
+    /// <see cref="ScrubPath"/> so the non-empty validation is enforced.</summary>
+    public IReadOnlyList<string> ScrubPaths => _scrubPaths.AsReadOnly();
 
     /// <summary>The token a scrubbed value is replaced with. Defaults to <c>"&lt;scrubbed&gt;"</c>.</summary>
     public string ScrubToken { get; private set; } = "<scrubbed>";

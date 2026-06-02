@@ -50,13 +50,22 @@ internal sealed class WildcardAssertionTests
     }
 
     [Test]
-    public async Task HasJsonValueMatching_WildcardOneFails_Fails(CancellationToken ct)
+    public async Task HasJsonValueMatching_WildcardOneFails_FailsNamingIndex(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        await Assert.That(async () =>
+        var ex = await Assert.That(async () =>
         {
             await Assert.That("""[{"on":true},{"on":false}]""")
                 .HasJsonValueMatching("[*].on", v => v.ValueKind == JsonValueKind.True);
         }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("[1]");
+    }
+
+    [Test]
+    public async Task HasJsonValueMatching_WildcardEmptyArray_PassesVacuously(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("[]").HasJsonValueMatching("[*].on", v => v.ValueKind == JsonValueKind.True);
     }
 }

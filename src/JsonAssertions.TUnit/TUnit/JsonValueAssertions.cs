@@ -107,15 +107,18 @@ public static class JsonValueAssertions
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> satisfies the
-    /// <paramref name="predicate"/>. The predicate sees the resolved
+    /// <paramref name="predicate"/>. When <paramref name="path"/> contains the <c>[*]</c> wildcard,
+    /// the predicate must hold on every expanded element; the failure names the first element that is
+    /// missing or fails, and an empty match set passes vacuously. The predicate sees the resolved
     /// <see cref="JsonElement"/> and decides pass/fail; failure messages do not surface the
     /// predicate's intent (use a descriptive call site or wrap the assertion in
     /// <c>.Because(...)</c>).</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
-    /// indices, for example <c>user.age</c>.</param>
+    /// indices, for example <c>user.age</c>, optionally with the <c>[*]</c> wildcard to match every
+    /// element of an array (for example <c>[*].on</c>).</param>
     /// <param name="predicate">A predicate that returns <see langword="true"/> for matching
-    /// elements; receives the element resolved at <paramref name="path"/>.</param>
+    /// elements; receives each element resolved at <paramref name="path"/>.</param>
     [GenerateAssertion]
     public static AssertionResult HasJsonValueMatching(this string json, string path, Func<JsonElement, bool> predicate)
     {
@@ -124,10 +127,13 @@ public static class JsonValueAssertions
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> satisfies
-    /// <paramref name="predicate"/>.</summary>
+    /// <paramref name="predicate"/>. When <paramref name="path"/> contains the <c>[*]</c> wildcard,
+    /// the predicate must hold on every expanded element; the failure names the first element that is
+    /// missing or fails, and an empty match set passes vacuously.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
-    /// indices, for example <c>user.age</c>.</param>
+    /// indices, for example <c>user.age</c>, optionally with the <c>[*]</c> wildcard to match every
+    /// element of an array.</param>
     /// <param name="predicate">A predicate that returns <see langword="true"/> for matching
     /// elements.</param>
     [GenerateAssertion]
@@ -143,7 +149,9 @@ public static class JsonValueAssertions
             {
                 if (!expanded.Found || !predicate(expanded.Element))
                 {
-                    return AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, expanded, "a value matching the predicate"));
+                    // Report the concrete expanded path (e.g. "[1].on"), not the wildcard, so the
+                    // failure names which element failed, consistent with HasJsonProperty.
+                    return AssertionResult.Failed(JsonFailureMessage.ValueMismatch(expanded.ResolvedPrefix, expanded, "a value matching the predicate"));
                 }
             }
 
