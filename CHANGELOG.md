@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-02: `[*]` wildcard array paths, structural JSON canonicalizer
+
+Feature release. Adds the `[*]` wildcard path segment so array-element assertions check every element (`HasJsonProperty("[*].id")`, `HasJsonValueMatching("[*].isStarted", ...)`) rather than only index `[0]`, turning a weak first-element check into an all-element check. Also adds `JsonCanonicalizer.Canonicalize`, a typeless structural canonicalizer (sorted keys, stable indent, all fields preserved so new fields surface) with JSON-path scrubbing of volatile values, for composing JSON snapshots with a sibling snapshot package's normalizer hook. Also folds in the accumulated CI hardening, the Renovate migration, and the CONVENTIONS v0.7 sync from the unreleased line.
+
+### Added
+
+- **`[*]` wildcard path segment** on `HasJsonProperty` and `HasJsonValueMatching` (backed by the new `JsonPath.ResolveAll` core): `[*]` matches every element of the array it targets, so `HasJsonProperty("[*].id")` requires every element to carry `id`, and `HasJsonValueMatching("[*].isStarted", v => ...)` runs the predicate on each. Nested and multiple wildcards compose (`cycles[*].cycleId`, `[*].tags[*]`). An empty array passes vacuously (a "for all" over an empty set; pair with a non-empty-array assertion when emptiness must fail); a failure names which element failed by its concrete index. `JsonPath.ContainsWildcard(path)` reports whether a path uses the wildcard.
+- **`JsonCanonicalizer.Canonicalize(string json, Action<JsonCanonicalizeOptions> configure)`** produces a deterministic structural canonical form: object keys sorted ordinally, two-space indentation, LF line endings, relaxed escaping, and every value preserved (so an added or removed field surfaces as a text diff). `JsonCanonicalizeOptions.ScrubPath(path)` replaces the value at a JSON path (wildcards supported) with a stable token (default `<scrubbed>`, overridable via `WithScrubToken`). Unlike the typed `JsonRenderers.ReformatJson<T>`, this needs no `JsonSerializerContext` and keeps unknown properties, which is what makes it suitable for pinning a whole response shape as a snapshot baseline. Composes with a snapshot library's normalizer hook at the consumer's call site, so neither package depends on the other.
+
 ### Changed
 
 - Removed `paths-ignore` from `.github/workflows/ci.yml` so the `Build, test & pack` required check always reports a status. Without the fix, docs-only PRs stuck in `Expected - Waiting for status to be reported` and could not satisfy branch protection.
@@ -144,7 +153,8 @@ Semantic JSON equality and subset / fragment matching are candidate work for v0.
 - Source Link, deterministic builds, embedded PDB.
 - TUnit dependency pinned to **1.44.0**.
 
-[Unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.4.0
 [0.3.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.3.0
 [0.2.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.2.0
 [0.1.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.1.0

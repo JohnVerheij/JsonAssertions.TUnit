@@ -172,15 +172,16 @@ A path is a sequence of dot-separated property names and zero-based bracket indi
 
 - `user.address.city` resolves `user`, then `address`, then `city`.
 - `items[0].name` resolves the first element of `items`, then `name` on it. Indices are zero-based, non-negative integers. Property and index segments compose freely (`objects[0].planData[1].pickPlanId`).
+- `items[*].name` uses the `[*]` wildcard (since v0.4.0): it matches every element of the array, so the assertion holds only if it holds for all of them. Nested and multiple wildcards compose (`cycles[*].cycleId`, `[*].tags[*]`). Supported by `HasJsonProperty` and `HasJsonValueMatching`; an empty array passes vacuously (a "for all" over an empty set), and a failure names the first failing element by its concrete index.
 - `$` is the JSONPath root reference: `$` alone resolves to the asserted element itself; `$.user.name` is equivalent to `user.name`; `$[0]` (and bare `[0]`) is equivalent against a root array.
 - A path that traverses a non-object value where a property is expected (or a non-array where an index is expected) resolves to "not found" rather than throwing; the failure message names which segment blocked the resolution.
 - An empty path, a whitespace path, an empty / non-numeric / negative bracket index, an unclosed `[`, a property name directly after `]` without a `.` separator, or a doubled or leading / trailing dot throws `ArgumentException`.
 
-Wildcard segments (e.g. `[*]`) are not part of the 0.3.0 surface; see the roadmap below.
+The single-location assertions (`HasJsonValue`, `HasJsonValueOneOf`, `HasJsonValueParsableAs<T>`, `HasJsonArrayLength`, ...) target one path and reject `[*]` as a malformed index; the wildcard is for the all-element assertions above. For pinning a whole response shape as a snapshot, `JsonCanonicalizer.Canonicalize(json, opts)` (since v0.4.0) produces a deterministic structural form (object keys sorted, stable two-space indent, LF, every field preserved) with `[*]`-aware `ScrubPath` scrubbing of volatile values; compose it with a snapshot library's normalizer hook. Unlike the typed `JsonRenderers.ReformatJson<T>`, it needs no `JsonSerializerContext` and keeps unknown fields, so an added or removed field surfaces as a diff.
 
 ## Entry points
 
-The full v0.3.0 entry-point catalog is in the Status table at the top of this file. The summary below organizes them by domain.
+The full entry-point catalog is in the Status table at the top of this file. The summary below organizes them by domain.
 
 **Path / value / shape (over JSON `string`, `JsonElement`, and `HttpResponseMessage`):**
 
@@ -439,7 +440,7 @@ The next increments, each as a reviewed pull request:
 
 ## Family compatibility
 
-The six assertion-family packages: `LogAssertions.TUnit`, `TimeAssertions.TUnit`, `SnapshotAssertions.TUnit`, `MathAssertions.TUnit`, `JsonAssertions.TUnit`, and `SseAssertions.TUnit`: release independently and target the same .NET TFM at any moment (LTS-anchored, multi-target during STS support windows; see the [TFM policy in CONVENTIONS.md](CONVENTIONS.md#tfm-policy) for the rotation schedule). **Mix versions freely.** Each package ships under SemVer with `EnablePackageValidation` strict-mode ApiCompat against its previous baseline, so binary breaks within a version line are caught at pack time.
+The seven assertion-family packages: `LogAssertions.TUnit`, `TimeAssertions.TUnit`, `SnapshotAssertions.TUnit`, `MathAssertions.TUnit`, `JsonAssertions.TUnit`, `SseAssertions.TUnit`, and `GrpcAssertions.TUnit`: release independently and target the same .NET TFM at any moment (LTS-anchored, multi-target during STS support windows; see the [TFM policy in CONVENTIONS.md](CONVENTIONS.md#tfm-policy) for the rotation schedule). **Mix versions freely.** Each package ships under SemVer with `EnablePackageValidation` strict-mode ApiCompat against its previous baseline, so binary breaks within a version line are caught at pack time.
 
 For per-package release notes:
 - [LogAssertions.TUnit CHANGELOG](https://github.com/JohnVerheij/LogAssertions.TUnit/blob/main/CHANGELOG.md)
@@ -448,6 +449,7 @@ For per-package release notes:
 - [MathAssertions.TUnit CHANGELOG](https://github.com/JohnVerheij/MathAssertions.TUnit/blob/main/CHANGELOG.md)
 - [JsonAssertions.TUnit CHANGELOG](https://github.com/JohnVerheij/JsonAssertions.TUnit/blob/main/CHANGELOG.md)
 - [SseAssertions.TUnit CHANGELOG](https://github.com/JohnVerheij/SseAssertions.TUnit/blob/main/CHANGELOG.md)
+- [GrpcAssertions.TUnit CHANGELOG](https://github.com/JohnVerheij/GrpcAssertions.TUnit/blob/main/CHANGELOG.md)
 
 ## Pair with
 
@@ -456,6 +458,7 @@ For per-package release notes:
 - **[`SnapshotAssertions.TUnit`](https://www.nuget.org/packages/SnapshotAssertions.TUnit/)**: text-snapshot assertions for API-surface tests and similar deterministic-string scenarios. Coexists with Verify; covers the 80% case without coverage friction.
 - **[`MathAssertions.TUnit`](https://www.nuget.org/packages/MathAssertions.TUnit/)**: tolerance-aware fluent assertions over numeric and geometric types (vectors, quaternions, matrices, planes, complex numbers, arrays).
 - **[`SseAssertions.TUnit`](https://www.nuget.org/packages/SseAssertions.TUnit/)**: Server-Sent Events (SSE) wire-format assertions: event-count, field shape (`event:`, `data:`, `id:`, `retry:`), and stream content validation.
+- **[`GrpcAssertions.TUnit`](https://www.nuget.org/packages/GrpcAssertions.TUnit/)**: fluent gRPC outcome assertions (`ThrowsGrpcException` with `StatusCode` shorthands and detail refinements) plus the `GrpcCallBuilder` test-double helper.
 
 ## Contributing
 
