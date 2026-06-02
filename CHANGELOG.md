@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-06-01: `[*]` wildcard array paths, structural JSON canonicalizer
+## [0.4.0] - 2026-06-02: `[*]` wildcard array paths, structural JSON canonicalizer
 
 Feature release. Adds the `[*]` wildcard path segment so array-element assertions check every element (`HasJsonProperty("[*].id")`, `HasJsonValueMatching("[*].isStarted", ...)`) rather than only index `[0]`, turning a weak first-element check into an all-element check. Also adds `JsonCanonicalizer.Canonicalize`, a typeless structural canonicalizer (sorted keys, stable indent, all fields preserved so new fields surface) with JSON-path scrubbing of volatile values, for composing JSON snapshots with a sibling snapshot package's normalizer hook. Also folds in the accumulated CI hardening, the Renovate migration, and the CONVENTIONS v0.7 sync from the unreleased line.
 
