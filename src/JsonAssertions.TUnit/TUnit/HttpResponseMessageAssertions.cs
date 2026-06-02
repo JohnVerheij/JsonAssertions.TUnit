@@ -109,6 +109,74 @@ public static class HttpResponseMessageAssertions
         return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValue(root, path, expected), cancellationToken);
     }
 
+    /// <summary>Asserts the response body has the 32-bit integer value <paramref name="expected"/>
+    /// at the dot-separated <paramref name="path"/>, matching whether the JSON encodes it as a number
+    /// or as a numeric string and comparing exactly. System.Text.Json writes <c>int32</c> as a JSON
+    /// number while Protobuf's <c>JsonFormatter</c> can emit a JSON string; both are matched.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A dot-separated property path, for example <c>user.age</c>.</param>
+    /// <param name="expected">The expected 32-bit integer value.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValue(
+        this HttpResponseMessage response, string path, int expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValue(root, path, expected), cancellationToken);
+    }
+
+    /// <summary>Asserts the response body has the unsigned 32-bit integer value
+    /// <paramref name="expected"/> at the dot-separated <paramref name="path"/>, matching whether the
+    /// JSON encodes it as a number or as a numeric string and comparing exactly. System.Text.Json
+    /// writes <c>uint32</c> as a JSON number while Protobuf's <c>JsonFormatter</c> can emit a JSON
+    /// string; both are matched.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A dot-separated property path, for example <c>user.age</c>.</param>
+    /// <param name="expected">The expected unsigned 32-bit integer value.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValue(
+        this HttpResponseMessage response, string path, uint expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValue(root, path, expected), cancellationToken);
+    }
+
+    /// <summary>Asserts the response body has the 64-bit integer value <paramref name="expected"/>
+    /// at the dot-separated <paramref name="path"/>, matching whether the JSON encodes it as a number
+    /// or as a numeric string (parsed with <see cref="System.Globalization.CultureInfo.InvariantCulture"/>) and
+    /// comparing exactly. Protobuf serializes <c>int64</c> as a JSON string while System.Text.Json
+    /// writes it as a JSON number; both are matched.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A dot-separated property path, for example <c>guid.high</c>.</param>
+    /// <param name="expected">The expected 64-bit integer value.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValue(
+        this HttpResponseMessage response, string path, long expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValue(root, path, expected), cancellationToken);
+    }
+
+    /// <summary>Asserts the response body has the unsigned 64-bit integer value
+    /// <paramref name="expected"/> at the dot-separated <paramref name="path"/>, matching whether the
+    /// JSON encodes it as a number or as a numeric string (parsed with
+    /// <see cref="System.Globalization.CultureInfo.InvariantCulture"/>) and comparing exactly. Protobuf serializes
+    /// <c>uint64</c> as a JSON string while System.Text.Json writes it as a JSON number; both are
+    /// matched.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A dot-separated property path, for example <c>guid.low</c>.</param>
+    /// <param name="expected">The expected unsigned 64-bit integer value.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValue(
+        this HttpResponseMessage response, string path, ulong expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValue(root, path, expected), cancellationToken);
+    }
+
     /// <summary>Asserts the value at the dot-separated <paramref name="path"/> in the response
     /// body is a JSON array with exactly <paramref name="expectedLength"/> elements.</summary>
     /// <param name="response">The HTTP response whose body is the JSON document.</param>
@@ -234,6 +302,77 @@ public static class HttpResponseMessageAssertions
     [GenerateAssertion]
     public static Task<AssertionResult> HasJsonValueOneOf(
         this HttpResponseMessage response, string path, double[] candidates, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(candidates);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueOneOf(root, path, candidates), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is a 32-bit integer
+    /// equal to any of <paramref name="candidates"/>, encoded as either a JSON number or a numeric
+    /// JSON string, for System.Text.Json or Protobuf-style <c>int32</c> values.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>response.code</c>.</param>
+    /// <param name="candidates">The acceptable 32-bit integer values.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValueOneOf(
+        this HttpResponseMessage response, string path, int[] candidates, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(candidates);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueOneOf(root, path, candidates), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is an unsigned
+    /// 32-bit integer equal to any of <paramref name="candidates"/>, encoded as either a JSON number
+    /// or a numeric JSON string, for System.Text.Json or Protobuf-style <c>uint32</c>
+    /// values.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>response.code</c>.</param>
+    /// <param name="candidates">The acceptable unsigned 32-bit integer values.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValueOneOf(
+        this HttpResponseMessage response, string path, uint[] candidates, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(candidates);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueOneOf(root, path, candidates), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is a 64-bit integer
+    /// equal to any of <paramref name="candidates"/>, encoded as either a JSON number or a numeric
+    /// JSON string (parsed with <see cref="System.Globalization.CultureInfo.InvariantCulture"/>), for
+    /// System.Text.Json or Protobuf-style <c>int64</c> values.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>message.sequence</c>.</param>
+    /// <param name="candidates">The acceptable 64-bit integer values.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValueOneOf(
+        this HttpResponseMessage response, string path, long[] candidates, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(candidates);
+        return AssertOnBodyAsync(response, root => JsonValueAssertions.HasJsonValueOneOf(root, path, candidates), cancellationToken);
+    }
+
+    /// <summary>Asserts the value at <paramref name="path"/> in the response body is an unsigned
+    /// 64-bit integer equal to any of <paramref name="candidates"/>, encoded as either a JSON number
+    /// or a numeric JSON string (parsed with <see cref="System.Globalization.CultureInfo.InvariantCulture"/>), for
+    /// System.Text.Json or Protobuf-style <c>uint64</c> values.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="path">A path of dot-separated property names and zero-based bracket
+    /// indices, for example <c>message.sequence</c>.</param>
+    /// <param name="candidates">The acceptable unsigned 64-bit integer values.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> HasJsonValueOneOf(
+        this HttpResponseMessage response, string path, ulong[] candidates, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(candidates);

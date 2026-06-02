@@ -19,8 +19,8 @@ Each path / value / shape entry point is available over a JSON `string`, a `Syst
 |---|---|
 | `HasJsonProperty(path)` | Asserts a property exists at the path. |
 | `DoesNotHaveJsonProperty(path)` | Asserts no property exists at the path. |
-| `HasJsonValue(path, expected)` | Asserts the value at `path` equals `expected` (a `string`, `bool`, or number). |
-| `HasJsonValueOneOf(path, T[])` | Asserts the value at `path` is one of the given strings or numbers. |
+| `HasJsonValue(path, expected)` | Asserts the value at `path` equals `expected` (a `string`, `bool`, or number; `long` / `ulong` overloads read a string-encoded 64-bit integer such as Protobuf `int64` / `uint64`). |
+| `HasJsonValueOneOf(path, T[])` | Asserts the value at `path` is one of the given values (`string[]`, `double[]`, `long[]`, or `ulong[]`). |
 | `HasJsonValueMatching(path, predicate)` | Asserts the value at `path` satisfies `Func<JsonElement, bool>`. |
 | `HasJsonValueParsableAs<T>(path)` | Asserts the value at `path` is a JSON string parseable as `T` (where `T : IParsable<T>`). |
 | `HasJsonValueKind(path, kind)` | Asserts the value at `path` is of the given `JsonValueKind`. |
@@ -71,6 +71,8 @@ The fluent entry points auto-import via `TUnit.Assertions.Extensions`. The same 
 await Assert.That(response).HasJsonProperty("user.name", ct);
 await Assert.That(response).HasJsonValue("user.age", 30, ct);
 ```
+
+`int` / `uint` match JSON numbers (protobuf `int32` / `uint32`); `long` / `ulong` match JSON strings (protobuf `int64` / `uint64`, to avoid 53-bit precision loss); `double` matches JSON numbers. Use the `L` / `UL` suffix to assert a 64-bit string-encoded value (`HasJsonValue("guid.high", 123456789012345L)`).
 
 When an assertion fails, the message names the failure point:
 

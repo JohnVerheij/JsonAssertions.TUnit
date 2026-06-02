@@ -65,6 +65,8 @@ internal sealed class HttpResponseMessageAssertionsTests
     public async Task HasJsonValue_Number_Match_Passes(CancellationToken ct)
     {
         using var response = Response(BodyJson);
+
+        // A bare int literal binds to the int overload, which matches the JSON number exactly.
         await Assert.That(response).HasJsonValue("user.age", 30, ct);
     }
 
@@ -78,6 +80,76 @@ internal sealed class HttpResponseMessageAssertionsTests
         }).Throws<AssertionException>();
 
         await Assert.That(ex!.Message).Contains("found: \"alice\"");
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int64_StringEncodedMatch_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"guid":{"high":"123456789012345"}}""");
+        await Assert.That(response).HasJsonValue("guid.high", 123456789012345L, ct);
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt64_StringEncodedMatch_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"guid":{"low":"18446744073709551615"}}""");
+        await Assert.That(response).HasJsonValue("guid.low", ulong.MaxValue, ct);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int64_NumberEncodedMatch_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"guid":{"high":123456789012345}}""");
+        await Assert.That(response).HasJsonValue("guid.high", 123456789012345L, ct);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int32_StringEncodedMatch_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"code":"200"}""");
+        await Assert.That(response).HasJsonValue("code", 200, ct);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int64_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"seq":"200"}""");
+        await Assert.That(response).HasJsonValueOneOf("seq", [100L, 200L], ct);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_UInt64_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"seq":"7"}""");
+        await Assert.That(response).HasJsonValueOneOf("seq", [7UL, 8UL], ct);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int32_NumberMatch_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"code":200}""");
+        await Assert.That(response).HasJsonValue("code", 200, ct);
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt32_NumberMatch_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"code":4294967295}""");
+        await Assert.That(response).HasJsonValue("code", uint.MaxValue, ct);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int32_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"code":404}""");
+        await Assert.That(response).HasJsonValueOneOf("code", [200, 404], ct);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_UInt32_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"code":7}""");
+        await Assert.That(response).HasJsonValueOneOf("code", [7U, 8U], ct);
     }
 
     [Test]
