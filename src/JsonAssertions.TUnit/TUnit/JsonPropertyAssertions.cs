@@ -37,6 +37,22 @@ public static class JsonPropertyAssertions
     [GenerateAssertion]
     public static AssertionResult HasJsonProperty(this JsonElement element, string path)
     {
+        if (JsonPath.ContainsWildcard(path))
+        {
+            // A `[*]` path requires every expanded element to resolve; report the first that does
+            // not (its prefix names which element, e.g. `[1]`). An empty array expands to zero
+            // resolutions and passes vacuously.
+            foreach (var expanded in JsonPath.ResolveAll(element, path))
+            {
+                if (!expanded.Found)
+                {
+                    return AssertionResult.Failed(JsonFailureMessage.PropertyNotFound(path, expanded));
+                }
+            }
+
+            return AssertionResult.Passed;
+        }
+
         var resolution = JsonPath.Resolve(element, path);
         return resolution.Found
             ? AssertionResult.Passed

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -258,4 +259,223 @@ public static class JsonPath
     /// callers must have already checked bounds.</summary>
     private static JsonElement GetArrayElement(JsonElement array, int index)
         => array.EnumerateArray().ElementAt(index);
+
+    /// <summary>Reports whether <paramref name="path"/> contains a wildcard array segment
+    /// <c>[*]</c>, which matches every element of an array rather than a single index. Wildcard
+    /// paths are resolved with <see cref="ResolveAll"/>; <see cref="Resolve"/> rejects <c>[*]</c>
+    /// as a malformed (non-numeric) index.</summary>
+    /// <param name="path">The path to inspect.</param>
+    /// <returns><see langword="true"/> if <paramref name="path"/> contains a <c>[*]</c> segment.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
+    public static bool ContainsWildcard(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        return path.Contains("[*]", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="path"/> against <paramref name="element"/>, expanding each
+    /// <c>[*]</c> wildcard across every element of the array it targets, and returns one
+    /// <see cref="JsonPathResolution"/> per expanded concrete path. A path with no wildcard yields
+    /// exactly one resolution (identical to <see cref="Resolve"/>). A <c>[*]</c> over an empty
+    /// array yields zero resolutions: a "for all" over an empty set, so an all-must-resolve check
+    /// passes vacuously (pair with a non-empty-array assertion when emptiness must fail). A
+    /// <c>[*]</c> applied to a non-array yields a single failed resolution describing the mismatch.
+    /// Each failed resolution carries the concrete prefix (e.g. <c>[1]</c>) so a wildcard failure
+    /// names which element failed.
+    /// </summary>
+    /// <param name="element">The JSON element to navigate from.</param>
+    /// <param name="path">A path as in <see cref="Resolve"/>, optionally containing one or more
+    /// <c>[*]</c> wildcard segments.</param>
+    /// <returns>The resolutions for every concrete path the wildcards expand to, in document order.</returns>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is invalid; see <see cref="Resolve"/>.</exception>
+    public static IReadOnlyList<JsonPathResolution> ResolveAll(JsonElement element, string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var normalized = NormalizeRoot(path);
+        var results = new List<JsonPathResolution>();
+        if (normalized.Length is 0)
+        {
+            results.Add(JsonPathResolution.Resolved(element, string.Empty));
+            return results;
+        }
+
+        Expand(element, ParseSegments(normalized), 0, new StringBuilder(), results);
+        return results;
+    }
+
+    /// <summary>Recursively walks <paramref name="segments"/> from <paramref name="index"/>,
+    /// branching at each wildcard, accumulating one resolution per concrete leaf path.</summary>
+    private static void Expand(
+        JsonElement current,
+        IReadOnlyList<PathSegment> segments,
+        int index,
+        StringBuilder prefix,
+        List<JsonPathResolution> results)
+    {
+        if (index == segments.Count)
+        {
+            results.Add(JsonPathResolution.Resolved(current, prefix.ToString()));
+            return;
+        }
+
+        var segment = segments[index];
+        switch (segment.Kind)
+        {
+            case SegmentKind.Property:
+                ExpandProperty(current, segment.Property, segments, index, prefix, results);
+                break;
+            case SegmentKind.Index:
+                ExpandIndex(current, segment.Index, segments, index, prefix, results);
+                break;
+            default:
+                ExpandWildcard(current, segments, index, prefix, results);
+                break;
+        }
+    }
+
+    private static void ExpandProperty(
+        JsonElement current, string property, IReadOnlyList<PathSegment> segments, int index, StringBuilder prefix, List<JsonPathResolution> results)
+    {
+        if (current.ValueKind is not JsonValueKind.Object || !current.TryGetProperty(property, out var next))
+        {
+            results.Add(JsonPathResolution.NotFound(prefix.ToString(), property, current.ValueKind));
+            return;
+        }
+
+        var saved = prefix.Length;
+        if (prefix.Length > 0)
+        {
+            prefix.Append('.');
+        }
+
+        prefix.Append(property);
+        Expand(next, segments, index + 1, prefix, results);
+        prefix.Length = saved;
+    }
+
+    private static void ExpandIndex(
+        JsonElement current, int arrayIndex, IReadOnlyList<PathSegment> segments, int index, StringBuilder prefix, List<JsonPathResolution> results)
+    {
+        var segmentText = string.Concat("[", arrayIndex.ToString(CultureInfo.InvariantCulture), "]");
+        if (current.ValueKind is not JsonValueKind.Array || arrayIndex >= current.GetArrayLength())
+        {
+            results.Add(JsonPathResolution.NotFound(prefix.ToString(), segmentText, current.ValueKind));
+            return;
+        }
+
+        var saved = prefix.Length;
+        prefix.Append(segmentText);
+        Expand(GetArrayElement(current, arrayIndex), segments, index + 1, prefix, results);
+        prefix.Length = saved;
+    }
+
+    private static void ExpandWildcard(
+        JsonElement current, IReadOnlyList<PathSegment> segments, int index, StringBuilder prefix, List<JsonPathResolution> results)
+    {
+        if (current.ValueKind is not JsonValueKind.Array)
+        {
+            results.Add(JsonPathResolution.NotFound(prefix.ToString(), "[*]", current.ValueKind));
+            return;
+        }
+
+        var i = 0;
+        foreach (var item in current.EnumerateArray())
+        {
+            var saved = prefix.Length;
+            prefix.Append('[').Append(i.ToString(CultureInfo.InvariantCulture)).Append(']');
+            Expand(item, segments, index + 1, prefix, results);
+            prefix.Length = saved;
+            i++;
+        }
+    }
+
+    /// <summary>Tokenizes a root-normalized path into property / index / wildcard segments, applying
+    /// the same grammar rules <see cref="WalkSegments"/> enforces (a property after <c>]</c> needs a
+    /// dot; no leading / doubled / trailing dot; closed brackets), with <c>[*]</c> added.</summary>
+    private static List<PathSegment> ParseSegments(string path)
+    {
+        var segments = new List<PathSegment>();
+        var i = 0;
+        while (i < path.Length)
+        {
+            var c = path[i];
+            if (c is '[')
+            {
+                segments.Add(ParseBracketSegment(path, ref i));
+            }
+            else if (c is '.')
+            {
+                ConsumeDot(path, ref i, segments.Count);
+            }
+            else
+            {
+                segments.Add(ParsePropertySegment(path, ref i));
+            }
+        }
+
+        return segments;
+    }
+
+    private static PathSegment ParseBracketSegment(string path, ref int i)
+    {
+        var close = path.IndexOf(']', i + 1);
+        if (close < 0)
+        {
+            throw new ArgumentException(
+                "Path contains an unclosed '['; bracket indices must be closed.", nameof(path));
+        }
+
+        var inside = path[(i + 1)..close];
+        i = close + 1;
+        if (i < path.Length && path[i] is not '.' and not '[')
+        {
+            throw new ArgumentException(
+                "Path segment after ']' must be '.', '[', or end-of-path; a property name following an index requires a dot separator (use 'items[0].name', not 'items[0]name').",
+                nameof(path));
+        }
+
+        if (string.Equals(inside, "*", StringComparison.Ordinal))
+        {
+            return new PathSegment(SegmentKind.Wildcard, string.Empty, 0);
+        }
+
+        if (inside.Length is 0)
+        {
+            throw new ArgumentException(
+                "Path contains an empty bracket index '[]'; indices must be a non-negative integer or the '*' wildcard.", nameof(path));
+        }
+
+        if (!int.TryParse(inside, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
+        {
+            throw new ArgumentException(
+                "Path contains a non-numeric or negative bracket index '[" + inside + "]'; indices must be a non-negative integer or the '*' wildcard.",
+                nameof(path));
+        }
+
+        return new PathSegment(SegmentKind.Index, string.Empty, parsed);
+    }
+
+    private static PathSegment ParsePropertySegment(string path, ref int i)
+    {
+        var end = i;
+        while (end < path.Length && path[end] is not '.' and not '[')
+        {
+            end++;
+        }
+
+        var property = path[i..end];
+        i = end;
+        return new PathSegment(SegmentKind.Property, property, 0);
+    }
+
+    private enum SegmentKind
+    {
+        Property,
+        Index,
+        Wildcard,
+    }
+
+    private readonly record struct PathSegment(SegmentKind Kind, string Property, int Index);
 }
