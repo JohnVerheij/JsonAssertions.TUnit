@@ -72,7 +72,7 @@ await Assert.That(response).HasJsonProperty("user.name", ct);
 await Assert.That(response).HasJsonValue("user.age", 30, ct);
 ```
 
-`int` / `uint` match JSON numbers (protobuf `int32` / `uint32`); `long` / `ulong` match JSON strings (protobuf `int64` / `uint64`, to avoid 53-bit precision loss); `double` matches JSON numbers. Use the `L` / `UL` suffix to assert a 64-bit string-encoded value (`HasJsonValue("guid.high", 123456789012345L)`).
+Each integer overload (`int` / `uint` / `long` / `ulong`) matches the value whether the JSON encodes it as a number or a numeric string; `long` / `ulong` exist because protobuf serializes 64-bit ints as JSON strings (to avoid 53-bit precision loss) while System.Text.Json writes them as numbers. `double` matches a JSON number only. Use the `L` / `UL` suffix to assert a 64-bit value (`HasJsonValue("guid.high", 123456789012345L)`).
 
 When an assertion fails, the message names the failure point:
 
