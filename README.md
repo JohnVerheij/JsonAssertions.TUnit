@@ -188,6 +188,8 @@ A path is a sequence of dot-separated property names and zero-based bracket indi
 - `user.address.city` resolves `user`, then `address`, then `city`.
 - `items[0].name` resolves the first element of `items`, then `name` on it. Indices are zero-based, non-negative integers. Property and index segments compose freely (`objects[0].planData[1].pickPlanId`).
 - `items[*].name` uses the `[*]` wildcard (since v0.4.0): it matches every element of the array, so the assertion holds only if it holds for all of them. Nested and multiple wildcards compose (`cycles[*].cycleId`, `[*].tags[*]`). Supported by `HasJsonProperty` and `HasJsonValueMatching`; an empty array passes vacuously (a "for all" over an empty set), and a failure names the first failing element by its concrete index.
+  - **Empty-array footgun.** `[*]` is a "for all" quantifier, so `[*].id` passes vacuously on an empty array (there is nothing to violate the predicate), whereas `[0].id` *fails* on an empty array (there is no first element). A naive `[0]` to `[*]` migration therefore silently drops the implicit non-emptiness check that `[0]` carried. When an empty array should fail the test, pair the wildcard with an explicit non-emptiness assertion, for example `HasNonEmptyJsonArray("items")` alongside `HasJsonProperty("items[*].id")`.
+  - **Wildcards are for existence and uniform checks, not element-specific ones.** `[*]` fits property-existence checks and value checks that genuinely hold for every element. A check that depends on a specific element's position (for example "the element at index 2 has `id` 2", `HasJsonValue("items[2].id", 2)`) must stay index-scoped; rewriting it as `[*]` would assert the same value for every element and change the meaning of the test.
 - `$` is the JSONPath root reference: `$` alone resolves to the asserted element itself; `$.user.name` is equivalent to `user.name`; `$[0]` (and bare `[0]`) is equivalent against a root array.
 - A path that traverses a non-object value where a property is expected (or a non-array where an index is expected) resolves to "not found" rather than throwing; the failure message names which segment blocked the resolution.
 - An empty path, a whitespace path, an empty / non-numeric / negative bracket index, an unclosed `[`, a property name directly after `]` without a `.` separator, or a doubled or leading / trailing dot throws `ArgumentException`.
@@ -445,7 +447,6 @@ The 1.0 milestone signals API stability.
 The next increments, each as a reviewed pull request:
 
 - Semantic JSON equality and subset / fragment matching (`IsEquivalentJsonTo`, `ContainsJson`).
-- Wildcard path segments (`items[*]` and similar) when consumer evidence accumulates.
 
 ### Out of scope
 

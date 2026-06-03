@@ -11,7 +11,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>JsonAssertions.TUnit</PackageId>
     <ProductName>JsonAssertions.TUnit</ProductName>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
     <Description>TUnit-native JSON assertions for .NET tests. Fluent .Method(...) entry points (generated via TUnit's [GenerateAssertion]) for asserting paths, values, and shapes against a JSON string, a System.Text.Json JsonElement, or an HttpResponseMessage. Supports nested property navigation, zero-based array indices (items[0].id), and the JSONPath root reference ($, $.user, $[0]); ships value-at-path (including long/ulong overloads that read string-encoded 64-bit integers such as Protobuf int64/uint64), kind, array-shape, non-empty-string, boolean, predicate, one-of, and IParsable&lt;T&gt;-via-string assertions. AOT-compatible, trimmable, no runtime reflection.</Description>
@@ -35,11 +35,11 @@
          catches binary breaks at pack time. Each minor version bumps the baseline to the
          immediately previous shipped version; CompatibilitySuppressions.xml is regenerated
          alongside to capture the accepted additive surface from that baseline. Current baseline:
-         0.2.0 (validates the additive v0.3.0 surface). -->
+         0.4.0 (the v0.4.1 release is docs-only, so the surface is identical to the baseline). -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.3.0</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.4.0</PackageValidationBaselineVersion>
     <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
     <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
     <ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>

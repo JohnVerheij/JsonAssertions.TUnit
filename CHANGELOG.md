@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-06-04
+
+Documentation patch. No code, public API, or behaviour change.
+
+### Changed
+
+- `[*]` wildcard path syntax: documented the **empty-array footgun** in the root and packed READMEs. `[*].id` passes vacuously on an empty array (correct "for all" semantics) while `[0].id` fails on one, so a naive `[0]` to `[*]` migration silently drops the implicit non-emptiness check; the notes tell readers to pair `[*]` with `HasNonEmptyJsonArray(...)` when emptiness should fail the test.
+- `[*]` wildcard path syntax: documented the **index-scoped caveat** in the root and packed READMEs. Wildcards fit existence and genuinely-uniform value checks only; an element-specific value check (for example `HasJsonValue("items[2].id", 2)`) must stay index-scoped rather than become `[*]`.
+
 ## [0.4.0] - 2026-06-03: `[*]` wildcard array paths, structural JSON canonicalizer
 
 Feature release. Adds the `[*]` wildcard path segment so array-element assertions check every element (`HasJsonProperty("[*].id")`, `HasJsonValueMatching("[*].isStarted", ...)`) rather than only index `[0]`, turning a weak first-element check into an all-element check. Also adds `JsonCanonicalizer.Canonicalize`, a typeless structural canonicalizer (sorted keys, stable indent, all fields preserved so new fields surface) with JSON-path scrubbing of volatile values, for composing JSON snapshots with a sibling snapshot package's normalizer hook. Also folds in the accumulated CI hardening, the Renovate migration, and the CONVENTIONS v0.7 sync from the unreleased line.
@@ -155,7 +164,8 @@ Semantic JSON equality and subset / fragment matching are candidate work for v0.
 - Source Link, deterministic builds, embedded PDB.
 - TUnit dependency pinned to **1.44.0**.
 
-[Unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.4.1
 [0.4.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.4.0
 [0.3.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.3.0
 [0.2.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.2.0
