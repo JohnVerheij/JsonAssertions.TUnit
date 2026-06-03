@@ -23,7 +23,7 @@ namespace JsonAssertions.TUnit;
 /// <para>AOT-clean: the supplied <see cref="JsonTypeInfo{T}"/> is the source-generated entry
 /// for <c>T</c> in the consumer's <c>JsonSerializerContext</c>; the assertion
 /// uses no runtime reflection.</para>
-/// <para>Educational-demand use case (per early consumer survey): consumers shipping
+/// <para>Use case: consumers shipping
 /// AOT-compatible web APIs typically have a <c>JsonSerializerContext</c> but rarely write
 /// regression tests verifying that EVERY type in the context round-trips correctly. A
 /// <c>RoundtripsCleanlyVia</c> regression test for each type in each context is a 1-2 hour

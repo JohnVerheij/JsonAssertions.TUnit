@@ -96,6 +96,8 @@ internal sealed class JsonValueAssertionsTests
     public async Task HasJsonValue_Number_Match_Passes(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+
+        // A bare int literal binds to the int overload, which reads a JSON number exactly.
         await Assert.That(SampleJson).HasJsonValue("user.age", 30);
     }
 
@@ -167,6 +169,353 @@ internal sealed class JsonValueAssertionsTests
         }).Throws<AssertionException>();
 
         await Assert.That(ex!.Message).Contains("found: null");
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int64_StringEncodedMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"guid":{"high":"123456789012345"}}""").HasJsonValue("guid.high", 123456789012345L);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int64_NumberEncodedMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"guid":{"high":123456789012345}}""").HasJsonValue("guid.high", 123456789012345L);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int64_StringEncodedMatch_JsonElement_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"guid":{"high":"123456789012345"}}""");
+
+        await Assert.That(document.RootElement).HasJsonValue("guid.high", 123456789012345L);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int64_DifferentValue_FailsShowingFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"high":"123456789012345"}""").HasJsonValue("high", 999L);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value 999 at path \"high\"");
+        await Assert.That(ex.Message).Contains("found: \"123456789012345\"");
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int64_AgainstNonNumericString_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        // A non-numeric string does not parse to the expected 64-bit integer.
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"high":"not-a-number"}""").HasJsonValue("high", 1L);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("found: \"not-a-number\"");
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt64_StringEncodedMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"guid":{"low":"18446744073709551615"}}""").HasJsonValue("guid.low", ulong.MaxValue);
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt64_NumberEncodedMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"guid":{"low":18446744073709551615}}""").HasJsonValue("guid.low", ulong.MaxValue);
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt64_StringEncodedMatch_JsonElement_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"guid":{"low":"18446744073709551615"}}""");
+
+        await Assert.That(document.RootElement).HasJsonValue("guid.low", ulong.MaxValue);
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt64_DifferentValue_FailsShowingFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"low":"42"}""").HasJsonValue("low", 43UL);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value 43 at path \"low\"");
+        await Assert.That(ex.Message).Contains("found: \"42\"");
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int64_PathNotFound_FailsWithFailurePoint(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(SampleJson).HasJsonValue("user.high", 1L);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("resolved as far as: user");
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int64_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"seq":"200"}""").HasJsonValueOneOf("seq", [100L, 200L, 300L]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int64_JsonElement_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"seq":"200"}""");
+
+        await Assert.That(document.RootElement).HasJsonValueOneOf("seq", [100L, 200L, 300L]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int64_NumberEncoded_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"seq":200}""").HasJsonValueOneOf("seq", [100L, 200L, 300L]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int64_NotInCandidates_FailsShowingCandidatesAndFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"seq":"500"}""").HasJsonValueOneOf("seq", [100L, 200L]);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value one of { 100, 200 } at path \"seq\"");
+        await Assert.That(ex.Message).Contains("found: \"500\"");
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_UInt64_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"seq":"18446744073709551615"}""").HasJsonValueOneOf("seq", [1UL, ulong.MaxValue]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_UInt64_JsonElement_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"seq":"7"}""");
+
+        await Assert.That(document.RootElement).HasJsonValueOneOf("seq", [7UL, 8UL]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_UInt64_NotInCandidates_FailsShowingCandidatesAndFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"seq":"9"}""").HasJsonValueOneOf("seq", [1UL, 2UL]);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value one of { 1, 2 } at path \"seq\"");
+        await Assert.That(ex.Message).Contains("found: \"9\"");
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_NullInt64Candidates_String_ThrowsArgumentNullException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(() => JsonValueAssertions.HasJsonValueOneOf(SampleJson, "user.age", (long[])null!))
+            .Throws<ArgumentNullException>();
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_NullUInt64Candidates_String_ThrowsArgumentNullException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(() => JsonValueAssertions.HasJsonValueOneOf(SampleJson, "user.age", (ulong[])null!))
+            .Throws<ArgumentNullException>();
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int32_NumberMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"user":{"age":30}}""").HasJsonValue("user.age", 30);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int32_NumberMatch_JsonElement_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"user":{"age":30}}""");
+
+        await Assert.That(document.RootElement).HasJsonValue("user.age", 30);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int32_DifferentValue_FailsShowingFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"age":30}""").HasJsonValue("age", 31);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value 31 at path \"age\"");
+        await Assert.That(ex.Message).Contains("found: 30");
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int32_StringEncodedMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        // A numeric string is matched by the int overload (Protobuf can emit int32 as a string).
+        await Assert.That("""{"age":"30"}""").HasJsonValue("age", 30);
+    }
+
+    [Test]
+    public async Task HasJsonValue_Int32_AgainstNonNumericString_Fails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"age":"thirty"}""").HasJsonValue("age", 30);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("found: \"thirty\"");
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt32_NumberMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"code":4294967295}""").HasJsonValue("code", uint.MaxValue);
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt32_NumberMatch_JsonElement_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"code":4294967295}""");
+
+        await Assert.That(document.RootElement).HasJsonValue("code", uint.MaxValue);
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt32_StringEncodedMatch_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"code":"4294967295"}""").HasJsonValue("code", uint.MaxValue);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int32_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"code":200}""").HasJsonValueOneOf("code", [200, 404, 500]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int32_JsonElement_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"code":404}""");
+
+        await Assert.That(document.RootElement).HasJsonValueOneOf("code", [200, 404, 500]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int32_StringEncoded_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"code":"404"}""").HasJsonValueOneOf("code", [200, 404, 500]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_Int32_NotInCandidates_FailsShowingCandidatesAndFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"code":418}""").HasJsonValueOneOf("code", [200, 404]);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value one of { 200, 404 } at path \"code\"");
+        await Assert.That(ex.Message).Contains("found: 418");
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_UInt32_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"code":4294967295}""").HasJsonValueOneOf("code", [1U, uint.MaxValue]);
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_UInt32_JsonElement_Matches_Passes(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"code":7}""");
+
+        await Assert.That(document.RootElement).HasJsonValueOneOf("code", [7U, 8U]);
+    }
+
+    [Test]
+    public async Task HasJsonValue_UInt32_DifferentValue_FailsShowingFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"code":7}""").HasJsonValue("code", 8U);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value 8 at path \"code\"");
+        await Assert.That(ex.Message).Contains("found: 7");
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_UInt32_NotInCandidates_FailsShowingCandidatesAndFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That("""{"code":9}""").HasJsonValueOneOf("code", [1U, 2U]);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("to have JSON value one of { 1, 2 } at path \"code\"");
+        await Assert.That(ex.Message).Contains("found: 9");
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_NullInt32Candidates_String_ThrowsArgumentNullException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(() => JsonValueAssertions.HasJsonValueOneOf(SampleJson, "user.age", (int[])null!))
+            .Throws<ArgumentNullException>();
+    }
+
+    [Test]
+    public async Task HasJsonValueOneOf_NullUInt32Candidates_String_ThrowsArgumentNullException(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(() => JsonValueAssertions.HasJsonValueOneOf(SampleJson, "user.age", (uint[])null!))
+            .Throws<ArgumentNullException>();
     }
 
     [Test]

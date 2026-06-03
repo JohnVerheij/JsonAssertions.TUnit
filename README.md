@@ -23,8 +23,8 @@ Property existence, value-at-path, value-predicate, value-one-of, value-parsable
 |---|---|
 | `HasJsonProperty(string path)` | Asserts a property exists at the path. |
 | `DoesNotHaveJsonProperty(string path)` | Asserts no property exists at the path. |
-| `HasJsonValue(string path, string\|bool\|number expected)` | Asserts the value at `path` equals `expected`. |
-| `HasJsonValueOneOf(string path, string[]\|double[] candidates)` | Asserts the value at `path` is one of the given strings or numbers. |
+| `HasJsonValue(string path, string\|bool\|number expected)` | Asserts the value at `path` equals `expected`. The integer overloads (`int` / `uint` / `long` / `ulong`) match the value whether the JSON encodes it as a number or a numeric string. |
+| `HasJsonValueOneOf(string path, string[]\|double[]\|int[]\|uint[]\|long[]\|ulong[] candidates)` | Asserts the value at `path` is one of the given values. The integer overloads match a number or a numeric string. |
 | `HasJsonValueMatching(string path, Func<JsonElement, bool> predicate)` | Asserts the value at `path` satisfies the predicate. |
 | `HasJsonValueParsableAs<T>(string path)` *where T : IParsable&lt;T&gt;* | Asserts the value at `path` is a JSON string parseable as `T` (covers `Guid`, `DateTimeOffset`, `Uri`, ...). |
 | `HasJsonValueKind(string path, JsonValueKind kind)` | Asserts the value at `path` is of the given kind. |
@@ -158,6 +158,21 @@ await Assert.That(response).HasJsonArrayLength("items", 3, ct);
 
 A response body or string that is not valid JSON fails the assertion with an explained message rather than throwing a raw `JsonException`; a body that cannot be parsed does not vacuously satisfy `DoesNotHaveJsonProperty`.
 
+### Integer overloads: number or numeric string
+
+The integer overloads (`int` / `uint` / `long` / `ulong`) match the value whether the JSON encodes it as a number or a numeric string, because the encoding depends on the serializer. `long` / `ulong` exist because protobuf serializes 64-bit ints as JSON strings (to avoid 53-bit precision loss), while System.Text.Json writes them as numbers, and both now match. A passing value is an exact integer in range: a fractional number, an out-of-range number, or a non-numeric string fails. The `double` overload matches a JSON number only. Use the `L` / `UL` suffix to assert a 64-bit value:
+
+```csharp
+// number-encoded (System.Text.Json): {"guid":{"high":123456789012345,"low":42}}
+await Assert.That(json).HasJsonValue("guid.high", 123456789012345L);
+
+// string-encoded (protobuf JsonFormatter): {"guid":{"high":"123456789012345","low":"18446744073709551615"}}
+await Assert.That(json).HasJsonValue("guid.high", 123456789012345L);
+await Assert.That(json).HasJsonValue("guid.low", 18446744073709551615UL);
+
+await Assert.That(json).HasJsonValueOneOf("message.sequence", [100L, 200L, 300L]);
+```
+
 When an assertion fails, the message names the failure point rather than just reporting a `false`:
 
 ```text
@@ -186,8 +201,8 @@ The full entry-point catalog is in the Status table at the top of this file. The
 **Path / value / shape (over JSON `string`, `JsonElement`, and `HttpResponseMessage`):**
 
 - `HasJsonProperty(path)` / `DoesNotHaveJsonProperty(path)`
-- `HasJsonValue(path, expected)` (`string` / `bool` / number overloads)
-- `HasJsonValueOneOf(path, candidates[])` (`string[]` / `double[]` overloads)
+- `HasJsonValue(path, expected)` (`string` / `bool` / `double` overloads, plus `int` / `uint` / `long` / `ulong` integer overloads that match a number or a numeric string)
+- `HasJsonValueOneOf(path, candidates[])` (`string[]` / `double[]` / `int[]` / `uint[]` / `long[]` / `ulong[]` overloads)
 - `HasJsonValueMatching(path, predicate)`
 - `HasJsonValueParsableAs<T>(path)` *(where T : IParsable&lt;T&gt;)*
 - `HasJsonValueKind(path, kind)` / `HasJsonBoolean(path)` / `HasNonEmptyJsonString(path)`
