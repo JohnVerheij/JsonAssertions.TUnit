@@ -21,7 +21,7 @@ namespace JsonAssertions;
 /// <list type="bullet">
 /// <item><c>user.address.city</c> &#x2014; nested property navigation.</item>
 /// <item><c>items[0]</c> &#x2014; array element access.</item>
-/// <item><c>objects[0].planData[0].pickPlanId</c> &#x2014; mixed nesting.</item>
+/// <item><c>objects[0].entries[0].id</c> &#x2014; mixed nesting.</item>
 /// <item><c>$</c> &#x2014; the root element itself; <c>$.user.name</c> equivalent to
 /// <c>user.name</c>; <c>$[0]</c> equivalent to <c>[0]</c> against a root array.</item>
 /// </list>

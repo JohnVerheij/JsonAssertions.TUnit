@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-06-05: documentation refresh
+
+Documentation-only release. No API or behaviour change.
+
+### Changed
+
+- Refreshed the README (plain-ASCII punctuation) and rewrote the shared `CONVENTIONS.md`: removed the version-history preamble so it reads as a conventions document, not a changelog.
+- Documented the JSON path syntax (dot-separated with `[n]` indices plus the `[*]` wildcard) and why it is a navigable subset rather than JSONPath/JMESPath.
+
 ## [0.4.1] - 2026-06-04
 
 Documentation patch. No code, public API, or behaviour change.
@@ -71,7 +80,7 @@ Feature release. Adds the `[*]` wildcard path segment so array-element assertion
 
 ### Added
 
-- **Array-indexed path segments.** `JsonPath.Resolve(element, "items[0].name")` navigates `items` (object property) then index 0 (array element) then `name` (object property). Indices are zero-based, non-negative integers in `[N]` brackets. Mixed property + index segments compose freely (`objects[0].planData[1].pickPlanId`). Closes the #1 friction surfaced by the v0.1.0 adoption survey.
+- **Array-indexed path segments.** `JsonPath.Resolve(element, "items[0].name")` navigates `items` (object property) then index 0 (array element) then `name` (object property). Indices are zero-based, non-negative integers in `[N]` brackets. Mixed property + index segments compose freely (`objects[0].entries[1].id`). Closes the #1 friction surfaced by the v0.1.0 adoption survey.
 - **`$` JSONPath root-self.** `JsonPath.Resolve(element, "$")` resolves to the supplied element itself. `$.user.name` is equivalent to `user.name`; `$[0]` is equivalent to `[0]`. A bare `[0]` against a root array also works without the `$` prefix. Closes the "no path to assert root-array shape" gap surfaced by the v0.1.0 adoption survey.
 - **`HasNonEmptyJsonString(path)`** on `string` and `JsonElement` (and `HttpResponseMessage` for the async HTTP entry point). Asserts the value at `path` is a JSON string of non-zero length. A non-string kind or an empty `""` string fails.
 - **`HasJsonBoolean(path)`** on `string`, `JsonElement`, and `HttpResponseMessage`. Asserts the value at `path` is a JSON boolean (either `true` or `false`). `JsonValueKind.True` and `.False` are distinct kinds, so this is the discoverable form of "this field is a bool, either value" that `HasJsonValueKind` alone cannot express.
@@ -164,10 +173,11 @@ Semantic JSON equality and subset / fragment matching are candidate work for v0.
 - Source Link, deterministic builds, embedded PDB.
 - TUnit dependency pinned to **1.44.0**.
 
-[Unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.1...HEAD
-[0.4.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.4.1
-[0.4.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.4.0
-[0.3.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.3.0
-[0.2.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.2.0
-[0.1.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.1.0
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/releases/tag/v0.0.1
