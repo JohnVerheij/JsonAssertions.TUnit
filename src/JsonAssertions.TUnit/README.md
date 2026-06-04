@@ -19,8 +19,8 @@ Each path / value / shape entry point is available over a JSON `string`, a `Syst
 |---|---|
 | `HasJsonProperty(path)` | Asserts a property exists at the path. |
 | `DoesNotHaveJsonProperty(path)` | Asserts no property exists at the path. |
-| `HasJsonValue(path, expected)` | Asserts the value at `path` equals `expected` (a `string`, `bool`, or number; `long` / `ulong` overloads read a string-encoded 64-bit integer such as Protobuf `int64` / `uint64`). |
-| `HasJsonValueOneOf(path, T[])` | Asserts the value at `path` is one of the given values (`string[]`, `double[]`, `long[]`, or `ulong[]`). |
+| `HasJsonValue(path, expected)` | Asserts the value at `path` equals `expected` (a `string`, `bool`, or number; the `int` / `uint` / `long` / `ulong` overloads match a number or a numeric string, so a string-encoded 64-bit integer such as Protobuf `int64` / `uint64` matches too). |
+| `HasJsonValueOneOf(path, T[])` | Asserts the value at `path` is one of the given values (`string[]`, `double[]`, `int[]`, `uint[]`, `long[]`, or `ulong[]`). |
 | `HasJsonValueMatching(path, predicate)` | Asserts the value at `path` satisfies `Func<JsonElement, bool>`. |
 | `HasJsonValueParsableAs<T>(path)` | Asserts the value at `path` is a JSON string parseable as `T` (where `T : IParsable<T>`). |
 | `HasJsonValueKind(path, kind)` | Asserts the value at `path` is of the given `JsonValueKind`. |
@@ -37,6 +37,8 @@ Each path / value / shape entry point is available over a JSON `string`, a `Syst
 | `JsonCanonicalizer.Canonicalize(json, opts)` *(static, v0.4.0+)* | Typeless structural canonical form (sorted keys, stable indent, all fields preserved) with `[*]`-aware `ScrubPath` scrubbing of volatile values; for pinning a whole response shape as a snapshot. Needs no `JsonSerializerContext` (unlike `ReformatJson<T>`) and keeps unknown fields. |
 
 The path is a dot-separated property navigation with optional `[N]` zero-based bracket indices and an optional leading `$` JSONPath root reference: `user.name`, `items[0].id`, `objects[0].planData[1].pickPlanId`, `$[0]` for a root-array first element. The `[*]` wildcard (v0.4.0+) matches every element of an array on `HasJsonProperty` and `HasJsonValueMatching` (`items[*].id`). See [the path-syntax notes on GitHub](https://github.com/JohnVerheij/JsonAssertions.TUnit#path-syntax) for the full grammar.
+
+Two notes on `[*]`. It is a "for all" quantifier, so `[*].id` passes **vacuously** on an empty array, whereas `[0].id` *fails* on one; a naive `[0]` to `[*]` migration silently drops the implicit non-emptiness check, so pair the wildcard with `HasNonEmptyJsonArray("items")` when emptiness should fail the test. And `[*]` fits existence and genuinely-uniform value checks only: an element-specific check (for example "the element at index 2 has `id` 2", `HasJsonValue("items[2].id", 2)`) must stay index-scoped rather than become `[*]`.
 
 The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
 
@@ -90,7 +92,7 @@ The single package places types in two namespaces, the same shape as the rest of
 
 | Type | Namespace | Auto-imported? |
 |---|---|---|
-| `JsonPath`, `JsonPathResolution`, `JsonValueComparison`, `JsonShape` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
+| `JsonPath`, `JsonPathResolution`, `JsonValueComparison`, `JsonShape`, `JsonRenderers`, `JsonFailureMessage` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
 | Source-generated assertion entry points | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
 
 ## Roadmap
@@ -105,6 +107,8 @@ Part of an assertion family for TUnit:
 - [SnapshotAssertions.TUnit](https://github.com/JohnVerheij/SnapshotAssertions.TUnit)
 - [TimeAssertions.TUnit](https://github.com/JohnVerheij/TimeAssertions.TUnit)
 - [MathAssertions.TUnit](https://github.com/JohnVerheij/MathAssertions.TUnit)
+- [SseAssertions.TUnit](https://github.com/JohnVerheij/SseAssertions.TUnit)
+- [GrpcAssertions.TUnit](https://github.com/JohnVerheij/GrpcAssertions.TUnit)
 
 ## License
 
