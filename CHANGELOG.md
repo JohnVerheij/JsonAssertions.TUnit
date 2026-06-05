@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.2] - 2026-06-05: documentation refresh
 
-Documentation and release-tooling release. No API or behaviour change.
+Documentation and release-tooling release. No API or behavior change.
 
 ### Changed
 
@@ -19,7 +19,7 @@ Documentation and release-tooling release. No API or behaviour change.
 
 ## [0.4.1] - 2026-06-04
 
-Documentation patch. No code, public API, or behaviour change.
+Documentation patch. No code, public API, or behavior change.
 
 ### Changed
 
@@ -55,7 +55,7 @@ Feature release. Adds the `[*]` wildcard path segment so array-element assertion
 
 - Hardened GitHub Actions token handling: set `persist-credentials: false` on every `actions/checkout` so the repository token is not written into `.git/config`; moved the inline coverage-report expression in `ci.yml` into an `env:` variable to remove a template-injection vector; and scoped workflow write permissions (`security-events` on `codeql`; `contents`/`id-token`/`packages`/`attestations` on `release`) to the job level with a read-only workflow-level default. CI-only; no released package is affected.
 
-## [0.3.0] - 2026-05-17: AOT-context regression assertions, HTTP-response JSON and RFC 7807 ProblemDetails, a canonicalising JSON renderer for snapshot composition, plus a public failure-message extension point
+## [0.3.0] - 2026-05-17: AOT-context regression assertions, HTTP-response JSON and RFC 7807 ProblemDetails, a canonicalizing JSON renderer for snapshot composition, plus a public failure-message extension point
 
 ### Added
 
@@ -64,7 +64,7 @@ Feature release. Adds the `[*]` wildcard path segment so array-element assertion
 - Added **`HasJsonResponse<T>(HttpStatusCode, JsonTypeInfo<T>, T expected, CancellationToken)`** on `HttpResponseMessage`, combining HTTP status + AOT-clean deserialization + structural-equality in one chain. Collapses the common `response.EnsureSuccessStatusCode() + body-read + Deserialize + AreEqual` 4-6-line pattern into a single fluent call. The supplied `JsonTypeInfo<T>` is the source-generated entry from the consumer's `JsonSerializerContext`; no runtime reflection. Failure messages include the response body (truncated at 256 chars) so the diagnostic surfaces the structured-error shape for non-200 responses and the actual JSON shape for deserialization failures. Status-only and predicate overloads deferred pending consumer demand.
 - Added **`MatchesProblemDetails(int status, string? title, string? detail, string? type, string? instance, CancellationToken)`** on `HttpResponseMessage`, asserting the response is a valid RFC 7807 ProblemDetails (Content-Type `application/problem+json`, deserializable shape) and that each specified field matches. Unspecified fields skip (pass `null`). Deserializes via an internal `ProblemDetailsMirror` so the production package stays MIT-clean (no `Microsoft.AspNetCore.Mvc.Abstractions` Apache 2.0 dep) and AOT-clean via STJ source-gen. Mismatched fields report in a single failure message with expected-vs-got pairs. RFC 7807 §3.2 extension members are captured by the mirror's `[JsonExtensionData]` dictionary so they survive deserialization; a future `WithExtension(name, value)` chain method may expose the assertion surface.
 - Added **`MatchesValidationProblemDetails(int status, IReadOnlyDictionary<string, string[]> errors, string? title, string? detail, string? type, string? instance, CancellationToken)`** on `HttpResponseMessage`. Same shape as `MatchesProblemDetails` plus the ASP.NET Core ValidationProblemDetails `errors` dictionary mapping field names to validation messages. Every key in the supplied `errors` dictionary must appear in the response with matching values.
-- Added **`JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)`** in the `JsonAssertions` core namespace as a static factory returning `Func<string, string>` that canonicalises a JSON string via the consumer's `JsonSerializerContext` (deserialize then re-serialize through the supplied `JsonTypeInfo<T>`). Composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` overload at the consumer's call site without coupling the packages (per CONVENTIONS.md v0.6 cross-package references rule). Two-step composition for HTTP responses: async read body in test, then sync canonicalise + snapshot. AOT-clean by construction.
+- Added **`JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)`** in the `JsonAssertions` core namespace as a static factory returning `Func<string, string>` that canonicalizes a JSON string via the consumer's `JsonSerializerContext` (deserialize then re-serialize through the supplied `JsonTypeInfo<T>`). Composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` overload at the consumer's call site without coupling the packages (per CONVENTIONS.md v0.6 cross-package references rule). Two-step composition for HTTP responses: async read body in test, then sync canonicalize + snapshot. AOT-clean by construction.
 - Promoted **`JsonFailureMessage` static class** in the `JsonAssertions` core namespace from `internal` to `public`. Exposes a curated subset of failure-message factory methods as the v0.3.0+ extension point for consumer-authored typed JSON assertions: `ParseFailure(JsonException)`, `PropertyNotFound(string path, JsonPathResolution)`, `PropertyShouldNotExist(string path, JsonPathResolution)`, `ValueMismatch(string path, JsonPathResolution, string expectedDescription)`, `ShapeMismatch(string path, JsonPathResolution, string expectedDescription)`. Consumers writing their own typed assertions can compose these factories to produce failure messages that match the package's diagnostic style. Mirrors the `MathAssertions.MathFailureMessage` pattern in the sibling package. HTTP-response, ProblemDetails, and roundtrip-specific factories remain `internal` — context-bound to their specific assertions, no extension value.
 
 ### Changed
@@ -128,7 +128,7 @@ The first feature release. 0.1.0 turns the 0.0.1 skeleton into a real assertion 
 
 ### Notes
 
-- Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
+- Failure-message text is not part of the stable public surface; pin behavior against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
 - The numeric `HasJsonValue` overload reads the element as a `double`; values beyond `double` precision are out of scope for this release.
 
 ## [0.0.1] - 2026-05-14: Initial preview, skeleton release establishing repository, package identifier, and quality bar

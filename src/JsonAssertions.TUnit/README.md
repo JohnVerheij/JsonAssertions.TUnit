@@ -15,7 +15,7 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 Each path / value / shape entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document). HTTP-response and AOT-context assertions target their natural receiver type.
 
-| Entry point | Behaviour |
+| Entry point | Behavior |
 |---|---|
 | `HasJsonProperty(path)` | Asserts a property exists at the path. |
 | `DoesNotHaveJsonProperty(path)` | Asserts no property exists at the path. |

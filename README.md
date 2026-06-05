@@ -19,7 +19,7 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 Property existence, value-at-path, value-predicate, value-one-of, value-parsable-as-`T`, shape (kind / array-length / non-empty / boolean / non-empty-string), HTTP-response JSON assertions (status + AOT-clean deserialization + structural equality, RFC 7807 ProblemDetails, ValidationProblemDetails), AOT-context regression assertions (`RoundtripsCleanlyVia` and `HasJsonTypeInfoFor` via the `AsJsonContext` bridge), and a canonicalizing-renderer (`JsonRenderers.ReformatJson`) for composition with `SnapshotAssertions.TUnit` at the consumer's call site. Each fluent entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document):
 
-| Entry point | Behaviour |
+| Entry point | Behavior |
 |---|---|
 | `HasJsonProperty(string path)` | Asserts a property exists at the path. |
 | `DoesNotHaveJsonProperty(string path)` | Asserts no property exists at the path. |
@@ -413,7 +413,7 @@ This is a 0.x release and the public API may evolve.
 - **Additive changes** (new entry points, new input overloads) ship in any patch without breaking ApiCompat.
 - **Breaking changes** to existing signatures bump the minor version (0.X.0) and are called out in the [CHANGELOG](CHANGELOG.md).
 - `PackageValidationBaselineVersion` pins to the previous shipped version so ApiCompat breakage is caught at pack time; `CompatibilitySuppressions.xml` records accepted differences.
-- Failure-message text is not part of the stable public surface; pin behaviour against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
+- Failure-message text is not part of the stable public surface; pin behavior against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
 The 1.0 milestone signals API stability.
 
 ## Roadmap
