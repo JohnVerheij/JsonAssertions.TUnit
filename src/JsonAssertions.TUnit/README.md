@@ -15,7 +15,7 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 Each path / value / shape entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document). HTTP-response and AOT-context assertions target their natural receiver type.
 
-| Entry point | Behaviour |
+| Entry point | Behavior |
 |---|---|
 | `HasJsonProperty(path)` | Asserts a property exists at the path. |
 | `DoesNotHaveJsonProperty(path)` | Asserts no property exists at the path. |
@@ -31,12 +31,12 @@ Each path / value / shape entry point is available over a JSON `string`, a `Syst
 | `HasJsonResponse<T>(status, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + structural equality in one chain. |
 | `MatchesProblemDetails(status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields. |
 | `MatchesValidationProblemDetails(status, errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |
-| `RoundtripsCleanlyVia<T>(JsonTypeInfo<T>)` on any `T` | Asserts serialize → deserialize → re-serialize is byte-identical via the supplied source-generated `JsonTypeInfo<T>`. |
+| `RoundtripsCleanlyVia<T>(JsonTypeInfo<T>)` on any `T` | Asserts serialize -> deserialize -> re-serialize is byte-identical via the supplied source-generated `JsonTypeInfo<T>`. |
 | `AsJsonContext().HasJsonTypeInfoFor<T>()` on a `JsonSerializerContext`-typed source | Asserts the supplied source-generated context registers a `JsonTypeInfo<T>` for `T`. |
-| `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` *(static factory)* | Returns `Func<string, string>` that canonicalises a JSON string via the consumer's `JsonSerializerContext`; composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` at the consumer's call site. |
+| `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` *(static factory)* | Returns `Func<string, string>` that canonicalizes a JSON string via the consumer's `JsonSerializerContext`; composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` at the consumer's call site. |
 | `JsonCanonicalizer.Canonicalize(json, opts)` *(static, v0.4.0+)* | Typeless structural canonical form (sorted keys, stable indent, all fields preserved) with `[*]`-aware `ScrubPath` scrubbing of volatile values; for pinning a whole response shape as a snapshot. Needs no `JsonSerializerContext` (unlike `ReformatJson<T>`) and keeps unknown fields. |
 
-The path is a dot-separated property navigation with optional `[N]` zero-based bracket indices and an optional leading `$` JSONPath root reference: `user.name`, `items[0].id`, `objects[0].planData[1].pickPlanId`, `$[0]` for a root-array first element. The `[*]` wildcard (v0.4.0+) matches every element of an array on `HasJsonProperty` and `HasJsonValueMatching` (`items[*].id`). See [the path-syntax notes on GitHub](https://github.com/JohnVerheij/JsonAssertions.TUnit#path-syntax) for the full grammar.
+The path is a dot-separated property navigation with optional `[N]` zero-based bracket indices and an optional leading `$` JSONPath root reference: `user.name`, `items[0].id`, `objects[0].entries[1].id`, `$[0]` for a root-array first element. The `[*]` wildcard (v0.4.0+) matches every element of an array on `HasJsonProperty` and `HasJsonValueMatching` (`items[*].id`). See [the path-syntax notes on GitHub](https://github.com/JohnVerheij/JsonAssertions.TUnit#path-syntax) for the full grammar.
 
 Two notes on `[*]`. It is a "for all" quantifier, so `[*].id` passes **vacuously** on an empty array, whereas `[0].id` *fails* on one; a naive `[0]` to `[*]` migration silently drops the implicit non-emptiness check, so pair the wildcard with `HasNonEmptyJsonArray("items")` when emptiness should fail the test. And `[*]` fits existence and genuinely-uniform value checks only: an element-specific check (for example "the element at index 2 has `id` 2", `HasJsonValue("items[2].id", 2)`) must stay index-scoped rather than become `[*]`.
 
