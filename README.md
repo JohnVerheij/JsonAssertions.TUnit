@@ -17,7 +17,7 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 ## Status
 
-Property existence, value-at-path, value-predicate, value-one-of, value-parsable-as-`T`, shape (kind / array-length / non-empty / boolean / non-empty-string), HTTP-response JSON assertions (status + AOT-clean deserialization + structural equality, RFC 7807 ProblemDetails, ValidationProblemDetails), AOT-context regression assertions (`RoundtripsCleanlyVia` and `HasJsonTypeInfoFor` via the `AsJsonContext` bridge), and a canonicalising-renderer (`JsonRenderers.ReformatJson`) for composition with `SnapshotAssertions.TUnit` at the consumer's call site. Each fluent entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document):
+Property existence, value-at-path, value-predicate, value-one-of, value-parsable-as-`T`, shape (kind / array-length / non-empty / boolean / non-empty-string), HTTP-response JSON assertions (status + AOT-clean deserialization + structural equality, RFC 7807 ProblemDetails, ValidationProblemDetails), AOT-context regression assertions (`RoundtripsCleanlyVia` and `HasJsonTypeInfoFor` via the `AsJsonContext` bridge), and a canonicalizing-renderer (`JsonRenderers.ReformatJson`) for composition with `SnapshotAssertions.TUnit` at the consumer's call site. Each fluent entry point is available over a JSON `string`, a `System.Text.Json.JsonElement`, and an `HttpResponseMessage` (whose body is read as the JSON document):
 
 | Entry point | Behaviour |
 |---|---|
@@ -37,7 +37,7 @@ Property existence, value-at-path, value-predicate, value-one-of, value-parsable
 | `MatchesValidationProblemDetails(int status, IReadOnlyDictionary<string, string[]> errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |
 | `RoundtripsCleanlyVia<T>(JsonTypeInfo<T>)` on any `T` | Asserts serialize -> deserialize -> re-serialize is byte-identical via the supplied source-generated `JsonTypeInfo<T>`. |
 | `AsJsonContext().HasJsonTypeInfoFor<T>()` on a `JsonSerializerContext`-typed source | Asserts the supplied source-generated context registers a `JsonTypeInfo<T>` for `T`. |
-| `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` *(static factory)* | Returns `Func<string, string>` that canonicalises a JSON string via the consumer's `JsonSerializerContext`. Composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` at the consumer's call site without coupling the packages. |
+| `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` *(static factory)* | Returns `Func<string, string>` that canonicalizes a JSON string via the consumer's `JsonSerializerContext`. Composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` at the consumer's call site without coupling the packages. |
 
 The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
 
@@ -224,7 +224,7 @@ The full entry-point catalog is in the Status table at the top of this file. The
 
 **Composition + extension point (in `JsonAssertions` core namespace):**
 
-- `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` - static factory returning `Func<string, string>` that canonicalises a JSON string for snapshot composition
+- `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` - static factory returning `Func<string, string>` that canonicalizes a JSON string for snapshot composition
 - `JsonFailureMessage` - public path-family factory methods (`ParseFailure`, `PropertyNotFound`, `PropertyShouldNotExist`, `ValueMismatch`, `ShapeMismatch`) for consumer-authored typed JSON assertions
 
 ## Failure diagnostics
@@ -354,9 +354,9 @@ public async Task SerializerContextStaysInSyncWithDomainTypes()
 
 `.AsJsonContext()` is a one-method bridge that produces an `IJsonContextAssertionSource` whose `Context` is statically typed at `JsonSerializerContext`. The bridge exists because `Assert.That(MyJsonContext.Default)` returns an assertion source typed at the concrete subtype (`IAssertionSource<MyJsonContext>`), and C# does not allow partial generic-type-argument inference. The bridge moves the receiver type out of the leaf assertion's signature, restoring the single-explicit-generic shape (`HasJsonTypeInfoFor<MyDto>()`) consumers expect. The pattern is AOT-clean (one O(1) lookup against the context's type registry; the upcast goes through TUnit's existing `Map` pipeline, no reflection).
 
-### Pattern: compose with `SnapshotAssertions.TUnit` for canonicalised body snapshots
+### Pattern: compose with `SnapshotAssertions.TUnit` for canonicalized body snapshots
 
-`JsonRenderers.ReformatJson<T>` returns a `Func<string, string>` that canonicalises a JSON string via the consumer's `JsonSerializerContext` (deserialize then re-serialize through the supplied `JsonTypeInfo<T>`). Composes with [`SnapshotAssertions.TUnit`](https://www.nuget.org/packages/SnapshotAssertions.TUnit/)'s `MatchesSnapshot(Func<>)` overload at the consumer's call site, without coupling the packages (the family's [Cross-package references rule](CONVENTIONS.md) keeps production-side `PackageReference`s separate; composition happens at the test's call site via standard delegates):
+`JsonRenderers.ReformatJson<T>` returns a `Func<string, string>` that canonicalizes a JSON string via the consumer's `JsonSerializerContext` (deserialize then re-serialize through the supplied `JsonTypeInfo<T>`). Composes with [`SnapshotAssertions.TUnit`](https://www.nuget.org/packages/SnapshotAssertions.TUnit/)'s `MatchesSnapshot(Func<>)` overload at the consumer's call site, without coupling the packages (the family's [Cross-package references rule](CONVENTIONS.md) keeps production-side `PackageReference`s separate; composition happens at the test's call site via standard delegates):
 
 ```csharp
 [Test]
@@ -365,13 +365,13 @@ public async Task PostOrder_ResponseBodyMatchesSnapshot(CancellationToken ct)
     using var response = await _httpClient.PostAsJsonAsync("/orders", new { ... }, ct);
     var body = await response.Content.ReadAsStringAsync(ct);
 
-    // Canonicalises body via MyJsonContext (deterministic ordering + formatting), then snapshots.
+    // Canonicalizes body via MyJsonContext (deterministic ordering + formatting), then snapshots.
     await Assert.That(body).MatchesSnapshot(
         JsonRenderers.ReformatJson(MyJsonContext.Default.OrderDto));
 }
 ```
 
-The two-step composition (async body-read in the test, sync canonicalise + snapshot) keeps the rule "no sync-over-async" intact while letting the snapshot pipeline operate on a deterministic JSON shape.
+The two-step composition (async body-read in the test, sync canonicalize + snapshot) keeps the rule "no sync-over-async" intact while letting the snapshot pipeline operate on a deterministic JSON shape.
 
 ### Pattern: extend the same DSL with consumer-authored typed assertions
 
