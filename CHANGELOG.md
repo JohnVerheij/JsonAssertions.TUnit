@@ -47,7 +47,7 @@ Feature release. Adds the `[*]` wildcard path segment so array-element assertion
 - Added `SseAssertions.TUnit` (the sixth family package, Server-Sent Events wire-format assertions) to the `CONVENTIONS.md` family roster.
 - Added a per-package strict-scope policy section to `CONVENTIONS.md` with explicit scope statements for all six packages.
 - Added a core+adapter packaging rule section to `CONVENTIONS.md`: five of six family packages ship core+adapter; this repo is the sole single-package member.
-- Synchronised `CONVENTIONS.md` across all six family repos (the file is copied identically).
+- Synchronized `CONVENTIONS.md` across all six family repos (the file is copied identically).
 - Expanded the `README.md` Family section to six packages, adding `SseAssertions.TUnit` and updating the "shared across" line in Contributing.
 - Added GitHub Actions workflow security scanning. `.github/workflows/zizmor.yml` runs `zizmor` (blocking, with findings shown as inline annotations) on every workflow change; `.github/workflows/codeql.yml` now analyzes the `actions` language alongside `csharp`; `.github/workflows/scorecard.yml` (OpenSSF Scorecard) and `.github/workflows/dependency-review.yml` (fails a PR that adds a high-severity-vulnerable dependency) are new. Added the Renovate `helpers:pinGitHubActionDigestsToSemver` preset so any newly-introduced action is auto-pinned to a commit SHA. CI-only; no effect on shipped packages.
 
