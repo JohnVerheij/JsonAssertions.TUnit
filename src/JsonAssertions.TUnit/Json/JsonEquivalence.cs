@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Numerics;
 using System.Text.Json;
 
 namespace JsonAssertions;
@@ -229,16 +230,72 @@ public static class JsonEquivalence
             return da == db;
         }
 
-        // Beyond decimal range: compare as double, but only when both values are finite. An extreme
-        // magnitude (for example 1e400) reads as +/-Infinity rather than a failed parse, and distinct
-        // literals must not be equated through a shared Infinity, so fall back to exact raw-text
-        // equality in that case.
+        // Beyond decimal range, but still finite as a double: compare as double. An extreme magnitude
+        // (for example 1e400) reads as +/-Infinity here, so those are excluded and handled below.
         if (a.TryGetDouble(out var fa) && b.TryGetDouble(out var fb) && double.IsFinite(fa) && double.IsFinite(fb))
         {
             return fa.Equals(fb);
         }
 
-        return string.Equals(a.GetRawText(), b.GetRawText(), StringComparison.Ordinal);
+        // Outside finite-double range: compare the literals in a canonical (sign, significand,
+        // exponent) form so number-form independence still holds (1e400 == 1E400 == 10e399), rather
+        // than degrading to lexical equality. Falls back to raw-text equality only if a literal somehow
+        // fails to canonicalize (it should not, the document already parsed as valid JSON).
+        return TryCanonicalizeNumber(a.GetRawText(), out var canonicalA)
+            && TryCanonicalizeNumber(b.GetRawText(), out var canonicalB)
+            ? canonicalA.Equals(canonicalB)
+            : string.Equals(a.GetRawText(), b.GetRawText(), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Parses a JSON number literal into a canonical <c>(sign, significand, exponent)</c> form: the
+    /// significand is a non-negative <see cref="BigInteger"/> with trailing zeros stripped and the
+    /// exponent adjusted, so two literals denoting the same value canonicalize identically regardless
+    /// of exponent case, scientific-form normalization, or insignificant zeros. Zero canonicalizes to
+    /// a positive sign with a zero significand and exponent.
+    /// </summary>
+    private static bool TryCanonicalizeNumber(string literal, out (int Sign, BigInteger Significand, int Exponent) canonical)
+    {
+        canonical = default;
+
+        var mantissa = literal;
+        var exponent = 0;
+        var eIndex = literal.IndexOfAny(['e', 'E']);
+        if (eIndex >= 0)
+        {
+            if (!int.TryParse(literal.AsSpan(eIndex + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out exponent))
+                return false;
+            mantissa = literal[..eIndex];
+        }
+
+        var sign = 1;
+        if (mantissa.StartsWith('-'))
+        {
+            sign = -1;
+            mantissa = mantissa[1..];
+        }
+
+        var dotIndex = mantissa.IndexOf('.', StringComparison.Ordinal);
+        if (dotIndex >= 0)
+        {
+            var fractionLength = mantissa.Length - dotIndex - 1;
+            exponent -= fractionLength;
+            mantissa = string.Concat(mantissa.AsSpan(0, dotIndex), mantissa.AsSpan(dotIndex + 1));
+        }
+
+        // The mantissa is now a non-empty digit string (JSON guarantees a leading integer digit), so
+        // Parse cannot throw. A zero-valued literal is within decimal range and is handled by the
+        // decimal path before reaching here, so the significand is non-zero and the trailing-zero loop
+        // always terminates.
+        var significand = BigInteger.Parse(mantissa, NumberStyles.None, CultureInfo.InvariantCulture);
+        while (significand % 10 == 0)
+        {
+            significand /= 10;
+            exponent++;
+        }
+
+        canonical = (sign, significand, exponent);
+        return true;
     }
 
     private static bool IsBoolean(JsonValueKind kind) => kind is JsonValueKind.True or JsonValueKind.False;

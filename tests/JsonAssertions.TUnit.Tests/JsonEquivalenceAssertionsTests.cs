@@ -50,8 +50,20 @@ internal sealed class JsonEquivalenceAssertionsTests
     public async Task BeyondDoubleRange_EqualLiterals_AreEquivalent(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // 1e400 exceeds double range and reads as Infinity; equality falls back to exact raw text.
+        // 1e400 exceeds double range; equality is decided by a canonical numeric form, not lexically.
         await Assert.That("""{"n":1e400}""").IsEquivalentJsonTo("""{"n":1e400}""");
+    }
+
+    [Test]
+    public async Task BeyondDoubleRange_FormVariants_AreEquivalent(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // Number-form independence holds in the overflow range: exponent case, scientific-form
+        // normalization, a fractional mantissa, and a written-out integer all denote the same value.
+        await Assert.That("""{"n":1e400}""").IsEquivalentJsonTo("""{"n":1E400}""");
+        await Assert.That("""{"n":1e400}""").IsEquivalentJsonTo("""{"n":10e399}""");
+        await Assert.That("""{"a":1.5e400}""").IsEquivalentJsonTo("""{"a":15e399}""");
+        await Assert.That($$"""{"n":{{"1" + new string('0', 400)}}}""").IsEquivalentJsonTo("""{"n":1e400}""");
     }
 
     [Test]
@@ -63,6 +75,28 @@ internal sealed class JsonEquivalenceAssertionsTests
             await Assert.That("""{"n":1e400}""").IsEquivalentJsonTo("""{"n":2e400}"""))
             .Throws<AssertionException>();
         await Assert.That(ex!.Message).Contains("value differs");
+    }
+
+    [Test]
+    public async Task BeyondDoubleRange_OppositeSigns_AreNotEquivalent(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("""{"n":-1e400}""").IsEquivalentJsonTo("""{"n":-1e400}""");
+        await Assert.That(async () =>
+            await Assert.That("""{"n":1e400}""").IsEquivalentJsonTo("""{"n":-1e400}"""))
+            .Throws<AssertionException>();
+    }
+
+    [Test]
+    public async Task BeyondDoubleRange_ExponentOverflowingInt_FallsBackToRawText(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // An exponent that overflows Int32 cannot canonicalize, so equality falls back to raw text:
+        // identical literals still match, and differing ones do not.
+        await Assert.That("""{"n":1e9999999999}""").IsEquivalentJsonTo("""{"n":1e9999999999}""");
+        await Assert.That(async () =>
+            await Assert.That("""{"n":1e9999999999}""").IsEquivalentJsonTo("""{"n":2e9999999999}"""))
+            .Throws<AssertionException>();
     }
 
     [Test]
