@@ -2,8 +2,92 @@
 <!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids -->
 <Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:JsonAssertions.JsonDifference</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:JsonAssertions.JsonDifferenceKind</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:JsonAssertions.JsonEquivalence</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:JsonAssertions.JsonEquivalenceOptions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:JsonAssertions.TUnit.JsonEquivalenceAssertions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.JsonElement_IsEquivalentJsonTo_String_ActionJsonEquivalenceOptions_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.JsonElement_IsEquivalentJsonTo_String_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.JsonEquivalenceAssertions</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.String_IsEquivalentJsonTo_String_ActionJsonEquivalenceOptions_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:TUnit.Assertions.Extensions.String_IsEquivalentJsonTo_String_Assertion</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:JsonAssertions.JsonFailureMessage.EquivalenceMismatch(JsonAssertions.JsonDifference)</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:JsonAssertions.JsonFailureMessage.ExpectedParseFailure(System.Text.Json.JsonException)</Target>
+    <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
+    <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
     <DiagnosticId>CP0003</DiagnosticId>
-    <Target>JsonAssertions.TUnit, Version=0.4.1.0, Culture=neutral, PublicKeyToken=null</Target>
+    <Target>JsonAssertions.TUnit, Version=0.4.2.0, Culture=neutral, PublicKeyToken=null</Target>
     <Left>lib/net10.0/JsonAssertions.TUnit.dll</Left>
     <Right>lib/net10.0/JsonAssertions.TUnit.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>

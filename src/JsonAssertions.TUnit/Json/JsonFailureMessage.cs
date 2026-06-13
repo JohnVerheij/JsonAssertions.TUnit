@@ -240,6 +240,44 @@ public static class JsonFailureMessage
         return sb.ToString();
     }
 
+    /// <summary>Renders the failure when the <em>expected</em> JSON supplied to an equivalence
+    /// assertion is itself malformed (a test-authoring error rather than a value mismatch).</summary>
+    public static string ExpectedParseFailure(JsonException exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        var sb = new StringBuilder();
+        sb.Append("the expected JSON to be parseable").Append('\n');
+        sb.Append("  but parsing the expected document failed: ").Append(exception.Message).Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Renders the failure for a structural-equivalence assertion: the path where the two
+    /// documents diverge, the category of difference, and a rendered view of each side. Container
+    /// values are shown as truncated raw JSON so an object/array mismatch reports its content rather
+    /// than just its kind.</summary>
+    public static string EquivalenceMismatch(JsonDifference difference)
+    {
+        ArgumentNullException.ThrowIfNull(difference);
+        var location = difference.Path.Length is 0 ? "the root" : "\"" + difference.Path + "\"";
+        var sb = new StringBuilder();
+        sb.Append("to be JSON-equivalent to the expected document").Append('\n');
+        sb.Append("  at ").Append(location).Append(": ").Append(DescribeDifference(difference.Kind)).Append('\n');
+        sb.Append("    expected: ").Append(difference.Expected).Append('\n');
+        sb.Append("    actual:   ").Append(difference.Actual).Append('\n');
+        return sb.ToString();
+    }
+
+    /// <summary>Maps a difference category to the one-line reason shown in the failure message.</summary>
+    private static string DescribeDifference(JsonDifferenceKind kind) => kind switch
+    {
+        JsonDifferenceKind.Value => "value differs",
+        JsonDifferenceKind.Kind => "JSON kind differs",
+        JsonDifferenceKind.MissingProperty => "property missing in the actual document",
+        JsonDifferenceKind.UnexpectedProperty => "unexpected property in the actual document",
+        JsonDifferenceKind.ArrayLength => "array length differs",
+        _ => "no equivalent element in the actual array", // ArrayElementUnmatched
+    };
+
     /// <summary>Renders the failure for a positive property-existence assertion: the path did
     /// not resolve, and the message says how far it got and why it stopped.</summary>
     public static string PropertyNotFound(string path, JsonPathResolution resolution)
