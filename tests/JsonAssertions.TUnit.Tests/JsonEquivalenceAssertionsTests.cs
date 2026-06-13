@@ -47,6 +47,25 @@ internal sealed class JsonEquivalenceAssertionsTests
     }
 
     [Test]
+    public async Task BeyondDoubleRange_EqualLiterals_AreEquivalent(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // 1e400 exceeds double range and reads as Infinity; equality falls back to exact raw text.
+        await Assert.That("""{"n":1e400}""").IsEquivalentJsonTo("""{"n":1e400}""");
+    }
+
+    [Test]
+    public async Task BeyondDoubleRange_DistinctLiterals_AreNotEquivalent(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // Both read as +Infinity as doubles, but they are distinct numbers and must not be equated.
+        var ex = await Assert.That(async () =>
+            await Assert.That("""{"n":1e400}""").IsEquivalentJsonTo("""{"n":2e400}"""))
+            .Throws<AssertionException>();
+        await Assert.That(ex!.Message).Contains("value differs");
+    }
+
+    [Test]
     public async Task JsonElementReceiver_IsEquivalent(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

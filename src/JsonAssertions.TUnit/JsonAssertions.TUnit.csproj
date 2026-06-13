@@ -35,7 +35,7 @@
          catches binary breaks at pack time. Each minor version bumps the baseline to the
          immediately previous shipped version; CompatibilitySuppressions.xml is regenerated
          alongside to capture the accepted additive surface from that baseline. Current baseline:
-         0.4.0 (the v0.4.1 release is docs-only, so the surface is identical to the baseline). -->
+         0.4.2 (the immediately previous shipped version; 0.5.0 adds the equivalence surface). -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>

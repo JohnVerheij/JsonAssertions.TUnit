@@ -32,7 +32,7 @@ Property existence, value-at-path, value-predicate, value-one-of, value-parsable
 | `HasNonEmptyJsonString(string path)` | Asserts the value at `path` is a non-empty JSON string. |
 | `HasJsonArrayLength(string path, int length)` | Asserts the value at `path` is a JSON array of the given length. |
 | `HasNonEmptyJsonArray(string path)` / `HasEmptyJsonArray(string path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
-| `IsEquivalentJsonTo(string expected)` / `IsEquivalentJsonTo(string expected, Action<JsonEquivalenceOptions> configure)` | Asserts the whole document is structurally equivalent to `expected`, independent of property order and number form. The configure callback sets `IgnorePath` and `IgnoreArrayOrder`. |
+| `IsEquivalentJsonTo(string expected)` / `IsEquivalentJsonTo(string expected, Action<JsonEquivalenceOptions> configure)` over a JSON `string` or `JsonElement` | Asserts the whole document is structurally equivalent to `expected`, independent of property order and number form. The configure callback sets `IgnorePath` and `IgnoreArrayOrder`. |
 | `HasJsonResponse<T>(HttpStatusCode, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + structural equality in one chain. |
 | `MatchesProblemDetails(int status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields. |
 | `MatchesValidationProblemDetails(int status, IReadOnlyDictionary<string, string[]> errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |

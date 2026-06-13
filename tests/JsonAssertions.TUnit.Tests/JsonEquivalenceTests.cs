@@ -59,10 +59,13 @@ internal sealed class JsonEquivalenceTests
     }
 
     [Test]
-    public async Task Options_IgnorePath_NullOrWhitespace_Throws(CancellationToken ct)
+    [Arguments(" ")]
+    [Arguments("")]
+    [Arguments(null)]
+    public async Task Options_IgnorePath_NullOrWhitespace_Throws(string? path, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        await Assert.That(() => new JsonEquivalenceOptions().IgnorePath(" ")).Throws<ArgumentException>();
+        await Assert.That(() => new JsonEquivalenceOptions().IgnorePath(path!)).Throws<ArgumentException>();
     }
 
     [Test]

@@ -229,11 +229,16 @@ public static class JsonEquivalence
             return da == db;
         }
 
-        // Beyond decimal range (very large or high-precision): compare as double. A value that does
-        // not fit a double leaves its out-parameter at zero, so two such values still compare equal.
-        _ = a.TryGetDouble(out var fa);
-        _ = b.TryGetDouble(out var fb);
-        return fa.Equals(fb);
+        // Beyond decimal range: compare as double, but only when both values are finite. An extreme
+        // magnitude (for example 1e400) reads as +/-Infinity rather than a failed parse, and distinct
+        // literals must not be equated through a shared Infinity, so fall back to exact raw-text
+        // equality in that case.
+        if (a.TryGetDouble(out var fa) && b.TryGetDouble(out var fb) && double.IsFinite(fa) && double.IsFinite(fb))
+        {
+            return fa.Equals(fb);
+        }
+
+        return string.Equals(a.GetRawText(), b.GetRawText(), StringComparison.Ordinal);
     }
 
     private static bool IsBoolean(JsonValueKind kind) => kind is JsonValueKind.True or JsonValueKind.False;

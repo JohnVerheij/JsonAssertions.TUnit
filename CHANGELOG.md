@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.0] - 2026-06-13: structural JSON equivalence
+## [0.5.0] - 2026-06-14: structural JSON equivalence
 
 Minor release. Adds whole-document structural equivalence assertions. Purely additive.
 
