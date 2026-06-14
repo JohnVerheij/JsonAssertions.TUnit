@@ -34,16 +34,24 @@ internal sealed class JsonEquivalenceAssertionsTests
     }
 
     [Test]
-    public async Task LargeNumbers_BeyondDecimal_CompareAsDouble(CancellationToken ct)
+    public async Task LargeNumbers_BeyondDecimal_CompareCanonically(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // 1e30 exceeds decimal range, so equality falls back to double comparison.
+        // 1e30 exceeds decimal range, so equality uses the canonical form (not a lossy double compare).
         await Assert.That("""{"n":1e30}""").IsEquivalentJsonTo("""{"n":1.0e30}""");
 
         var ex = await Assert.That(async () =>
             await Assert.That("""{"n":1e30}""").IsEquivalentJsonTo("""{"n":2e30}"""))
             .Throws<AssertionException>();
         await Assert.That(ex!.Message).Contains("value differs");
+
+        // Precision collision: 1e29 and 1e29 + 1 are distinct integers that round to the same double,
+        // so a double compare would wrongly equate them. The canonical form keeps them distinct.
+        var big = $$"""{"n":{{"1" + new string('0', 29)}}}""";          // 10^29
+        var bigPlusOne = $$"""{"n":{{"1" + new string('0', 28) + "1"}}}"""; // 10^29 + 1
+        var collision = await Assert.That(async () => await Assert.That(big).IsEquivalentJsonTo(bigPlusOne))
+            .Throws<AssertionException>();
+        await Assert.That(collision!.Message).Contains("value differs");
     }
 
     [Test]

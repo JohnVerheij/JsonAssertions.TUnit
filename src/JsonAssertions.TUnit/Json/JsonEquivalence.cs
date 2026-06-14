@@ -230,21 +230,17 @@ public static class JsonEquivalence
             return da == db;
         }
 
-        // Beyond decimal range, but still finite as a double: compare as double. An extreme magnitude
-        // (for example 1e400) reads as +/-Infinity here, so those are excluded and handled below.
-        if (a.TryGetDouble(out var fa) && b.TryGetDouble(out var fb) && double.IsFinite(fa) && double.IsFinite(fb))
-        {
-            return fa.Equals(fb);
-        }
-
-        // Outside finite-double range: compare the literals in a canonical (sign, significand,
-        // exponent) form so number-form independence still holds (1e400 == 1E400 == 10e399), rather
-        // than degrading to lexical equality. Falls back to raw-text equality only if a literal somehow
-        // fails to canonicalize (it should not, the document already parsed as valid JSON).
-        return TryCanonicalizeNumber(a.GetRawText(), out var canonicalA)
-            && TryCanonicalizeNumber(b.GetRawText(), out var canonicalB)
+        // Beyond decimal range: compare the literals in a canonical (sign, significand, exponent) form.
+        // This keeps number-form independence (1e400 == 1E400 == 10e399) and, unlike a double compare,
+        // does not equate distinct values that round to the same binary64 (for example 1e29 and
+        // 1e29 + 1 both collapse to 1e29 as a double). Falls back to raw-text equality only if a literal
+        // fails to canonicalize (an exponent beyond int range); the document already parsed as valid JSON.
+        var rawA = a.GetRawText();
+        var rawB = b.GetRawText();
+        return TryCanonicalizeNumber(rawA, out var canonicalA)
+            && TryCanonicalizeNumber(rawB, out var canonicalB)
             ? canonicalA.Equals(canonicalB)
-            : string.Equals(a.GetRawText(), b.GetRawText(), StringComparison.Ordinal);
+            : string.Equals(rawA, rawB, StringComparison.Ordinal);
     }
 
     /// <summary>
