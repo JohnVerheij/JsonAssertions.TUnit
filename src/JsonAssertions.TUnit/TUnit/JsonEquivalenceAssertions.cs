@@ -21,7 +21,11 @@ public static class JsonEquivalenceAssertions
 {
     /// <summary>Asserts that the JSON string is structurally equivalent to <paramref name="expected"/>.</summary>
     /// <param name="actual">The actual JSON document text.</param>
-    /// <param name="expected">The expected JSON document text.</param>
+    /// <summary>
+        /// Asserts that the actual JSON is structurally equivalent to the expected JSON.
+        /// </summary>
+        /// <param name="expected">The expected JSON document text.</param>
+        /// <returns>An AssertionResult that passes if the documents are equivalent, fails otherwise.</returns>
     [GenerateAssertion]
     public static AssertionResult IsEquivalentJsonTo(this string actual, string expected)
         => IsEquivalentJsonTo(actual, expected, configure: null);
@@ -32,7 +36,11 @@ public static class JsonEquivalenceAssertions
     /// <param name="actual">The actual JSON document text.</param>
     /// <param name="expected">The expected JSON document text.</param>
     /// <param name="configure">A callback that sets comparison options. May be
-    /// <see langword="null"/> for the defaults.</param>
+    /// <summary>
+    /// Asserts that the actual JSON string is structurally equivalent to the expected JSON string.
+    /// </summary>
+    /// <param name="configure">Optional callback to configure the equivalence options. Pass null to use the default settings.</param>
+    /// <returns>An AssertionResult indicating whether the JSON structures are equivalent.</returns>
     [GenerateAssertion]
     public static AssertionResult IsEquivalentJsonTo(this string actual, string expected, Action<JsonEquivalenceOptions>? configure)
     {
@@ -43,7 +51,11 @@ public static class JsonEquivalenceAssertions
 
     /// <summary>Asserts that the JSON element is structurally equivalent to <paramref name="expected"/>.</summary>
     /// <param name="actual">The actual JSON element.</param>
-    /// <param name="expected">The expected JSON document text.</param>
+    /// <summary>
+        /// Asserts that a JSON element is structurally equivalent to an expected JSON document.
+        /// </summary>
+        /// <param name="expected">The expected JSON document text.</param>
+        /// <returns>An AssertionResult indicating if the JSON documents are structurally equivalent.</returns>
     [GenerateAssertion]
     public static AssertionResult IsEquivalentJsonTo(this JsonElement actual, string expected)
         => IsEquivalentJsonTo(actual, expected, configure: null);
@@ -54,7 +66,13 @@ public static class JsonEquivalenceAssertions
     /// <param name="actual">The actual JSON element.</param>
     /// <param name="expected">The expected JSON document text.</param>
     /// <param name="configure">A callback that sets comparison options. May be
-    /// <see langword="null"/> for the defaults.</param>
+    /// <summary>
+    /// Asserts that the JSON element is structurally equivalent to an expected JSON document.
+    /// </summary>
+    /// <param name="actual">The JSON element to verify.</param>
+    /// <param name="expected">The expected JSON document as a string.</param>
+    /// <param name="configure">An optional callback to configure equivalence options; pass <see langword="null"/> for the defaults.</param>
+    /// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
     [GenerateAssertion]
     public static AssertionResult IsEquivalentJsonTo(this JsonElement actual, string expected, Action<JsonEquivalenceOptions>? configure)
     {

@@ -230,7 +230,10 @@ public static class JsonFailureMessage
     /// <summary>Renders the failure for a JSON <see cref="string"/> overload whose input could
     /// not be parsed at all. A malformed response body is a legitimate runtime scenario, so it
     /// is surfaced as an explained assertion failure rather than an escaping
-    /// <see cref="JsonException"/>.</summary>
+    /// <summary>
+    /// Formats a failure message for JSON parsing failure.
+    /// </summary>
+    /// <returns>A formatted failure message indicating the asserted value should be parseable JSON and including the parsing error.</returns>
     public static string ParseFailure(JsonException exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
@@ -241,7 +244,11 @@ public static class JsonFailureMessage
     }
 
     /// <summary>Renders the failure when the <em>expected</em> JSON supplied to an equivalence
-    /// assertion is itself malformed (a test-authoring error rather than a value mismatch).</summary>
+    /// <summary>
+    /// Formats an error message when the expected JSON in a test assertion cannot be parsed.
+    /// </summary>
+    /// <param name="exception">The JSON parsing exception that was thrown.</param>
+    /// <returns>A formatted error message describing the parsing failure and including the exception details.</returns>
     public static string ExpectedParseFailure(JsonException exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
@@ -254,7 +261,11 @@ public static class JsonFailureMessage
     /// <summary>Renders the failure for a structural-equivalence assertion: the path where the two
     /// documents diverge, the category of difference, and a rendered view of each side. Container
     /// values are shown as truncated raw JSON so an object/array mismatch reports its content rather
-    /// than just its kind.</summary>
+    /// <summary>
+    /// Renders a failure message for a JSON structural-equivalence mismatch.
+    /// </summary>
+    /// <param name="difference">The structural difference describing the equivalence failure.</param>
+    /// <returns>A formatted failure message indicating the location, difference reason, and expected/actual values.</returns>
     public static string EquivalenceMismatch(JsonDifference difference)
     {
         ArgumentNullException.ThrowIfNull(difference);
@@ -279,7 +290,11 @@ public static class JsonFailureMessage
     };
 
     /// <summary>Renders the failure for a positive property-existence assertion: the path did
-    /// not resolve, and the message says how far it got and why it stopped.</summary>
+    /// <summary>
+    /// Renders a failure message when an expected JSON property at the specified path could not be found.
+    /// </summary>
+    /// <param name="resolution">The path resolution result describing how far resolution progressed and why it stopped.</param>
+    /// <returns>The formatted failure message.</returns>
     public static string PropertyNotFound(string path, JsonPathResolution resolution)
     {
         ArgumentNullException.ThrowIfNull(path);

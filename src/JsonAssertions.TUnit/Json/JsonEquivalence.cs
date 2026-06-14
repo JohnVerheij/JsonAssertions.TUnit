@@ -26,6 +26,14 @@ public static class JsonEquivalence
     /// <param name="options">The comparison options.</param>
     /// <returns>The first difference found, or <see langword="null"/> when equivalent.</returns>
     /// <exception cref="ArgumentNullException">Any argument is <see langword="null"/>.</exception>
+    /// <summary>
+    /// Parses two JSON strings and compares them structurally.
+    /// </summary>
+    /// <param name="expected">The expected JSON as a string.</param>
+    /// <param name="actual">The actual JSON string to compare against the expected.</param>
+    /// <param name="options">Configuration that controls comparison behavior, such as which paths to ignore.</param>
+    /// <returns>The first structural difference found, or null if the JSON documents are equivalent.</returns>
+    /// <exception cref="ArgumentNullException">Any argument is null.</exception>
     /// <exception cref="JsonException">Either argument is not valid JSON.</exception>
     public static JsonDifference? Compare(string expected, string actual, JsonEquivalenceOptions options)
     {
@@ -44,6 +52,13 @@ public static class JsonEquivalence
     /// <param name="actual">The actual JSON element.</param>
     /// <param name="options">The comparison options.</param>
     /// <returns>The first difference found, or <see langword="null"/> when equivalent.</returns>
+    /// <summary>
+    /// Compares two JSON elements structurally.
+    /// </summary>
+    /// <param name="expected">The expected JSON element.</param>
+    /// <param name="actual">The actual JSON element.</param>
+    /// <param name="options">Configuration for the comparison, including ignored paths and array ordering behavior.</param>
+    /// <returns>The first structural difference found, or <see langword="null"/> if the elements are equivalent.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
     public static JsonDifference? Compare(JsonElement expected, JsonElement actual, JsonEquivalenceOptions options)
     {
@@ -53,6 +68,10 @@ public static class JsonEquivalence
         return CompareElement(expected, actual, string.Empty, options, ignored);
     }
 
+    /// <summary>
+    /// Resolves configured path patterns against both JSON documents to build a set of paths to ignore.
+    /// </summary>
+    /// <returns>A set of path prefixes to ignore during comparison.</returns>
     private static HashSet<string> ResolveIgnoredPaths(JsonElement expected, JsonElement actual, JsonEquivalenceOptions options)
     {
         var ignored = new HashSet<string>(StringComparer.Ordinal);
@@ -65,6 +84,9 @@ public static class JsonEquivalence
         return ignored;
     }
 
+    /// <summary>
+    /// Resolves a JSONPath pattern and adds all successful resolutions to the ignored paths set.
+    /// </summary>
     private static void AddResolved(HashSet<string> ignored, JsonElement root, string pattern)
     {
         foreach (var resolution in JsonPath.ResolveAll(root, pattern))
@@ -76,6 +98,15 @@ public static class JsonEquivalence
         }
     }
 
+    /// <summary>
+    /// Compares two JSON elements at the specified path, returning the first difference found.
+    /// </summary>
+    /// <param name="expected">The expected JSON element.</param>
+    /// <param name="actual">The actual JSON element.</param>
+    /// <param name="path">The JSON path to the element being compared, used for locating differences.</param>
+    /// <param name="options">Configuration controlling comparison behavior (e.g., array order sensitivity).</param>
+    /// <param name="ignored">Set of resolved JSON paths to exclude from comparison.</param>
+    /// <returns>null if the elements are equivalent; otherwise the first JsonDifference detected.</returns>
     private static JsonDifference? CompareElement(
         JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
     {
@@ -110,6 +141,15 @@ public static class JsonEquivalence
         };
     }
 
+    /// <summary>
+    /// Compares two JSON objects for structural equivalence.
+    /// </summary>
+    /// <param name="expected">The expected JSON object.</param>
+    /// <param name="actual">The actual JSON object.</param>
+    /// <param name="path">The JSON path to this object.</param>
+    /// <param name="options">Comparison configuration and ignored path patterns.</param>
+    /// <param name="ignored">Set of resolved paths to exclude from comparison.</param>
+    /// <returns>The first structural difference found, or null if the objects are equivalent.</returns>
     private static JsonDifference? CompareObject(
         JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
     {
@@ -145,6 +185,10 @@ public static class JsonEquivalence
         return null;
     }
 
+    /// <summary>
+    /// Compares two JSON arrays in order, excluding ignored paths.
+    /// </summary>
+    /// <returns>The first JSON difference found, or null if the arrays are equivalent.</returns>
     private static JsonDifference? CompareArrayOrdered(
         JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
     {
@@ -172,6 +216,12 @@ public static class JsonEquivalence
         return null;
     }
 
+    /// <summary>
+    /// Compares two JSON arrays as unordered collections.
+    /// </summary>
+    /// <returns>
+    /// `null` if equivalent when element order is disregarded, otherwise the first structural difference.
+    /// </returns>
     private static JsonDifference? CompareArrayUnordered(
         JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
     {
@@ -204,7 +254,13 @@ public static class JsonEquivalence
 
     /// <summary>Returns the array's elements paired with their original index, excluding any element
     /// whose own path is in the ignored set. Child-only ignores (for example a field on every element)
-    /// keep the element; only an element-level ignore removes it.</summary>
+    /// <summary>
+    /// Enumerates array elements, excluding those whose element paths are marked as ignored.
+    /// </summary>
+    /// <param name="array">The JSON array to enumerate.</param>
+    /// <param name="path">The current path prefix to the array.</param>
+    /// <param name="ignored">The set of paths to exclude.</param>
+    /// <returns>A list of tuples with the original index and element for each non-ignored item.</returns>
     private static List<(int Index, JsonElement Element)> NonIgnoredItems(
         JsonElement array, string path, HashSet<string> ignored)
     {
@@ -223,6 +279,11 @@ public static class JsonEquivalence
         return items;
     }
 
+    /// <summary>
+    /// Finds and marks an unmatched actual element that is equivalent to the expected element.
+    /// </summary>
+    /// <param name="matched">Boolean array tracking which actual elements have been matched. Marked true when an equivalent element is found.</param>
+    /// <returns>`true` if an unmatched element was found and marked, `false` otherwise.</returns>
     private static bool TryMatchUnordered(
         JsonElement expectedItem, List<JsonElement> actualItems, bool[] matched, string childPath, JsonEquivalenceOptions options, HashSet<string> ignored)
     {
@@ -238,13 +299,24 @@ public static class JsonEquivalence
         return false;
     }
 
-    private static JsonDifference ArrayLengthDifference(string path, int expectedCount, int actualCount)
+    /// <summary>
+            /// Creates a JsonDifference representing an array length mismatch.
+            /// </summary>
+            /// <param name="path">The path to the array in the JSON document.</param>
+            /// <param name="expectedCount">The number of elements in the expected array.</param>
+            /// <param name="actualCount">The number of elements in the actual array.</param>
+            /// <returns>A JsonDifference for the array length mismatch.</returns>
+            private static JsonDifference ArrayLengthDifference(string path, int expectedCount, int actualCount)
         => new(
             path,
             JsonDifferenceKind.ArrayLength,
             expectedCount.ToString(CultureInfo.InvariantCulture) + " element(s)",
             actualCount.ToString(CultureInfo.InvariantCulture) + " element(s)");
 
+    /// <summary>
+    /// Determines if two JSON numeric values are equivalent.
+    /// </summary>
+    /// <returns>`true` if the numbers are equivalent, `false` otherwise.</returns>
     private static bool NumbersEqual(JsonElement a, JsonElement b)
     {
         if (a.TryGetDecimal(out var da) && b.TryGetDecimal(out var db))
@@ -271,7 +343,12 @@ public static class JsonEquivalence
     /// exponent adjusted, so two literals denoting the same value canonicalize identically regardless
     /// of exponent case, scientific-form normalization, or insignificant zeros. Zero canonicalizes to
     /// a positive sign with a zero significand and exponent.
+    /// <summary>
+    /// Canonicalizes a JSON numeric literal into a normalized form with separated sign, significand, and exponent.
     /// </summary>
+    /// <param name="literal">The JSON numeric literal to canonicalize.</param>
+    /// <param name="canonical">The canonical form with sign, significand, and exponent; undefined if the method returns false.</param>
+    /// <returns>true if the literal is successfully canonicalized; false if the exponent cannot be parsed as an integer.</returns>
     private static bool TryCanonicalizeNumber(string literal, out (int Sign, BigInteger Significand, int Exponent) canonical)
     {
         canonical = default;
@@ -324,14 +401,32 @@ public static class JsonEquivalence
         return true;
     }
 
-    private static bool IsBoolean(JsonValueKind kind) => kind is JsonValueKind.True or JsonValueKind.False;
+    /// <summary>
+/// Determines whether a JSON value kind represents a boolean.
+/// </summary>
+/// <returns>true if the kind is JsonValueKind.True or JsonValueKind.False, false otherwise.</returns>
+private static bool IsBoolean(JsonValueKind kind) => kind is JsonValueKind.True or JsonValueKind.False;
 
-    private static string ChildPath(string path, string name)
+    /// <summary>
+        /// Constructs a child property path by appending a property name to a parent path.
+        /// </summary>
+        /// <returns>The property name appended to the parent path with a dot separator, or just the property name if the parent path is empty.</returns>
+        private static string ChildPath(string path, string name)
         => path.Length is 0 ? name : string.Concat(path, ".", name);
 
-    private static string ChildIndex(string path, int index)
+    /// <summary>
+        /// Constructs a child array element path by appending the index in bracket notation.
+        /// </summary>
+        /// <param name="path">The parent path.</param>
+        /// <param name="index">The array element index.</param>
+        /// <returns>The path with the index appended in bracket notation (e.g., "path[0]").</returns>
+        private static string ChildIndex(string path, int index)
         => string.Concat(path, "[", index.ToString(CultureInfo.InvariantCulture), "]");
 
+    /// <summary>
+    /// Renders a JSON element as a string for use in difference messages.
+    /// </summary>
+    /// <returns>A formatted string representation of the element, with objects and arrays truncated, strings quoted, and other values rendered in their appropriate literal form.</returns>
     private static string RenderValue(JsonElement element) => element.ValueKind switch
     {
         JsonValueKind.Object or JsonValueKind.Array => Truncate(element.GetRawText()),
@@ -342,6 +437,10 @@ public static class JsonEquivalence
         _ => "null", // Null (Undefined cannot occur for a parsed element)
     };
 
-    private static string Truncate(string value)
+    /// <summary>
+        /// Truncates a string to the maximum rendered length and appends an ellipsis if truncated.
+        /// </summary>
+        /// <returns>The original string, or if longer than the maximum rendered length, the first portion up to that length followed by "...".</returns>
+        private static string Truncate(string value)
         => value.Length <= MaxRenderedLength ? value : value[..MaxRenderedLength] + "...";
 }

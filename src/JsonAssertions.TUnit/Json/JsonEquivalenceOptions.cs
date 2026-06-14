@@ -33,6 +33,11 @@ public sealed class JsonEquivalenceOptions
     /// a field across all elements instead.</summary>
     /// <param name="path">The JSON path to ignore. Must be non-empty.</param>
     /// <returns>This instance, for chaining.</returns>
+    /// <summary>
+    /// Registers a JSON path to be excluded from equivalence comparisons.
+    /// </summary>
+    /// <param name="path">The JSON path to ignore during comparisons.</param>
+    /// <returns>The current instance for fluent configuration chaining.</returns>
     /// <exception cref="ArgumentException"><paramref name="path"/> is null, empty, or whitespace.</exception>
     public JsonEquivalenceOptions IgnorePath(string path)
     {
@@ -43,7 +48,10 @@ public sealed class JsonEquivalenceOptions
 
     /// <summary>Compares arrays order-insensitively for the remainder of this comparison (see
     /// <see cref="IgnoreArrayOrderEnabled"/>).</summary>
-    /// <returns>This instance, for chaining.</returns>
+    /// <summary>
+    /// Configures the equivalence comparison to ignore the order of array elements.
+    /// </summary>
+    /// <returns>This instance, for method chaining.</returns>
     public JsonEquivalenceOptions IgnoreArrayOrder()
     {
         IgnoreArrayOrderEnabled = true;

@@ -13,7 +13,13 @@ public sealed class JsonDifference
     /// <param name="path">The dot/bracket path where the documents diverge; empty for the root.</param>
     /// <param name="kind">The category of difference.</param>
     /// <param name="expected">A rendered description of the expected side at <paramref name="path"/>.</param>
-    /// <param name="actual">A rendered description of the actual side at <paramref name="path"/>.</param>
+    /// <summary>
+    /// Initializes a new instance of the JsonDifference class to represent a structural difference between two JSON documents.
+    /// </summary>
+    /// <param name="path">The dot/bracket path where the JSON documents diverge; an empty string indicates the root.</param>
+    /// <param name="kind">The category or type of difference detected at the path.</param>
+    /// <param name="expected">A rendered description of the expected JSON structure at the path.</param>
+    /// <param name="actual">A rendered description of the actual JSON structure at the path.</param>
     public JsonDifference(string path, JsonDifferenceKind kind, string expected, string actual)
     {
         Path = path;
