@@ -148,23 +148,25 @@ public static class JsonEquivalence
     private static JsonDifference? CompareArrayOrdered(
         JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
     {
-        if (expected.GetArrayLength() != actual.GetArrayLength())
+        // Exclude whole elements registered as ignored paths (for example IgnorePath("a[1]") or the
+        // wildcard "a[*]") before comparing, so an ignored element never trips a length difference and
+        // a wildcard can suppress extra or missing elements. Element paths whose only ignored part is a
+        // child (for example "a[*].t") keep the element and skip the child inside CompareElement.
+        var expectedItems = NonIgnoredItems(expected, path, ignored);
+        var actualItems = NonIgnoredItems(actual, path, ignored);
+        if (expectedItems.Count != actualItems.Count)
         {
-            return ArrayLengthDifference(expected, actual, path);
+            return ArrayLengthDifference(path, expectedItems.Count, actualItems.Count);
         }
 
-        using var expectedItems = expected.EnumerateArray();
-        using var actualItems = actual.EnumerateArray();
-        var index = 0;
-        while (expectedItems.MoveNext() && actualItems.MoveNext())
+        for (var i = 0; i < expectedItems.Count; i++)
         {
-            var difference = CompareElement(expectedItems.Current, actualItems.Current, ChildIndex(path, index), options, ignored);
+            var difference = CompareElement(
+                expectedItems[i].Element, actualItems[i].Element, ChildIndex(path, expectedItems[i].Index), options, ignored);
             if (difference is not null)
             {
                 return difference;
             }
-
-            index++;
         }
 
         return null;
@@ -173,20 +175,21 @@ public static class JsonEquivalence
     private static JsonDifference? CompareArrayUnordered(
         JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
     {
-        if (expected.GetArrayLength() != actual.GetArrayLength())
+        var expectedItems = NonIgnoredItems(expected, path, ignored);
+        var actualPairs = NonIgnoredItems(actual, path, ignored);
+        if (expectedItems.Count != actualPairs.Count)
         {
-            return ArrayLengthDifference(expected, actual, path);
+            return ArrayLengthDifference(path, expectedItems.Count, actualPairs.Count);
         }
 
-        var actualItems = new List<JsonElement>(actual.GetArrayLength());
-        foreach (var item in actual.EnumerateArray())
+        var actualItems = new List<JsonElement>(actualPairs.Count);
+        foreach (var pair in actualPairs)
         {
-            actualItems.Add(item);
+            actualItems.Add(pair.Element);
         }
 
         var matched = new bool[actualItems.Count];
-        var index = 0;
-        foreach (var expectedItem in expected.EnumerateArray())
+        foreach (var (index, expectedItem) in expectedItems)
         {
             var childPath = ChildIndex(path, index);
             if (!TryMatchUnordered(expectedItem, actualItems, matched, childPath, options, ignored))
@@ -194,11 +197,30 @@ public static class JsonEquivalence
                 return new JsonDifference(
                     childPath, JsonDifferenceKind.ArrayElementUnmatched, RenderValue(expectedItem), "no equivalent element in the actual array");
             }
+        }
+
+        return null;
+    }
+
+    /// <summary>Returns the array's elements paired with their original index, excluding any element
+    /// whose own path is in the ignored set. Child-only ignores (for example a field on every element)
+    /// keep the element; only an element-level ignore removes it.</summary>
+    private static List<(int Index, JsonElement Element)> NonIgnoredItems(
+        JsonElement array, string path, HashSet<string> ignored)
+    {
+        var items = new List<(int Index, JsonElement Element)>(array.GetArrayLength());
+        var index = 0;
+        foreach (var item in array.EnumerateArray())
+        {
+            if (!ignored.Contains(ChildIndex(path, index)))
+            {
+                items.Add((index, item));
+            }
 
             index++;
         }
 
-        return null;
+        return items;
     }
 
     private static bool TryMatchUnordered(
@@ -216,12 +238,12 @@ public static class JsonEquivalence
         return false;
     }
 
-    private static JsonDifference ArrayLengthDifference(JsonElement expected, JsonElement actual, string path)
+    private static JsonDifference ArrayLengthDifference(string path, int expectedCount, int actualCount)
         => new(
             path,
             JsonDifferenceKind.ArrayLength,
-            expected.GetArrayLength().ToString(CultureInfo.InvariantCulture) + " element(s)",
-            actual.GetArrayLength().ToString(CultureInfo.InvariantCulture) + " element(s)");
+            expectedCount.ToString(CultureInfo.InvariantCulture) + " element(s)",
+            actualCount.ToString(CultureInfo.InvariantCulture) + " element(s)");
 
     private static bool NumbersEqual(JsonElement a, JsonElement b)
     {

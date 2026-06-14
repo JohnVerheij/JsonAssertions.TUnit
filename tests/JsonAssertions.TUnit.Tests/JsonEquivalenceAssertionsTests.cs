@@ -295,6 +295,49 @@ internal sealed class JsonEquivalenceAssertionsTests
     }
 
     [Test]
+    public async Task IgnorePath_Root_IgnoresEntireDocument(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // Ignoring the root "$" excludes the whole document, so any two documents compare equivalent.
+        await Assert.That("""{"a":1}""").IsEquivalentJsonTo("""{"b":2,"c":[3]}""", o => o.IgnorePath("$"));
+    }
+
+    [Test]
+    public async Task IgnorePath_ExcludedElement_SuppressesLengthDifference(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // The only differing node (index 0) is explicitly excluded, so the length difference it would
+        // otherwise cause is suppressed, in both directions.
+        await Assert.That("""[1]""").IsEquivalentJsonTo("""[]""", o => o.IgnorePath("[0]"));
+        await Assert.That("""[]""").IsEquivalentJsonTo("""[1]""", o => o.IgnorePath("[0]"));
+    }
+
+    [Test]
+    public async Task IgnorePath_WildcardArrayElements_SuppressesExtraAndMissing(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // a[*] ignores every element of a, so differing element counts no longer matter.
+        await Assert.That("""{"a":[1,2,3]}""").IsEquivalentJsonTo("""{"a":[1]}""", o => o.IgnorePath("a[*]"));
+        await Assert.That("""{"a":[]}""").IsEquivalentJsonTo("""{"a":[9,9,9]}""", o => o.IgnorePath("a[*]"));
+        // Unordered with the same wildcard also collapses to an empty comparison.
+        await Assert.That("""{"a":[3,2,1]}""")
+            .IsEquivalentJsonTo("""{"a":[1]}""", o => o.IgnoreArrayOrder().IgnorePath("a[*]"));
+    }
+
+    [Test]
+    public async Task IgnorePath_ExcludedElement_StillFailsWhenNonIgnoredCountsDiffer(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // Excluding index 0 must not hide a genuine extra element among the non-ignored ones.
+        var ex = await Assert.That(async () =>
+            await Assert.That("""[9,1,2]""").IsEquivalentJsonTo("""[9,1]""", o => o.IgnorePath("[0]")))
+            .Throws<AssertionException>();
+        await Assert.That(ex!.Message).Contains("array length differs");
+        await Assert.That(ex.Message).Contains("expected: 1 element(s)");
+        await Assert.That(ex.Message).Contains("actual:   2 element(s)");
+    }
+
+    [Test]
     public async Task IgnorePath_ExcludesPropertyPresentOnlyInActual(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
