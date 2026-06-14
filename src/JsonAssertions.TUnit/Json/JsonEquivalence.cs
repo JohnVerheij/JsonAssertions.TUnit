@@ -284,10 +284,18 @@ public static class JsonEquivalence
         }
 
         // The mantissa is now a non-empty digit string (JSON guarantees a leading integer digit), so
-        // Parse cannot throw. A zero-valued literal is within decimal range and is handled by the
-        // decimal path before reaching here, so the significand is non-zero and the trailing-zero loop
-        // always terminates.
+        // Parse cannot throw. A zero can still reach here: NumbersEqual only canonicalizes when an
+        // operand is non-finite as a double (for example zero compared against 1e400), so a zero
+        // literal paired with an extreme-magnitude one is canonicalized. Guard it explicitly, both to
+        // give zero a single canonical form (positive sign, regardless of a "-0" literal) and to keep
+        // the trailing-zero loop terminating.
         var significand = BigInteger.Parse(mantissa, NumberStyles.None, CultureInfo.InvariantCulture);
+        if (significand.IsZero)
+        {
+            canonical = (1, BigInteger.Zero, 0);
+            return true;
+        }
+
         while (significand % 10 == 0)
         {
             significand /= 10;

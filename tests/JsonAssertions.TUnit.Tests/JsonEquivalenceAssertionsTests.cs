@@ -88,6 +88,21 @@ internal sealed class JsonEquivalenceAssertionsTests
     }
 
     [Test]
+    [Timeout(5_000)]
+    public async Task ZeroAgainstBeyondDoubleRange_TerminatesAndIsNotEquivalent(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // Zero reaches canonicalization only when the other operand is non-finite as a double (1e400
+        // reads as +Infinity, so the double path is skipped). The zero guard keeps the trailing-zero
+        // loop terminating; the values are distinct, so they must not be equated. Without the guard
+        // this assertion would hang and trip the timeout.
+        var ex = await Assert.That(async () =>
+            await Assert.That("""{"n":0}""").IsEquivalentJsonTo("""{"n":1e400}"""))
+            .Throws<AssertionException>();
+        await Assert.That(ex!.Message).Contains("value differs");
+    }
+
+    [Test]
     public async Task BeyondDoubleRange_ExponentOverflowingInt_FallsBackToRawText(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
