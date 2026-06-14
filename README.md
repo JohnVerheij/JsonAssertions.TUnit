@@ -32,6 +32,7 @@ Property existence, value-at-path, value-predicate, value-one-of, value-parsable
 | `HasNonEmptyJsonString(string path)` | Asserts the value at `path` is a non-empty JSON string. |
 | `HasJsonArrayLength(string path, int length)` | Asserts the value at `path` is a JSON array of the given length. |
 | `HasNonEmptyJsonArray(string path)` / `HasEmptyJsonArray(string path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
+| `IsEquivalentJsonTo(string expected)` / `IsEquivalentJsonTo(string expected, Action<JsonEquivalenceOptions> configure)` over a JSON `string` or `JsonElement` | Asserts the whole document is structurally equivalent to `expected`, independent of property order and number form. The configure callback sets `IgnorePath` and `IgnoreArrayOrder`. |
 | `HasJsonResponse<T>(HttpStatusCode, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + structural equality in one chain. |
 | `MatchesProblemDetails(int status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields. |
 | `MatchesValidationProblemDetails(int status, IReadOnlyDictionary<string, string[]> errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |
@@ -211,6 +212,10 @@ The full entry-point catalog is in the Status table at the top of this file. The
 - `HasJsonValueKind(path, kind)` / `HasJsonBoolean(path)` / `HasNonEmptyJsonString(path)`
 - `HasJsonArrayLength(path, length)` / `HasNonEmptyJsonArray(path)` / `HasEmptyJsonArray(path)`
 
+**Whole-document equivalence (over JSON `string` and `JsonElement`):**
+
+- `IsEquivalentJsonTo(expected)` / `IsEquivalentJsonTo(expected, configure)` - structural equality, independent of property order and number form (`1` == `1.0` == `1e0`). The configure callback sets `IgnorePath(path)` (excludes a path, `[*]`-aware) and `IgnoreArrayOrder()` (multiset array comparison).
+
 **HTTP-response combined assertions (on `HttpResponseMessage`):**
 
 - `HasJsonResponse<T>(status, JsonTypeInfo<T>, expected, ct)` - combined status + AOT-clean deserialization + structural equality
@@ -226,6 +231,7 @@ The full entry-point catalog is in the Status table at the top of this file. The
 
 - `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` - static factory returning `Func<string, string>` that canonicalizes a JSON string for snapshot composition
 - `JsonFailureMessage` - public path-family factory methods (`ParseFailure`, `PropertyNotFound`, `PropertyShouldNotExist`, `ValueMismatch`, `ShapeMismatch`) for consumer-authored typed JSON assertions
+- `JsonEquivalence.Compare(expected, actual, options)` - structural comparison over JSON strings or `JsonElement`s, returning the first `JsonDifference` or `null` when equivalent
 
 ## Failure diagnostics
 
@@ -420,7 +426,7 @@ The 1.0 milestone signals API stability.
 
 The next increments, each as a reviewed pull request:
 
-- Semantic JSON equality and subset / fragment matching (`IsEquivalentJsonTo`, `ContainsJson`).
+- Subset / fragment matching (`ContainsJson`). Whole-document equivalence (`IsEquivalentJsonTo`) shipped in 0.5.0.
 
 ### Out of scope
 

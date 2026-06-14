@@ -28,6 +28,7 @@ Each path / value / shape entry point is available over a JSON `string`, a `Syst
 | `HasNonEmptyJsonString(path)` | Asserts the value at `path` is a non-empty JSON string. |
 | `HasJsonArrayLength(path, length)` | Asserts the value at `path` is a JSON array of the given length. |
 | `HasNonEmptyJsonArray(path)` / `HasEmptyJsonArray(path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
+| `IsEquivalentJsonTo(expected)` / `IsEquivalentJsonTo(expected, configure)` over a JSON `string` or `JsonElement` | Asserts the whole document is structurally equivalent to `expected`, independent of property order and number form (`1` == `1.0`). The configure callback sets `IgnorePath` and `IgnoreArrayOrder`. |
 | `HasJsonResponse<T>(status, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + structural equality in one chain. |
 | `MatchesProblemDetails(status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields. |
 | `MatchesValidationProblemDetails(status, errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |
@@ -97,7 +98,7 @@ The single package places types in two namespaces, the same shape as the rest of
 
 ## Roadmap
 
-- Semantic JSON equality and subset / fragment matching (`IsEquivalentJsonTo`, `ContainsJson`).
+- Subset / fragment matching (`ContainsJson`). Whole-document equivalence (`IsEquivalentJsonTo`) shipped in 0.5.0.
 
 ## Family
 

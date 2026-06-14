@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-14: structural JSON equivalence
+
+Minor release. Adds whole-document structural equivalence assertions. Purely additive.
+
+### Added
+
+- **`Assert.That(actual).IsEquivalentJsonTo(expected)`** asserts that two JSON documents carry the same values at the same paths. Equivalence ignores object-property order and the lexical form of numbers, so `1`, `1.0`, and `1e0` are equal. Both a JSON `string` and a `JsonElement` are accepted as the actual value; the expected document is a JSON `string`. A configure overload sets options: `IgnorePath("items[*].timestamp")` excludes a path from the comparison (the same path grammar as the other assertions, including the `[*]` wildcard), and `IgnoreArrayOrder()` compares arrays as multisets rather than position by position. On failure the message names the first diverging path, the category of difference, and a rendered view of each side, with container values shown as truncated raw JSON.
+- **`JsonEquivalence`** (framework-agnostic core) exposes the comparison directly: `Compare(expected, actual, options)` over JSON strings or `JsonElement`s returns the first `JsonDifference`, or `null` when the documents are equivalent. `JsonEquivalenceOptions`, `JsonDifference`, and `JsonDifferenceKind` are public so the engine is usable outside the assertion path.
+
 ## [0.4.2] - 2026-06-05: documentation refresh
 
 Documentation and release-tooling release. No API or behavior change.
@@ -174,7 +183,8 @@ Semantic JSON equality and subset / fragment matching are candidate work for v0.
 - Source Link, deterministic builds, embedded PDB.
 - TUnit dependency pinned to **1.44.0**.
 
-[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.2...HEAD
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.3.0...v0.4.0

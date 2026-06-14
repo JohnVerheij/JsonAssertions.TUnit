@@ -17,8 +17,40 @@ namespace JsonAssertions
         public static string Canonicalize(string json) { }
         public static string Canonicalize(string json, System.Action<JsonAssertions.JsonCanonicalizeOptions>? configure) { }
     }
+    public sealed class JsonDifference
+    {
+        public JsonDifference(string path, JsonAssertions.JsonDifferenceKind kind, string expected, string actual) { }
+        public string Actual { get; }
+        public string Expected { get; }
+        public JsonAssertions.JsonDifferenceKind Kind { get; }
+        public string Path { get; }
+    }
+    public enum JsonDifferenceKind
+    {
+        Value = 0,
+        Kind = 1,
+        MissingProperty = 2,
+        UnexpectedProperty = 3,
+        ArrayLength = 4,
+        ArrayElementUnmatched = 5,
+    }
+    public static class JsonEquivalence
+    {
+        public static JsonAssertions.JsonDifference? Compare(System.Text.Json.JsonElement expected, System.Text.Json.JsonElement actual, JsonAssertions.JsonEquivalenceOptions options) { }
+        public static JsonAssertions.JsonDifference? Compare(string expected, string actual, JsonAssertions.JsonEquivalenceOptions options) { }
+    }
+    public sealed class JsonEquivalenceOptions
+    {
+        public JsonEquivalenceOptions() { }
+        public bool IgnoreArrayOrderEnabled { get; }
+        public System.Collections.Generic.IReadOnlyList<string> IgnoredPaths { get; }
+        public JsonAssertions.JsonEquivalenceOptions IgnoreArrayOrder() { }
+        public JsonAssertions.JsonEquivalenceOptions IgnorePath(string path) { }
+    }
     public static class JsonFailureMessage
     {
+        public static string EquivalenceMismatch(JsonAssertions.JsonDifference difference) { }
+        public static string ExpectedParseFailure(System.Text.Json.JsonException exception) { }
         public static string ParseFailure(System.Text.Json.JsonException exception) { }
         public static string PropertyNotFound(string path, JsonAssertions.JsonPathResolution resolution) { }
         public static string PropertyShouldNotExist(string path, JsonAssertions.JsonPathResolution resolution) { }
@@ -143,6 +175,17 @@ namespace JsonAssertions.TUnit
         public static JsonAssertions.TUnit.IJsonContextAssertionSource AsJsonContext<TContext>(this TUnit.Assertions.Core.IAssertionSource<TContext> source)
             where TContext : System.Text.Json.Serialization.JsonSerializerContext { }
         public static JsonAssertions.TUnit.HasJsonTypeInfoForAssertion<T> HasJsonTypeInfoFor<T>(this JsonAssertions.TUnit.IJsonContextAssertionSource source) { }
+    }
+    public static class JsonEquivalenceAssertions
+    {
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult IsEquivalentJsonTo(this System.Text.Json.JsonElement actual, string expected) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult IsEquivalentJsonTo(this string actual, string expected) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult IsEquivalentJsonTo(this System.Text.Json.JsonElement actual, string expected, System.Action<JsonAssertions.JsonEquivalenceOptions>? configure) { }
+        [TUnit.Assertions.Attributes.GenerateAssertion]
+        public static TUnit.Assertions.Core.AssertionResult IsEquivalentJsonTo(this string actual, string expected, System.Action<JsonAssertions.JsonEquivalenceOptions>? configure) { }
     }
     public static class JsonPropertyAssertions
     {
@@ -634,6 +677,25 @@ namespace TUnit.Assertions.Extensions
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
         protected override string GetExpectation() { }
     }
+    public sealed class JsonElement_IsEquivalentJsonTo_String_ActionJsonEquivalenceOptions_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
+    {
+        public JsonElement_IsEquivalentJsonTo_String_ActionJsonEquivalenceOptions_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string expected, System.Action<JsonAssertions.JsonEquivalenceOptions>? configure) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class JsonElement_IsEquivalentJsonTo_String_Assertion : TUnit.Assertions.Core.Assertion<System.Text.Json.JsonElement>
+    {
+        public JsonElement_IsEquivalentJsonTo_String_Assertion(TUnit.Assertions.Core.AssertionContext<System.Text.Json.JsonElement> context, string expected) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<System.Text.Json.JsonElement> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public static class JsonEquivalenceAssertions
+    {
+        public static TUnit.Assertions.Extensions.JsonElement_IsEquivalentJsonTo_String_Assertion IsEquivalentJsonTo(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string expected, [System.Runtime.CompilerServices.CallerArgumentExpression("expected")] string? expectedExpression = null) { }
+        public static TUnit.Assertions.Extensions.String_IsEquivalentJsonTo_String_Assertion IsEquivalentJsonTo(this TUnit.Assertions.Core.IAssertionSource<string> source, string expected, [System.Runtime.CompilerServices.CallerArgumentExpression("expected")] string? expectedExpression = null) { }
+        public static TUnit.Assertions.Extensions.JsonElement_IsEquivalentJsonTo_String_ActionJsonEquivalenceOptions_Assertion IsEquivalentJsonTo(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string expected, System.Action<JsonAssertions.JsonEquivalenceOptions>? configure, [System.Runtime.CompilerServices.CallerArgumentExpression("expected")] string? expectedExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("configure")] string? configureExpression = null) { }
+        public static TUnit.Assertions.Extensions.String_IsEquivalentJsonTo_String_ActionJsonEquivalenceOptions_Assertion IsEquivalentJsonTo(this TUnit.Assertions.Core.IAssertionSource<string> source, string expected, System.Action<JsonAssertions.JsonEquivalenceOptions>? configure, [System.Runtime.CompilerServices.CallerArgumentExpression("expected")] string? expectedExpression = null, [System.Runtime.CompilerServices.CallerArgumentExpression("configure")] string? configureExpression = null) { }
+    }
     public static class JsonPropertyAssertions
     {
         public static TUnit.Assertions.Extensions.JsonElement_DoesNotHaveJsonProperty_String_Assertion DoesNotHaveJsonProperty(this TUnit.Assertions.Core.IAssertionSource<System.Text.Json.JsonElement> source, string path, [System.Runtime.CompilerServices.CallerArgumentExpression("path")] string? pathExpression = null) { }
@@ -835,6 +897,18 @@ namespace TUnit.Assertions.Extensions
     public sealed class String_HasNonEmptyJsonString_String_Assertion : TUnit.Assertions.Core.Assertion<string>
     {
         public String_HasNonEmptyJsonString_String_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string path) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class String_IsEquivalentJsonTo_String_ActionJsonEquivalenceOptions_Assertion : TUnit.Assertions.Core.Assertion<string>
+    {
+        public String_IsEquivalentJsonTo_String_ActionJsonEquivalenceOptions_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string expected, System.Action<JsonAssertions.JsonEquivalenceOptions>? configure) { }
+        protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
+        protected override string GetExpectation() { }
+    }
+    public sealed class String_IsEquivalentJsonTo_String_Assertion : TUnit.Assertions.Core.Assertion<string>
+    {
+        public String_IsEquivalentJsonTo_String_Assertion(TUnit.Assertions.Core.AssertionContext<string> context, string expected) { }
         protected override System.Threading.Tasks.Task<TUnit.Assertions.Core.AssertionResult> CheckAsync(TUnit.Assertions.Core.EvaluationMetadata<string> metadata) { }
         protected override string GetExpectation() { }
     }
