@@ -160,7 +160,7 @@ jobs:
         # SPDX 3.0 SBOM inside the nupkg is covered by the build-provenance attestation above
         # (it's part of the artifact contents); this step adds the standalone signature for the
         # sibling CycloneDX file so security tooling can verify either format chain end-to-end.
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-path: ./artifacts/JsonAssertions.TUnit.${{ env.TAG_VERSION }}.nupkg
           sbom-path: ./artifacts/JsonAssertions.TUnit.${{ env.TAG_VERSION }}.cdx.json
