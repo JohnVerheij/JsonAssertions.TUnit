@@ -1,5 +1,8 @@
 # JsonAssertions.TUnit
 
+> Part of the **[DotNetAssertions](https://dotnetassertions.dev)** family of assertion extensions for TUnit.
+
+
 [![NuGet](https://img.shields.io/nuget/v/JsonAssertions.TUnit.svg)](https://www.nuget.org/packages/JsonAssertions.TUnit/)
 [![Downloads](https://img.shields.io/nuget/dt/JsonAssertions.TUnit.svg)](https://www.nuget.org/packages/JsonAssertions.TUnit/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
