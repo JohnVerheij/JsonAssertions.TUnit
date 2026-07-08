@@ -13,6 +13,8 @@ TUnit-native JSON assertions for .NET. Fluent entry points over TUnit's `Assert.
 
 > **Scope:** Test projects only. Not intended for production code.
 
+> Part of the **[DotNetAssertions](https://dotnetassertions.dev)** family of assertion extensions for TUnit.
+
 ---
 
 ## Status
