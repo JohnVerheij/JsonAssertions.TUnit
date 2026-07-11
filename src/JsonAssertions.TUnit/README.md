@@ -31,6 +31,8 @@ Each path / value / shape entry point is available over a JSON `string`, a `Syst
 | `HasJsonArrayLength(path, length)` | Asserts the value at `path` is a JSON array of the given length. |
 | `HasNonEmptyJsonArray(path)` / `HasEmptyJsonArray(path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
 | `IsEquivalentJsonTo(expected)` / `IsEquivalentJsonTo(expected, configure)` over a JSON `string` or `JsonElement` | Asserts the whole document is structurally equivalent to `expected`, independent of property order and number form (`1` == `1.0`). The configure callback sets `IgnorePath` and `IgnoreArrayOrder`. |
+| `ContainsJson(expectedSubset)` / `ContainsJson(expectedSubset, configure)` over a JSON `string`, `JsonElement`, or `HttpResponseMessage` *(v0.6.0+)* | Asserts the document contains the expected subset (extra actual properties ignored); the failure lists every missing or mismatched path. Same options as `IsEquivalentJsonTo`. |
+| `GetJsonValue<T>(path)` / `GetJsonString(path)` / `GetJsonElement(path)` over a JSON `string` or `JsonElement` (and `...Async` on `HttpResponseMessage`) *(v0.6.0+)* | Reads a typed value out at `path` and returns it (not an assertion), for driving later requests or cross-checks; throws `JsonExtractionException` with path context on failure. |
 | `HasJsonResponse<T>(status, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + structural equality in one chain. |
 | `MatchesProblemDetails(status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields. |
 | `MatchesValidationProblemDetails(status, errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |
@@ -100,7 +102,7 @@ The single package places types in two namespaces, the same shape as the rest of
 
 ## Roadmap
 
-- Subset / fragment matching (`ContainsJson`). Whole-document equivalence (`IsEquivalentJsonTo`) shipped in 0.5.0.
+- Semantic JSON equality already ships as `IsEquivalentJsonTo` (0.5.0); subset matching (`ContainsJson`) and typed extraction (`GetJsonValue<T>` / `GetJsonString` / `GetJsonElement`) in 0.6.0. Further increments are demand-driven.
 
 ## Family
 

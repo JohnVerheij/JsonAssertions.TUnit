@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-11: JSON subset matching and typed extraction
+
+Minor release. Adds subset (contains) assertions and typed value extraction. Purely additive.
+
+### Added
+
+- **`Assert.That(actual).ContainsJson(expectedSubset)`** asserts that a JSON document contains an expected subset: every property in the expected document must be present in the actual document with an equivalent value (recursively), while the actual document may carry additional properties. This is the subset counterpart of `IsEquivalentJsonTo` (full equality), for the common case where a response carries fields a test does not want to pin. A JSON `string`, a `JsonElement`, and an `HttpResponseMessage` (body read with a flowed `CancellationToken`) are accepted as the actual value; the expected subset is a JSON `string`. Matching is independent of object-property order and number form. An expected array asserts a positional prefix (the actual array may be longer); `IgnoreArrayOrder()` matches expected elements against the actual array as a multiset subset, and `IgnorePath(...)` excludes a path, both through the configure overload. On failure the message lists every missing or mismatched path in one report, each with its category and a rendered view of both sides, so a single run enumerates every field that is wrong.
+- **`JsonEquivalence.ContainsAll(expected, actual, options)`** (framework-agnostic core) exposes the subset comparison directly over JSON strings or `JsonElement`s, returning every `JsonDifference` found (empty when the actual document contains the subset). **`JsonFailureMessage.ContainsMismatch(differences)`** renders the multi-difference failure text.
+- **`GetJsonValue<T>(path)`**, **`GetJsonString(path)`**, and **`GetJsonElement(path)`** read a typed value out of a JSON document at a path and return it, for a test that needs the value (pulling an id to drive the next request, reading a count to cross-check an array length) rather than an assertion. `GetJsonValue<T>` parses the value as any `IParsable<T>` (`int` / `long` / `bool` / `Guid` / `DateTimeOffset`, ...) from a JSON string or a JSON number literal, using `CultureInfo.InvariantCulture`; `GetJsonElement` returns a detached copy that stays valid after the source document is disposed. Each is available over a JSON `string`, a `JsonElement`, and (as `GetJsonValueAsync` / `GetJsonStringAsync` / `GetJsonElementAsync`) an `HttpResponseMessage`. A failure to resolve the path, convert the value, or parse the source throws **`JsonExtractionException`** with the same path-context message the assertions render, replacing a hand-rolled `JsonDocument.Parse(...).GetProperty(...).GetInt32()` chain and its bare BCL exceptions.
+
 ## [0.5.0] - 2026-06-14: structural JSON equivalence
 
 Minor release. Adds whole-document structural equivalence assertions. Purely additive.
@@ -124,7 +134,8 @@ The 0.0.1 scope is intentionally narrow. The release exists to establish the rep
 
 Both namespaces ship in the single `JsonAssertions.TUnit` assembly. The two-namespace split keeps the same consumer feel as the rest of the assertion family (a framework-agnostic core plus a TUnit adapter) and future-proofs a package split if the bare `JsonAssertions` identifier ever becomes available.
 
-[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.0...v0.4.1

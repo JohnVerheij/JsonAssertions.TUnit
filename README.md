@@ -35,6 +35,8 @@ Property existence, value-at-path, value-predicate, value-one-of, value-parsable
 | `HasJsonArrayLength(string path, int length)` | Asserts the value at `path` is a JSON array of the given length. |
 | `HasNonEmptyJsonArray(string path)` / `HasEmptyJsonArray(string path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
 | `IsEquivalentJsonTo(string expected)` / `IsEquivalentJsonTo(string expected, Action<JsonEquivalenceOptions> configure)` over a JSON `string` or `JsonElement` | Asserts the whole document is structurally equivalent to `expected`, independent of property order and number form. The configure callback sets `IgnorePath` and `IgnoreArrayOrder`. |
+| `ContainsJson(string expectedSubset)` / `ContainsJson(string expectedSubset, Action<JsonEquivalenceOptions> configure)` over a JSON `string`, `JsonElement`, or `HttpResponseMessage` *(v0.6.0+)* | Asserts the document contains the expected subset (extra actual properties ignored); the failure lists every missing or mismatched path. Same options as `IsEquivalentJsonTo`. |
+| `GetJsonValue<T>(string path)` / `GetJsonString(string path)` / `GetJsonElement(string path)` over a JSON `string` or `JsonElement` (and `GetJsonValueAsync` / `GetJsonStringAsync` / `GetJsonElementAsync` on `HttpResponseMessage`) *(v0.6.0+)* | **Extraction, not assertion:** reads a typed value out at `path` and returns it, for pulling an id to drive the next request or a count to cross-check an array length. `GetJsonValue<T>` parses any `IParsable<T>` from a JSON string or number; `GetJsonElement` returns a detached copy. Throws `JsonExtractionException` with path context on failure. |
 | `HasJsonResponse<T>(HttpStatusCode, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + structural equality in one chain. |
 | `MatchesProblemDetails(int status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields. |
 | `MatchesValidationProblemDetails(int status, IReadOnlyDictionary<string, string[]> errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |
@@ -214,9 +216,14 @@ The full entry-point catalog is in the Status table at the top of this file. The
 - `HasJsonValueKind(path, kind)` / `HasJsonBoolean(path)` / `HasNonEmptyJsonString(path)`
 - `HasJsonArrayLength(path, length)` / `HasNonEmptyJsonArray(path)` / `HasEmptyJsonArray(path)`
 
-**Whole-document equivalence (over JSON `string` and `JsonElement`):**
+**Whole-document equivalence and subset (over JSON `string`, `JsonElement`, and `HttpResponseMessage`):**
 
-- `IsEquivalentJsonTo(expected)` / `IsEquivalentJsonTo(expected, configure)` - structural equality, independent of property order and number form (`1` == `1.0` == `1e0`). The configure callback sets `IgnorePath(path)` (excludes a path, `[*]`-aware) and `IgnoreArrayOrder()` (multiset array comparison).
+- `IsEquivalentJsonTo(expected)` / `IsEquivalentJsonTo(expected, configure)` (over `string` / `JsonElement`) - structural equality, independent of property order and number form (`1` == `1.0` == `1e0`). The configure callback sets `IgnorePath(path)` (excludes a path, `[*]`-aware) and `IgnoreArrayOrder()` (multiset array comparison).
+- `ContainsJson(expectedSubset)` / `ContainsJson(expectedSubset, configure)` *(v0.6.0+; over `string`, `JsonElement`, and `HttpResponseMessage`)* - subset match: every property in the expected document must be present and equal in the actual document, which may carry additional properties. Same order/number-form independence and `IgnorePath` / `IgnoreArrayOrder` options as equivalence; an expected array asserts a positional prefix. The failure lists **every** missing or mismatched path, not just the first. Use it to replace a block of per-property `HasJsonProperty` / `HasJsonValue` checks against one response.
+
+**Typed extraction, not assertion (over JSON `string` and `JsonElement`; `...Async` on `HttpResponseMessage`):** *(v0.6.0+)*
+
+- `GetJsonValue<T>(path)` where `T : IParsable<T>` - reads and returns the value at `path`, parsed as `T` from a JSON string or number literal (invariant culture), for driving a later request or a cross-check. `GetJsonString(path)` returns a JSON string value; `GetJsonElement(path)` returns a detached (`Clone`d) subtree that survives the source document's disposal. On a failure to resolve the path, convert the value, or parse the source, throws `JsonExtractionException` with the same path-context message the assertions render. These return values (they are not awaited assertions); the `HttpResponseMessage` forms are `GetJsonValueAsync` / `GetJsonStringAsync` / `GetJsonElementAsync`.
 
 **HTTP-response combined assertions (on `HttpResponseMessage`):**
 
@@ -234,6 +241,7 @@ The full entry-point catalog is in the Status table at the top of this file. The
 - `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` - static factory returning `Func<string, string>` that canonicalizes a JSON string for snapshot composition
 - `JsonFailureMessage` - public path-family factory methods (`ParseFailure`, `PropertyNotFound`, `PropertyShouldNotExist`, `ValueMismatch`, `ShapeMismatch`) for consumer-authored typed JSON assertions
 - `JsonEquivalence.Compare(expected, actual, options)` - structural comparison over JSON strings or `JsonElement`s, returning the first `JsonDifference` or `null` when equivalent
+- `JsonEquivalence.ContainsAll(expected, actual, options)` *(v0.6.0+)* - subset comparison returning **every** `JsonDifference` (empty when the actual document contains the expected subset); `JsonFailureMessage.ContainsMismatch(differences)` renders the multi-difference failure text
 
 ## Failure diagnostics
 
@@ -300,6 +308,45 @@ the value to round-trip cleanly through the supplied JsonTypeInfo
 Failure-message text is not part of the stable public surface; pin behavior against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality.
 
 ## Cookbook: common patterns
+
+### Pattern: pull a value out to drive the next step (`GetJsonValue`, v0.6.0+)
+
+Acceptance and end-to-end flows often read a value from one response to build the next request, or read a count to cross-check an array length. Instead of a hand-rolled `JsonDocument.Parse(...).RootElement.GetProperty("cycleId").GetUInt32()` (which throws a bare `KeyNotFoundException` / `InvalidOperationException` with no path context), extract it with a typed getter:
+
+```csharp
+// parse the body once, then read what the test needs
+var cycle = await response.GetJsonElementAsync("cycle", ct);
+var cycleId = cycle.GetJsonValue<int>("cycleId");         // drives the next request
+await _client.PostAsJsonAsync($"/cycles/{cycleId}/start", payload, ct);
+
+// cross-field consistency
+var objectCount = cycle.GetJsonValue<int>("objectCount");
+var objects = cycle.GetJsonElement("objects");
+await Assert.That(objectCount).IsEqualTo(objects.GetArrayLength());
+```
+
+`GetJsonValue<T>` parses any `IParsable<T>` (`int`, `long`, `bool`, `Guid`, `DateTimeOffset`, ...) from a JSON string or number literal; a missing path or unparseable value throws `JsonExtractionException` naming where the path stopped. `GetJsonElement` returns a detached copy, so it stays valid after the parsed document is gone.
+
+### Pattern: assert a response contains an expected shape (`ContainsJson`, v0.6.0+)
+
+When a test asserts several fields of one response, a block of per-property checks re-reads the body per line and restates each path in a `.Because`. `ContainsJson` collapses the block into one declarative subset assertion: the expected fields must be present and equal, and the response may carry any additional fields (durations, timestamps, versions) the test does not want to pin. The failure lists **every** missing or mismatched field in one report, so a single run tells you everything that is wrong.
+
+```csharp
+// Before: one assert per field, each re-reads the body, each restates the path
+await Assert.That(response).HasJsonProperty("status", ct).Because("aggregate health has status");
+await Assert.That(response).HasJsonProperty("totalDurationMs", ct).Because("has totalDurationMs");
+await Assert.That(response).HasNonEmptyJsonArray("entries", ct).Because("at least one entry");
+await Assert.That(response).HasJsonProperty("entries[0].name", ct);
+await Assert.That(response).HasJsonProperty("entries[0].status", ct);
+
+// After: one subset assertion; extra response fields are ignored; failure names every wrong path
+await Assert.That(response).ContainsJson("""
+    { "status": "Healthy",
+      "entries": [ { "name": "db", "status": "Healthy" } ] }
+    """, ct);
+```
+
+Use `IsEquivalentJsonTo` instead when the test must reject unexpected fields (full equality). `ContainsJson` also works over a JSON `string` and a `JsonElement`; when a test asserts status, shape, and extracts a value, parse the body once to a `JsonElement` and assert against that. An expected array asserts a positional prefix (the actual array may be longer); pass `o => o.IgnoreArrayOrder()` to match elements as a multiset subset, or `o => o.IgnorePath("...")` to exclude a volatile field.
 
 ### Pattern: assert an HTTP-response JSON body in one fluent call
 
@@ -428,7 +475,7 @@ The 1.0 milestone signals API stability.
 
 The next increments, each as a reviewed pull request:
 
-- Subset / fragment matching (`ContainsJson`). Whole-document equivalence (`IsEquivalentJsonTo`) shipped in 0.5.0.
+- Semantic JSON equality already ships as `IsEquivalentJsonTo` (0.5.0); subset matching (`ContainsJson`) and typed extraction (`GetJsonValue<T>` / `GetJsonString` / `GetJsonElement`) in 0.6.0. Further increments are demand-driven.
 
 ### Out of scope
 

@@ -634,6 +634,36 @@ public static class HttpResponseMessageAssertions
             : AssertionResult.Passed;
     }
 
+    /// <summary>Asserts the response body contains <paramref name="expectedSubset"/> as a JSON
+    /// subset: every property in the expected document must be present in the body with an
+    /// equivalent value (recursively), while the body may carry additional properties. The failure
+    /// lists every missing or mismatched field.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="expectedSubset">The expected subset document text.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> ContainsJson(
+        this HttpResponseMessage response, string expectedSubset, CancellationToken cancellationToken = default)
+        => ContainsJson(response, expectedSubset, configure: null, cancellationToken);
+
+    /// <summary>Asserts the response body contains <paramref name="expectedSubset"/> as a JSON
+    /// subset, with comparison options (ignored paths, order-insensitive arrays) set by
+    /// <paramref name="configure"/>.</summary>
+    /// <param name="response">The HTTP response whose body is the JSON document.</param>
+    /// <param name="expectedSubset">The expected subset document text.</param>
+    /// <param name="configure">A callback that sets comparison options. May be
+    /// <see langword="null"/> for the defaults.</param>
+    /// <param name="cancellationToken">Flows to the response-body read.</param>
+    [GenerateAssertion]
+    public static Task<AssertionResult> ContainsJson(
+        this HttpResponseMessage response, string expectedSubset, Action<JsonEquivalenceOptions>? configure, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(expectedSubset);
+        var options = JsonContainsAssertions.BuildOptions(configure);
+        return AssertOnBodyAsync(response, root => JsonContainsAssertions.ContainsAgainst(root, expectedSubset, options), cancellationToken);
+    }
+
     /// <summary>Reads the response body as text and runs <paramref name="assert"/> against the
     /// parsed root element, mapping a parse failure to an explained assertion failure.</summary>
     private static async Task<AssertionResult> AssertOnBodyAsync(
