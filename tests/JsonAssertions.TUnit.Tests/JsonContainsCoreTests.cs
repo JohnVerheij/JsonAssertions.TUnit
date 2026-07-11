@@ -68,4 +68,17 @@ internal sealed class JsonContainsCoreTests
         await Assert.That(message).Contains("\"a\"", StringComparison.Ordinal);
         await Assert.That(message).Contains("\"b\"", StringComparison.Ordinal);
     }
+
+    [Test]
+    public async Task ContainsMismatch_RootDifference_RendersRoot(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // A top-level kind mismatch diverges at the empty (root) path.
+        var differences = JsonEquivalence.ContainsAll("{}", "[1,2]", new JsonEquivalenceOptions());
+        await Assert.That(differences.Count).IsEqualTo(1);
+        await Assert.That(differences[0].Path).IsEqualTo(string.Empty);
+
+        var message = JsonFailureMessage.ContainsMismatch(differences);
+        await Assert.That(message).Contains("the root", StringComparison.Ordinal);
+    }
 }
