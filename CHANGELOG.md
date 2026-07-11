@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-11: JSON subset matching
+
+Minor release. Adds subset (contains) assertions to collapse a block of per-property `HasJsonProperty` / `HasJsonValue` checks into one declarative call. Purely additive.
+
+### Added
+
+- **`Assert.That(actual).ContainsJson(expectedSubset)`** asserts that a JSON document contains an expected subset: every property in the expected document must be present in the actual document with an equivalent value (recursively), while the actual document may carry additional properties. This is the subset counterpart of `IsEquivalentJsonTo` (full equality), for the common case where a response carries fields a test does not want to pin. A JSON `string`, a `JsonElement`, and an `HttpResponseMessage` (body read with a flowed `CancellationToken`) are accepted as the actual value; the expected subset is a JSON `string`. Matching is independent of object-property order and number form. An expected array asserts a positional prefix (the actual array may be longer); `IgnoreArrayOrder()` matches expected elements against the actual array as a multiset subset, and `IgnorePath(...)` excludes a path, both through the configure overload. On failure the message lists every missing or mismatched path in one report, each with its category and a rendered view of both sides, so a single run enumerates every field that is wrong.
+- **`JsonEquivalence.ContainsAll(expected, actual, options)`** (framework-agnostic core) exposes the subset comparison directly over JSON strings or `JsonElement`s, returning every `JsonDifference` found (empty when the actual document contains the subset). **`JsonFailureMessage.ContainsMismatch(differences)`** renders the multi-difference failure text.
+
 ## [0.5.0] - 2026-06-14: structural JSON equivalence
 
 Minor release. Adds whole-document structural equivalence assertions. Purely additive.
@@ -124,7 +133,8 @@ The 0.0.1 scope is intentionally narrow. The release exists to establish the rep
 
 Both namespaces ship in the single `JsonAssertions.TUnit` assembly. The two-namespace split keeps the same consumer feel as the rest of the assertion family (a framework-agnostic core plus a TUnit adapter) and future-proofs a package split if the bare `JsonAssertions` identifier ever becomes available.
 
-[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.0...v0.4.1

@@ -14,7 +14,9 @@ namespace JsonAssertions;
 /// any path registered with <see cref="JsonEquivalenceOptions.IgnorePath"/> is excluded from the
 /// comparison. <see cref="Compare(JsonElement, JsonElement, JsonEquivalenceOptions)"/> returns the
 /// first <see cref="JsonDifference"/> found, or <see langword="null"/> when the documents are
-/// equivalent.
+/// equivalent. <see cref="ContainsAll(JsonElement, JsonElement, JsonEquivalenceOptions)"/> performs
+/// a one-directional subset comparison (the actual document may carry properties beyond the
+/// expected set) and returns every difference rather than only the first.
 /// </summary>
 public static class JsonEquivalence
 {
@@ -50,7 +52,46 @@ public static class JsonEquivalence
         ArgumentNullException.ThrowIfNull(options);
 
         var ignored = ResolveIgnoredPaths(expected, actual, options);
-        return CompareElement(expected, actual, string.Empty, options, ignored);
+        return CompareElement(expected, actual, string.Empty, options, ignored, subset: false, sink: null);
+    }
+
+    /// <summary>Determines whether <paramref name="actual"/> contains <paramref name="expected"/> as
+    /// a subset: every property in the expected document must be present in the actual document with
+    /// an equivalent value (recursively), while the actual document may carry additional properties.
+    /// Every difference is collected, not only the first.</summary>
+    /// <param name="expected">The expected subset document text.</param>
+    /// <param name="actual">The actual JSON document text.</param>
+    /// <param name="options">The comparison options.</param>
+    /// <returns>Every difference found; an empty list when <paramref name="actual"/> contains the subset.</returns>
+    /// <exception cref="ArgumentNullException">Any argument is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">Either argument is not valid JSON.</exception>
+    public static IReadOnlyList<JsonDifference> ContainsAll(string expected, string actual, JsonEquivalenceOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(actual);
+        ArgumentNullException.ThrowIfNull(options);
+
+        using var expectedDocument = JsonDocument.Parse(expected);
+        using var actualDocument = JsonDocument.Parse(actual);
+        return ContainsAll(expectedDocument.RootElement, actualDocument.RootElement, options);
+    }
+
+    /// <summary>Determines whether <paramref name="actual"/> contains <paramref name="expected"/> as
+    /// a subset (see <see cref="ContainsAll(string, string, JsonEquivalenceOptions)"/>), over parsed
+    /// elements. The elements must stay valid for the call (their backing documents alive).</summary>
+    /// <param name="expected">The expected subset element.</param>
+    /// <param name="actual">The actual JSON element.</param>
+    /// <param name="options">The comparison options.</param>
+    /// <returns>Every difference found; an empty list when <paramref name="actual"/> contains the subset.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
+    public static IReadOnlyList<JsonDifference> ContainsAll(JsonElement expected, JsonElement actual, JsonEquivalenceOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var ignored = ResolveIgnoredPaths(expected, actual, options);
+        var sink = new List<JsonDifference>();
+        CompareElement(expected, actual, string.Empty, options, ignored, subset: true, sink);
+        return sink;
     }
 
     private static HashSet<string> ResolveIgnoredPaths(JsonElement expected, JsonElement actual, JsonEquivalenceOptions options)
@@ -76,8 +117,23 @@ public static class JsonEquivalence
         }
     }
 
+    /// <summary>Records <paramref name="difference"/>: appends it to <paramref name="sink"/> and
+    /// signals "continue" (collect-all mode) when a sink is supplied, otherwise signals "stop and
+    /// return this difference" (first-difference mode). Returns the difference to return, or
+    /// <see langword="null"/> to continue.</summary>
+    private static JsonDifference? Report(JsonDifference difference, List<JsonDifference>? sink)
+    {
+        if (sink is null)
+        {
+            return difference;
+        }
+
+        sink.Add(difference);
+        return null;
+    }
+
     private static JsonDifference? CompareElement(
-        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
+        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
     {
         if (ignored.Contains(path))
         {
@@ -91,27 +147,27 @@ public static class JsonEquivalence
             var kind = IsBoolean(expected.ValueKind) && IsBoolean(actual.ValueKind)
                 ? JsonDifferenceKind.Value
                 : JsonDifferenceKind.Kind;
-            return new JsonDifference(path, kind, RenderValue(expected), RenderValue(actual));
+            return Report(new JsonDifference(path, kind, RenderValue(expected), RenderValue(actual)), sink);
         }
 
         return expected.ValueKind switch
         {
-            JsonValueKind.Object => CompareObject(expected, actual, path, options, ignored),
+            JsonValueKind.Object => CompareObject(expected, actual, path, options, ignored, subset, sink),
             JsonValueKind.Array => options.IgnoreArrayOrderEnabled
-                ? CompareArrayUnordered(expected, actual, path, options, ignored)
-                : CompareArrayOrdered(expected, actual, path, options, ignored),
+                ? CompareArrayUnordered(expected, actual, path, options, ignored, subset, sink)
+                : CompareArrayOrdered(expected, actual, path, options, ignored, subset, sink),
             JsonValueKind.Number => NumbersEqual(expected, actual)
                 ? null
-                : new JsonDifference(path, JsonDifferenceKind.Value, RenderValue(expected), RenderValue(actual)),
+                : Report(new JsonDifference(path, JsonDifferenceKind.Value, RenderValue(expected), RenderValue(actual)), sink),
             JsonValueKind.String => string.Equals(expected.GetString(), actual.GetString(), StringComparison.Ordinal)
                 ? null
-                : new JsonDifference(path, JsonDifferenceKind.Value, RenderValue(expected), RenderValue(actual)),
+                : Report(new JsonDifference(path, JsonDifferenceKind.Value, RenderValue(expected), RenderValue(actual)), sink),
             _ => null, // True / False / Null: equal value kinds already imply equal values.
         };
     }
 
     private static JsonDifference? CompareObject(
-        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
+        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
     {
         foreach (var property in expected.EnumerateObject())
         {
@@ -123,22 +179,37 @@ public static class JsonEquivalence
 
             if (!actual.TryGetProperty(property.Name, out var actualValue))
             {
-                return new JsonDifference(childPath, JsonDifferenceKind.MissingProperty, RenderValue(property.Value), "absent");
+                var missing = Report(new JsonDifference(childPath, JsonDifferenceKind.MissingProperty, RenderValue(property.Value), "absent"), sink);
+                if (missing is not null)
+                {
+                    return missing;
+                }
+
+                continue;
             }
 
-            var difference = CompareElement(property.Value, actualValue, childPath, options, ignored);
+            var difference = CompareElement(property.Value, actualValue, childPath, options, ignored, subset, sink);
             if (difference is not null)
             {
                 return difference;
             }
         }
 
-        foreach (var property in actual.EnumerateObject())
+        // The reverse pass (flagging actual-only properties) applies to full equivalence only; a
+        // subset match permits the actual document to carry properties beyond the expected set.
+        if (!subset)
         {
-            var childPath = ChildPath(path, property.Name);
-            if (!ignored.Contains(childPath) && !expected.TryGetProperty(property.Name, out _))
+            foreach (var property in actual.EnumerateObject())
             {
-                return new JsonDifference(childPath, JsonDifferenceKind.UnexpectedProperty, "absent", RenderValue(property.Value));
+                var childPath = ChildPath(path, property.Name);
+                if (!ignored.Contains(childPath) && !expected.TryGetProperty(property.Name, out _))
+                {
+                    var unexpected = Report(new JsonDifference(childPath, JsonDifferenceKind.UnexpectedProperty, "absent", RenderValue(property.Value)), sink);
+                    if (unexpected is not null)
+                    {
+                        return unexpected;
+                    }
+                }
             }
         }
 
@@ -146,7 +217,7 @@ public static class JsonEquivalence
     }
 
     private static JsonDifference? CompareArrayOrdered(
-        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
+        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
     {
         // Exclude whole elements registered as ignored paths (for example IgnorePath("a[1]") or the
         // wildcard "a[*]") before comparing, so an ignored element never trips a length difference and
@@ -154,15 +225,24 @@ public static class JsonEquivalence
         // child (for example "a[*].t") keep the element and skip the child inside CompareElement.
         var expectedItems = NonIgnoredItems(expected, path, ignored);
         var actualItems = NonIgnoredItems(actual, path, ignored);
-        if (expectedItems.Count != actualItems.Count)
+
+        // Full equivalence requires equal lengths; a subset requires only that the actual array has
+        // at least as many elements, and compares the expected count element-by-element (trailing
+        // actual elements are ignored).
+        if (subset ? actualItems.Count < expectedItems.Count : expectedItems.Count != actualItems.Count)
         {
-            return ArrayLengthDifference(path, expectedItems.Count, actualItems.Count);
+            var lengthDifference = Report(ArrayLengthDifference(path, expectedItems.Count, actualItems.Count, subset), sink);
+            if (lengthDifference is not null)
+            {
+                return lengthDifference;
+            }
         }
 
-        for (var i = 0; i < expectedItems.Count; i++)
+        var compareCount = Math.Min(expectedItems.Count, actualItems.Count);
+        for (var i = 0; i < compareCount; i++)
         {
             var difference = CompareElement(
-                expectedItems[i].Element, actualItems[i].Element, ChildIndex(path, expectedItems[i].Index), options, ignored);
+                expectedItems[i].Element, actualItems[i].Element, ChildIndex(path, expectedItems[i].Index), options, ignored, subset, sink);
             if (difference is not null)
             {
                 return difference;
@@ -173,13 +253,20 @@ public static class JsonEquivalence
     }
 
     private static JsonDifference? CompareArrayUnordered(
-        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored)
+        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
     {
         var expectedItems = NonIgnoredItems(expected, path, ignored);
         var actualPairs = NonIgnoredItems(actual, path, ignored);
-        if (expectedItems.Count != actualPairs.Count)
+
+        // Full equivalence requires equal lengths (bijection); a subset requires only that each
+        // expected element has a distinct equivalent in the actual array, which may be larger.
+        if (!subset && expectedItems.Count != actualPairs.Count)
         {
-            return ArrayLengthDifference(path, expectedItems.Count, actualPairs.Count);
+            var lengthDifference = Report(ArrayLengthDifference(path, expectedItems.Count, actualPairs.Count, subset: false), sink);
+            if (lengthDifference is not null)
+            {
+                return lengthDifference;
+            }
         }
 
         var actualItems = new List<JsonElement>(actualPairs.Count);
@@ -192,10 +279,14 @@ public static class JsonEquivalence
         foreach (var (index, expectedItem) in expectedItems)
         {
             var childPath = ChildIndex(path, index);
-            if (!TryMatchUnordered(expectedItem, actualItems, matched, childPath, options, ignored))
+            if (!TryMatchUnordered(expectedItem, actualItems, matched, childPath, options, ignored, subset))
             {
-                return new JsonDifference(
-                    childPath, JsonDifferenceKind.ArrayElementUnmatched, RenderValue(expectedItem), "no equivalent element in the actual array");
+                var unmatched = Report(
+                    new JsonDifference(childPath, JsonDifferenceKind.ArrayElementUnmatched, RenderValue(expectedItem), "no equivalent element in the actual array"), sink);
+                if (unmatched is not null)
+                {
+                    return unmatched;
+                }
             }
         }
 
@@ -224,11 +315,14 @@ public static class JsonEquivalence
     }
 
     private static bool TryMatchUnordered(
-        JsonElement expectedItem, List<JsonElement> actualItems, bool[] matched, string childPath, JsonEquivalenceOptions options, HashSet<string> ignored)
+        JsonElement expectedItem, List<JsonElement> actualItems, bool[] matched, string childPath, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset)
     {
         for (var j = 0; j < actualItems.Count; j++)
         {
-            if (!matched[j] && CompareElement(expectedItem, actualItems[j], childPath, options, ignored) is null)
+            // Probe each candidate with first-difference semantics and no sink: a probe that reported
+            // into the real sink would record spurious differences for candidates that simply are not
+            // this element's match. Only a genuine no-match is reported by the caller.
+            if (!matched[j] && CompareElement(expectedItem, actualItems[j], childPath, options, ignored, subset, sink: null) is null)
             {
                 matched[j] = true;
                 return true;
@@ -238,11 +332,11 @@ public static class JsonEquivalence
         return false;
     }
 
-    private static JsonDifference ArrayLengthDifference(string path, int expectedCount, int actualCount)
+    private static JsonDifference ArrayLengthDifference(string path, int expectedCount, int actualCount, bool subset)
         => new(
             path,
             JsonDifferenceKind.ArrayLength,
-            expectedCount.ToString(CultureInfo.InvariantCulture) + " element(s)",
+            (subset ? "at least " : string.Empty) + expectedCount.ToString(CultureInfo.InvariantCulture) + " element(s)",
             actualCount.ToString(CultureInfo.InvariantCulture) + " element(s)");
 
     private static bool NumbersEqual(JsonElement a, JsonElement b)

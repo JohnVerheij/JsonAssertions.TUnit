@@ -100,7 +100,7 @@ The single package places types in two namespaces, the same shape as the rest of
 
 ## Roadmap
 
-- Subset / fragment matching (`ContainsJson`). Whole-document equivalence (`IsEquivalentJsonTo`) shipped in 0.5.0.
+- Typed value extraction (`GetJsonValue<T>(path)`) returning the parsed value at a path. Subset matching (`ContainsJson`) shipped in 0.6.0; whole-document equivalence (`IsEquivalentJsonTo`) in 0.5.0.
 
 ## Family
 

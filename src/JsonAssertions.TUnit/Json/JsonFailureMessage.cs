@@ -267,6 +267,30 @@ public static class JsonFailureMessage
         return sb.ToString();
     }
 
+    /// <summary>Renders the failure for a subset (contains) assertion: every path where the actual
+    /// document does not contain the expected value, each with the category of difference and a
+    /// rendered view of both sides. Unlike <see cref="EquivalenceMismatch(JsonDifference)"/>, all
+    /// differences are listed in one message (subset assertions replace a block of per-field checks,
+    /// so a single run must enumerate every field that is wrong).</summary>
+    /// <param name="differences">The differences found; must be non-empty.</param>
+    /// <returns>The rendered multi-line failure body.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="differences"/> is <see langword="null"/>.</exception>
+    public static string ContainsMismatch(IReadOnlyList<JsonDifference> differences)
+    {
+        ArgumentNullException.ThrowIfNull(differences);
+        var sb = new StringBuilder();
+        sb.Append("to contain the expected JSON").Append('\n');
+        foreach (var difference in differences)
+        {
+            var location = difference.Path.Length is 0 ? "the root" : "\"" + difference.Path + "\"";
+            sb.Append("  at ").Append(location).Append(": ").Append(DescribeDifference(difference.Kind)).Append('\n');
+            sb.Append("    expected: ").Append(difference.Expected).Append('\n');
+            sb.Append("    actual:   ").Append(difference.Actual).Append('\n');
+        }
+
+        return sb.ToString();
+    }
+
     /// <summary>Maps a difference category to the one-line reason shown in the failure message.</summary>
     private static string DescribeDifference(JsonDifferenceKind kind) => kind switch
     {
