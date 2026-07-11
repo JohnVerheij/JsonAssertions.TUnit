@@ -49,6 +49,27 @@ namespace JsonAssertions
         public JsonAssertions.JsonEquivalenceOptions IgnoreArrayOrder() { }
         public JsonAssertions.JsonEquivalenceOptions IgnorePath(string path) { }
     }
+    public static class JsonExtraction
+    {
+        public static System.Text.Json.JsonElement GetJsonElement(this System.Text.Json.JsonElement element, string path) { }
+        public static System.Text.Json.JsonElement GetJsonElement(this string json, string path) { }
+        public static System.Threading.Tasks.Task<System.Text.Json.JsonElement> GetJsonElementAsync(this System.Net.Http.HttpResponseMessage response, string path, System.Threading.CancellationToken cancellationToken = default) { }
+        public static string GetJsonString(this System.Text.Json.JsonElement element, string path) { }
+        public static string GetJsonString(this string json, string path) { }
+        public static System.Threading.Tasks.Task<string> GetJsonStringAsync(this System.Net.Http.HttpResponseMessage response, string path, System.Threading.CancellationToken cancellationToken = default) { }
+        public static T GetJsonValue<T>(this System.Text.Json.JsonElement element, string path)
+            where T : System.IParsable<T> { }
+        public static T GetJsonValue<T>(this string json, string path)
+            where T : System.IParsable<T> { }
+        public static System.Threading.Tasks.Task<T> GetJsonValueAsync<T>(this System.Net.Http.HttpResponseMessage response, string path, System.Threading.CancellationToken cancellationToken = default)
+            where T : System.IParsable<T> { }
+    }
+    public sealed class JsonExtractionException : System.Exception
+    {
+        public JsonExtractionException() { }
+        public JsonExtractionException(string message) { }
+        public JsonExtractionException(string message, System.Exception innerException) { }
+    }
     public static class JsonFailureMessage
     {
         public static string ContainsMismatch(System.Collections.Generic.IReadOnlyList<JsonAssertions.JsonDifference> differences) { }
