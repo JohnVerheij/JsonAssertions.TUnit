@@ -102,7 +102,7 @@ await Assert.That(response).ContainsJson("""
     """, ct);
 ```
 
-**Do not fold a volatile value into the expected subset.** `ContainsJson` asserts *equality* for every field you put in it - "subset" constrains which fields are checked, not how strictly they are compared. A duration reading, a server-generated identifier, or a status that can legitimately vary becomes a flaky or wrongly-passing assertion the moment it is pinned. This is the one way migrating to `ContainsJson` can quietly weaken a suite: collapsing a block of checks feels mechanical, so a volatile field is easy to sweep in with the stable ones. Keep those on their own presence or predicate assertion, or exclude them with `o => o.IgnorePath("...")`.
+**Do not fold a volatile value into the expected subset.** `ContainsJson` asserts *equality* for every field you put in it - "subset" constrains which fields are checked, not how strictly they are compared. A duration reading, a server-generated identifier, or a status that legitimately varies gets pinned to whatever the response said the day the test was written, which asserts more than the contract does and fails on the first run that differs. Collapsing a block of per-property checks feels mechanical, so a volatile field is easy to sweep in with the stable ones, turning a presence check into an equality check. Keep those fields on their own presence or predicate assertion, or exclude them with `o => o.IgnorePath("...")`.
 
 ## Two namespaces
 
@@ -117,8 +117,13 @@ The single package places types in two namespaces, the same shape as the rest of
 The extraction methods are the one part of the package that does not hang off `Assert.That(...)`: they extend the **receiver**, because they return a value rather than asserting one.
 
 ```csharp
-var orderId = await response.GetJsonValueAsync<int>("orderId", ct);         // right
-var orderId = await Assert.That(response).GetJsonValueAsync<int>("orderId", ct);  // does not compile
+using JsonAssertions;   // the extraction methods live here, and do not auto-import
+
+// RIGHT: the receiver, not the assertion
+var orderId = await response.GetJsonValueAsync<int>("orderId", ct);
+
+// WRONG: ValueAssertion<HttpResponseMessage> has no such method
+// await Assert.That(response).GetJsonValueAsync<int>("orderId", ct);
 ```
 
 ## Roadmap

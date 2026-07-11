@@ -121,11 +121,14 @@ The single package places types in two namespaces with deliberately-different sc
 **The extraction methods are the one part of this package that does not hang off `Assert.That(...)`.** They are extensions on the *receiver* (the `HttpResponseMessage`, `string`, or `JsonElement` itself), because they return a value rather than asserting one. The rest of the package trains you to reach for the chain, so the wrong spelling is the natural first guess, and it fails with a bare `CS1061` that never mentions the namespace you are missing:
 
 ```csharp
-// WRONG: ValueAssertion<HttpResponseMessage> has no such method
-var orderId = await Assert.That(response).GetJsonValueAsync<int>("orderId", ct);
+using JsonAssertions;   // the extraction methods live here, and do not auto-import
 
-// RIGHT: the receiver, not the assertion. Needs `using JsonAssertions;`
+// RIGHT: the receiver, not the assertion
 var orderId = await response.GetJsonValueAsync<int>("orderId", ct);
+
+// WRONG: ValueAssertion<HttpResponseMessage> has no such method, and the
+// resulting CS1061 does not mention the namespace you are missing
+// await Assert.That(response).GetJsonValueAsync<int>("orderId", ct);
 ```
 
 The fluent assertion entry points auto-import via `TUnit.Assertions.Extensions`; no extra `using` directive is needed if your test project already uses TUnit. For test projects that consume `JsonRenderers.ReformatJson<T>` or the `JsonFailureMessage` factory methods directly, put the namespace into a single `GlobalUsings.cs` so every test file sees it without ceremony:
@@ -369,9 +372,9 @@ await Assert.That(response).ContainsJson("""
 
 Use `IsEquivalentJsonTo` instead when the test must reject unexpected fields (full equality). `ContainsJson` also works over a JSON `string` and a `JsonElement`; when a test asserts status, shape, and extracts a value, parse the body once to a `JsonElement` and assert against that. An expected array asserts a positional prefix (the actual array may be longer); pass `o => o.IgnoreArrayOrder()` to match elements as a multiset subset, or `o => o.IgnorePath("...")` to exclude a volatile field.
 
-> **Do not fold a volatile value into the expected subset.** `ContainsJson` asserts *equality* for every field you put in it - "subset" constrains which fields are checked, not how strictly they are compared. A field whose value legitimately varies between runs (an elapsed-milliseconds or duration reading, a server-generated identifier, a health status that can be `Healthy` or `Degraded`) becomes a flaky or a wrongly-passing assertion the moment it is pinned to whatever the response happened to say the day the test was written.
+> **Do not fold a volatile value into the expected subset.** `ContainsJson` asserts *equality* for every field you put in it - "subset" constrains which fields are checked, not how strictly they are compared. A field whose value legitimately varies between runs (an elapsed-milliseconds or duration reading, a server-generated identifier, a health status that can be `Healthy` or `Degraded`) is pinned to whatever the response happened to say the day the test was written, which asserts **more** than the contract does and fails on the first run that legitimately differs.
 >
-> This is the one way migrating to `ContainsJson` can quietly weaken a suite: collapsing a block of per-property checks feels mechanical, so it is easy to sweep a volatile field in with the stable ones and end up asserting *less* than before. Keep volatile fields on their own presence or predicate assertion, or exclude them with `o => o.IgnorePath("...")`:
+> This is the failure mode a migration onto `ContainsJson` walks into: collapsing a block of per-property checks feels mechanical, so a volatile field is easy to sweep in with the stable ones, and a presence check (`HasJsonProperty("totalDurationMs")`) silently becomes an equality check. The test is now flaky - and the usual cure for a flaky assertion is to delete it, which is how the field ends up checked by nothing at all. Keep volatile fields on their own presence or predicate assertion, or exclude them with `o => o.IgnorePath("...")`:
 >
 > ```csharp
 > // status and the entry shape are the contract; totalDurationMs is not
@@ -420,7 +423,7 @@ public async Task PostOrder_OnValidationFailure_ReturnsProblemDetails(Cancellati
 
 For ASP.NET Core's `ValidationProblemDetails` (which carries an `errors` dictionary keyed by field name), use `MatchesValidationProblemDetails` instead.
 
-**`MatchesProblemDetails` asserts the media type as well as the fields.** If you keep a separate content-type test and a separate status/field test, migrating both to this one assertion makes them redundant - and a strict analyzer set will notice (SonarAnalyzer `S4144` fails the build on two methods with identical bodies). Keep the content-type test on the explicit `HasContentType` assertion so it holds its own distinct focus, rather than deleting it.
+**`MatchesProblemDetails` asserts the media type as well as the fields.** A test that existed only to check for `application/problem+json` is therefore already covered by it, and migrating both that test and a separate status/field test onto this one assertion leaves the two with identical bodies - which a strict analyzer set flags (SonarAnalyzer `S4144` fails the build on duplicate method implementations). Drop the now-redundant content-type test. If you would rather keep a focused one for its narrower failure message, assert the media type directly with `HasContentType` instead of restating the ProblemDetails check.
 
 ### Pattern: AOT round-trip CI gate (`RoundtripsCleanlyVia` + `HasJsonTypeInfoFor`)
 
