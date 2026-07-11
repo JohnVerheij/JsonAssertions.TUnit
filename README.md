@@ -131,7 +131,7 @@ var orderId = await response.GetJsonValueAsync<int>("orderId", ct);
 // await Assert.That(response).GetJsonValueAsync<int>("orderId", ct);
 ```
 
-The fluent assertion entry points auto-import via `TUnit.Assertions.Extensions`; no extra `using` directive is needed if your test project already uses TUnit. For test projects that consume `JsonRenderers.ReformatJson<T>` or the `JsonFailureMessage` factory methods directly, put the namespace into a single `GlobalUsings.cs` so every test file sees it without ceremony:
+Only the fluent assertion entry points auto-import (via `TUnit.Assertions.Extensions`), so a test project that already uses TUnit needs no `using` for them. The other three rows need **two** `using` directives between them: `using JsonAssertions;` covers both the typed extraction and the core types, and `using JsonAssertions.TUnit;` covers `.AsJsonContext()`. A single `GlobalUsings.cs` puts both in front of every test file without ceremony:
 
 ```csharp
 // tests/MyApp.Tests/GlobalUsings.cs

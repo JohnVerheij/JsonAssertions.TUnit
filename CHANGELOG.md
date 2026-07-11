@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.1] - 2026-07-11: document the 0.6.0 traps
+## [0.6.1] - 2026-07-12: document the 0.6.0 traps
 
 Patch release. Documentation only; no API or behavioral change. Everything here comes from migrating a real suite onto 0.6.0, where the two new features landed cleanly but three shapes in the surface misled a reader who was pattern-matching from the rest of the package.
 

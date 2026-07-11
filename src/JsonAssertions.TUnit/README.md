@@ -115,7 +115,7 @@ The package places its own types in two namespaces, the same shape as the rest o
 | `IJsonContextAssertionSource` + the `AsJsonContext()` bridge (the AOT-context assertions) | `JsonAssertions.TUnit` | No (needs `using JsonAssertions.TUnit;` when chaining `.AsJsonContext()`) |
 | Source-generated assertion entry points | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
 
-Everything except the two explicit rows above auto-imports, so a `GlobalUsings.cs` covers the rest once:
+Only the source-generated entry points auto-import. The other three rows need **two** `using` directives between them (`using JsonAssertions;` covers both of its rows), which a single `GlobalUsings.cs` puts in front of every test file:
 
 ```csharp
 global using JsonAssertions;       // core types + GetJsonValue<T>()
