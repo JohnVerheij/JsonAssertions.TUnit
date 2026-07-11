@@ -109,7 +109,7 @@ A future package split (a bare-identifier `JsonAssertions` core package plus thi
 
 ## Namespaces (and a `GlobalUsings.cs` recommendation)
 
-The single package places types in two namespaces with deliberately-different scopes:
+The single package places its own types in two namespaces with deliberately-different scopes, and the source generator emits the fluent entry points into a third that belongs to TUnit:
 
 | Type / member | Namespace | Auto-imported? |
 |---|---|---|
