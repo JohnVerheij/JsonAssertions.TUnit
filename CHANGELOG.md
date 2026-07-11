@@ -15,6 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-11: document the 0.6.0 traps
+
+Patch release. Documentation only; no API or behavioral change. Everything here comes from migrating a real suite onto 0.6.0, where the two new features landed cleanly but three shapes in the surface misled a reader who was pattern-matching from the rest of the package.
+
+### Changed
+
+- **`ContainsJson`** documentation now carries an explicit warning against folding a volatile value into the expected subset. `ContainsJson` asserts *equality* for every field placed in it: "subset" constrains which fields are checked, not how strictly they are compared. Pinning a duration reading, a server-generated identifier, or a legitimately-varying status makes the assertion flaky or wrongly-passing. This is the one way a migration onto 0.6.0 can quietly weaken a suite, because collapsing a block of per-property checks feels mechanical enough to sweep a volatile field in with the stable ones.
+- **`GetJsonValue<T>` / `GetJsonString` / `GetJsonElement`** are now documented as extending the **receiver** rather than the assertion chain, and as living in the `JsonAssertions` namespace, so they need `using JsonAssertions;`. Every other feature auto-imports through `TUnit.Assertions.Extensions`, which trains a reader to reach for `Assert.That(response).GetJsonValueAsync<T>(...)` first: that does not compile, and the resulting `CS1061` never names the missing namespace. The namespace table, the entry-point list, and the cookbook pattern now all show the receiver form.
+- **`HasJsonArrayLength`** and the other shape and value assertions now document that only the `HttpResponseMessage` forms take a `CancellationToken` (it flows to the body read; a `string` or `JsonElement` source has nothing to cancel). Passing one on a `JsonElement` reports `CS1929` naming `HttpResponseMessage` as the required receiver, which points at the receiver when the fix is to drop the token.
+- **`HasJsonTypeInfoFor<T>`** is now documented as the one assertion in the package that guards a failure class the rest of a suite can miss: a type absent from the `JsonSerializerContext` is not a compile error, and with a reflection fallback in the resolver chain a JIT test run serializes it happily while the published Native-AOT binary throws at runtime.
+- **`MatchesProblemDetails`** now documents that it asserts the media type as well as the fields, so a separate content-type test becomes redundant on migration (which a strict analyzer set will flag as duplicate method bodies).
+
 ## [0.6.0] - 2026-07-11: JSON subset matching and typed extraction
 
 Minor release. Adds subset (contains) assertions and typed value extraction. Purely additive.
@@ -134,7 +146,8 @@ The 0.0.1 scope is intentionally narrow. The release exists to establish the rep
 
 Both namespaces ship in the single `JsonAssertions.TUnit` assembly. The two-namespace split keeps the same consumer feel as the rest of the assertion family (a framework-agnostic core plus a TUnit adapter) and future-proofs a package split if the bare `JsonAssertions` identifier ever becomes available.
 
-[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.0...HEAD
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.1...v0.4.2

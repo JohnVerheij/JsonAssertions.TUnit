@@ -114,14 +114,25 @@ The single package places types in two namespaces with deliberately-different sc
 | Type / member | Namespace | Auto-imported? |
 |---|---|---|
 | `JsonPath`, `JsonPathResolution`, `JsonValueComparison`, `JsonShape`, `JsonRenderers`, `JsonFailureMessage` (framework-agnostic core) | `JsonAssertions` | **No** (needs `using JsonAssertions;`) |
+| **Typed extraction** (`GetJsonValue<T>()`, `GetJsonString()`, `GetJsonElement()` and the `...Async` forms) | `JsonAssertions` | **No** (needs `using JsonAssertions;`) |
 | Source-generated assertion entry points (`HasJsonProperty()`, `HasJsonValue()`, `HasJsonResponse()`, `MatchesProblemDetails()`, ...) | `TUnit.Assertions.Extensions` | **Yes** (TUnit auto-imports) |
 | `IJsonContextAssertionSource` + `AsJsonContext()` bridge (JSON-context family) | `JsonAssertions.TUnit` | **No** (needs `using JsonAssertions.TUnit;` when chaining `.AsJsonContext()`) |
+
+**The extraction methods are the one part of this package that does not hang off `Assert.That(...)`.** They are extensions on the *receiver* (the `HttpResponseMessage`, `string`, or `JsonElement` itself), because they return a value rather than asserting one. The rest of the package trains you to reach for the chain, so the wrong spelling is the natural first guess, and it fails with a bare `CS1061` that never mentions the namespace you are missing:
+
+```csharp
+// WRONG: ValueAssertion<HttpResponseMessage> has no such method
+var orderId = await Assert.That(response).GetJsonValueAsync<int>("orderId", ct);
+
+// RIGHT: the receiver, not the assertion. Needs `using JsonAssertions;`
+var orderId = await response.GetJsonValueAsync<int>("orderId", ct);
+```
 
 The fluent assertion entry points auto-import via `TUnit.Assertions.Extensions`; no extra `using` directive is needed if your test project already uses TUnit. For test projects that consume `JsonRenderers.ReformatJson<T>` or the `JsonFailureMessage` factory methods directly, put the namespace into a single `GlobalUsings.cs` so every test file sees it without ceremony:
 
 ```csharp
 // tests/MyApp.Tests/GlobalUsings.cs
-global using JsonAssertions;
+global using JsonAssertions;       // for GetJsonValue<T>() and the core types
 global using JsonAssertions.TUnit; // for .AsJsonContext()
 ```
 
@@ -216,6 +227,13 @@ The full entry-point catalog is in the Status table at the top of this file. The
 - `HasJsonValueKind(path, kind)` / `HasJsonBoolean(path)` / `HasNonEmptyJsonString(path)`
 - `HasJsonArrayLength(path, length)` / `HasNonEmptyJsonArray(path)` / `HasEmptyJsonArray(path)`
 
+> **Only the `HttpResponseMessage` forms take a `CancellationToken`** - the token flows to the response-body read, and there is nothing to cancel when the source is already a `string` or a `JsonElement`. Passing one anyway does not produce a helpful "no such overload": the compiler picks the `HttpResponseMessage` overload as the closest match and reports `CS1929` (*"... requires a receiver of type `System.Net.Http.HttpResponseMessage`"*), which points at the receiver when the fix is to drop the token.
+>
+> ```csharp
+> await Assert.That(element).HasJsonArrayLength("items", 2, ct);  // CS1929, misleading
+> await Assert.That(element).HasJsonArrayLength("items", 2);      // correct: nothing to cancel
+> ```
+
 **Whole-document equivalence and subset (over JSON `string`, `JsonElement`, and `HttpResponseMessage`):**
 
 - `IsEquivalentJsonTo(expected)` / `IsEquivalentJsonTo(expected, configure)` (over `string` / `JsonElement`) - structural equality, independent of property order and number form (`1` == `1.0` == `1e0`). The configure callback sets `IgnorePath(path)` (excludes a path, `[*]`-aware) and `IgnoreArrayOrder()` (multiset array comparison).
@@ -224,6 +242,7 @@ The full entry-point catalog is in the Status table at the top of this file. The
 **Typed extraction, not assertion (over JSON `string` and `JsonElement`; `...Async` on `HttpResponseMessage`):** *(v0.6.0+)*
 
 - `GetJsonValue<T>(path)` where `T : IParsable<T>` - reads and returns the value at `path`, parsed as `T` from a JSON string or number literal (invariant culture), for driving a later request or a cross-check. `GetJsonString(path)` returns a JSON string value; `GetJsonElement(path)` returns a detached (`Clone`d) subtree that survives the source document's disposal. On a failure to resolve the path, convert the value, or parse the source, throws `JsonExtractionException` with the same path-context message the assertions render. These return values (they are not awaited assertions); the `HttpResponseMessage` forms are `GetJsonValueAsync` / `GetJsonStringAsync` / `GetJsonElementAsync`.
+- These extend the **receiver**, not the assertion chain: write `response.GetJsonValueAsync<int>(...)`, not `Assert.That(response).GetJsonValueAsync<int>(...)`. They live in the `JsonAssertions` namespace, so they need `using JsonAssertions;` - see [Namespaces](#namespaces-and-a-globalusingscs-recommendation).
 
 **HTTP-response combined assertions (on `HttpResponseMessage`):**
 
@@ -311,19 +330,21 @@ Failure-message text is not part of the stable public surface; pin behavior agai
 
 ### Pattern: pull a value out to drive the next step (`GetJsonValue`, v0.6.0+)
 
-Acceptance and end-to-end flows often read a value from one response to build the next request, or read a count to cross-check an array length. Instead of a hand-rolled `JsonDocument.Parse(...).RootElement.GetProperty("cycleId").GetUInt32()` (which throws a bare `KeyNotFoundException` / `InvalidOperationException` with no path context), extract it with a typed getter:
+Acceptance and end-to-end flows often read a value from one response to build the next request, or read a count to cross-check an array length. Instead of a hand-rolled `JsonDocument.Parse(...).RootElement.GetProperty("orderId").GetInt32()` (which throws a bare `KeyNotFoundException` / `InvalidOperationException` with no path context), extract it with a typed getter:
 
 ```csharp
 // parse the body once, then read what the test needs
-var cycle = await response.GetJsonElementAsync("cycle", ct);
-var cycleId = cycle.GetJsonValue<int>("cycleId");         // drives the next request
-await _client.PostAsJsonAsync($"/cycles/{cycleId}/start", payload, ct);
+var order = await response.GetJsonElementAsync("order", ct);
+var orderId = order.GetJsonValue<int>("orderId");         // drives the next request
+await _client.PostAsJsonAsync($"/orders/{orderId}/submit", payload, ct);
 
 // cross-field consistency
-var objectCount = cycle.GetJsonValue<int>("objectCount");
-var objects = cycle.GetJsonElement("objects");
-await Assert.That(objectCount).IsEqualTo(objects.GetArrayLength());
+var itemCount = order.GetJsonValue<int>("itemCount");
+var items = order.GetJsonElement("items");
+await Assert.That(itemCount).IsEqualTo(items.GetArrayLength());
 ```
+
+Note the receiver: these hang off the `response` / `JsonElement` itself, **not** off `Assert.That(...)`, and they need `using JsonAssertions;`. They return a value instead of asserting one, so they are not part of the assertion chain - see [Namespaces](#namespaces-and-a-globalusingscs-recommendation) for the spelling that does not compile.
 
 `GetJsonValue<T>` parses any `IParsable<T>` (`int`, `long`, `bool`, `Guid`, `DateTimeOffset`, ...) from a JSON string or number literal; a missing path or unparseable value throws `JsonExtractionException` naming where the path stopped. `GetJsonElement` returns a detached copy, so it stays valid after the parsed document is gone.
 
@@ -347,6 +368,19 @@ await Assert.That(response).ContainsJson("""
 ```
 
 Use `IsEquivalentJsonTo` instead when the test must reject unexpected fields (full equality). `ContainsJson` also works over a JSON `string` and a `JsonElement`; when a test asserts status, shape, and extracts a value, parse the body once to a `JsonElement` and assert against that. An expected array asserts a positional prefix (the actual array may be longer); pass `o => o.IgnoreArrayOrder()` to match elements as a multiset subset, or `o => o.IgnorePath("...")` to exclude a volatile field.
+
+> **Do not fold a volatile value into the expected subset.** `ContainsJson` asserts *equality* for every field you put in it - "subset" constrains which fields are checked, not how strictly they are compared. A field whose value legitimately varies between runs (an elapsed-milliseconds or duration reading, a server-generated identifier, a health status that can be `Healthy` or `Degraded`) becomes a flaky or a wrongly-passing assertion the moment it is pinned to whatever the response happened to say the day the test was written.
+>
+> This is the one way migrating to `ContainsJson` can quietly weaken a suite: collapsing a block of per-property checks feels mechanical, so it is easy to sweep a volatile field in with the stable ones and end up asserting *less* than before. Keep volatile fields on their own presence or predicate assertion, or exclude them with `o => o.IgnorePath("...")`:
+>
+> ```csharp
+> // status and the entry shape are the contract; totalDurationMs is not
+> await Assert.That(response).ContainsJson("""
+>     { "status": "Healthy",
+>       "entries": [ { "name": "db" } ] }
+>     """, ct);
+> await Assert.That(response).HasJsonProperty("totalDurationMs", ct);   // present, not pinned
+> ```
 
 ### Pattern: assert an HTTP-response JSON body in one fluent call
 
@@ -386,7 +420,11 @@ public async Task PostOrder_OnValidationFailure_ReturnsProblemDetails(Cancellati
 
 For ASP.NET Core's `ValidationProblemDetails` (which carries an `errors` dictionary keyed by field name), use `MatchesValidationProblemDetails` instead.
 
+**`MatchesProblemDetails` asserts the media type as well as the fields.** If you keep a separate content-type test and a separate status/field test, migrating both to this one assertion makes them redundant - and a strict analyzer set will notice (SonarAnalyzer `S4144` fails the build on two methods with identical bodies). Keep the content-type test on the explicit `HasContentType` assertion so it holds its own distinct focus, rather than deleting it.
+
 ### Pattern: AOT round-trip CI gate (`RoundtripsCleanlyVia` + `HasJsonTypeInfoFor`)
+
+**`HasJsonTypeInfoFor<T>` is the only assertion here that guards a failure class the rest of your suite can miss entirely.** A domain type missing from the `JsonSerializerContext` is not a compile error, and nothing fails until something actually serializes that exact type. Whether it surfaces before deployment depends on the resolver chain: with a reflection fallback in the chain (the common default), a JIT test run serializes the unregistered type happily, while the published Native-AOT binary - which has no reflection to fall back to - throws at runtime. That is the worst shape a bug can have: green in CI, broken in production, on a code path a test never thought to cover. One assertion per registered type moves the check to CI, where it belongs.
 
 The pair of regression assertions catches the "added a domain type but forgot to update the `JsonSerializerContext`" class at CI time, before any runtime serialization touches the unregistered type. `RoundtripsCleanlyVia` verifies that a populated instance survives serialize -> deserialize -> re-serialize through a specific `JsonTypeInfo<T>` without drift; `HasJsonTypeInfoFor` verifies the context knows about the type at all.
 
