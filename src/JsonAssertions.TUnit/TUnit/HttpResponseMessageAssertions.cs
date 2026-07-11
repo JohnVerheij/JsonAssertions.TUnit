@@ -660,8 +660,7 @@ public static class HttpResponseMessageAssertions
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(expectedSubset);
-        var options = new JsonEquivalenceOptions();
-        configure?.Invoke(options);
+        var options = JsonContainsAssertions.BuildOptions(configure);
         return AssertOnBodyAsync(response, root => JsonContainsAssertions.ContainsAgainst(root, expectedSubset, options), cancellationToken);
     }
 

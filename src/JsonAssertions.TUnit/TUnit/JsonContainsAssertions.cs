@@ -69,7 +69,11 @@ public static class JsonContainsAssertions
         return ContainsAgainst(actual, expectedSubset, options);
     }
 
-    private static JsonEquivalenceOptions BuildOptions(Action<JsonEquivalenceOptions>? configure)
+    /// <summary>Builds the comparison options, applying the optional configure callback. Shared with
+    /// <c>HttpResponseMessageAssertions.ContainsJson</c> so the options wiring exists once.</summary>
+    /// <param name="configure">The optional configurator.</param>
+    /// <returns>The built options.</returns>
+    internal static JsonEquivalenceOptions BuildOptions(Action<JsonEquivalenceOptions>? configure)
     {
         var options = new JsonEquivalenceOptions();
         configure?.Invoke(options);

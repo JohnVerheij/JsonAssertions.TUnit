@@ -150,6 +150,7 @@ public static class JsonExtraction
         where T : IParsable<T>
     {
         ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(path);
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return json.GetJsonValue<T>(path);
     }
@@ -167,6 +168,7 @@ public static class JsonExtraction
         this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(path);
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return json.GetJsonString(path);
     }
@@ -183,6 +185,7 @@ public static class JsonExtraction
         this HttpResponseMessage response, string path, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(path);
         var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return json.GetJsonElement(path);
     }

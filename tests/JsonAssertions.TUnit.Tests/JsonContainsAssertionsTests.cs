@@ -140,6 +140,34 @@ internal sealed class JsonContainsAssertionsTests
     }
 
     [Test]
+    public async Task Subset_IgnoreArrayOrder_AmbiguousCandidates_FindsValidAssignment(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // Subset containment is one-directional, so a first-fit greedy assignment can strand a
+        // satisfiable expected element. Expected[0] ({"type":"x"}) matches BOTH actual elements, but
+        // expected[1] needs "extra":true, which only actual[0] carries. Greedy would take actual[0]
+        // for expected[0] and wrongly report expected[1] unmatched; a valid assignment exists
+        // (expected[0] -> actual[1], expected[1] -> actual[0]) and must be found.
+        await Assert.That("""{"items":[{"type":"x","extra":true,"common":2},{"type":"x","common":1}]}""")
+            .ContainsJson(
+                """{"items":[{"type":"x"},{"type":"x","extra":true}]}""",
+                o => o.IgnoreArrayOrder());
+    }
+
+    [Test]
+    public async Task Subset_IgnoreArrayOrder_GenuinelyUnmatched_StillFails(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // The augmenting-path matcher must not over-match: no assignment satisfies both expected
+        // elements against a single actual element.
+        var ex = await Assert.That(async () =>
+            await Assert.That("""{"items":[{"type":"x"}]}""")
+                .ContainsJson("""{"items":[{"type":"x"},{"type":"y"}]}""", o => o.IgnoreArrayOrder()))
+            .Throws<AssertionException>();
+        await Assert.That(ex!.Message).Contains("no equivalent element", StringComparison.Ordinal);
+    }
+
+    [Test]
     public async Task Subset_JsonElementReceiver(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

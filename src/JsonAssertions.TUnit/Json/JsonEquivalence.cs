@@ -275,18 +275,26 @@ public static class JsonEquivalence
             actualItems.Add(pair.Element);
         }
 
-        var matched = new bool[actualItems.Count];
-        foreach (var (index, expectedItem) in expectedItems)
+        // Maximum bipartite matching (see TryAugment): a first-fit greedy assignment is wrong for a
+        // subset match, because an actual element that satisfies an early expected item may be the only
+        // one that can satisfy a later, more specific one.
+        var matchedBy = new int[actualItems.Count];
+        Array.Fill(matchedBy, -1);
+
+        for (var expectedIndex = 0; expectedIndex < expectedItems.Count; expectedIndex++)
         {
-            var childPath = ChildIndex(path, index);
-            if (!TryMatchUnordered(expectedItem, actualItems, matched, childPath, options, ignored, subset))
+            var visited = new bool[actualItems.Count];
+            if (TryAugment(expectedIndex, expectedItems, actualItems, matchedBy, visited, path, options, ignored, subset))
             {
-                var unmatched = Report(
-                    new JsonDifference(childPath, JsonDifferenceKind.ArrayElementUnmatched, RenderValue(expectedItem), "no equivalent element in the actual array"), sink);
-                if (unmatched is not null)
-                {
-                    return unmatched;
-                }
+                continue;
+            }
+
+            var (index, expectedItem) = expectedItems[expectedIndex];
+            var unmatched = Report(
+                new JsonDifference(ChildIndex(path, index), JsonDifferenceKind.ArrayElementUnmatched, RenderValue(expectedItem), "no equivalent element in the actual array"), sink);
+            if (unmatched is not null)
+            {
+                return unmatched;
             }
         }
 
@@ -314,17 +322,64 @@ public static class JsonEquivalence
         return items;
     }
 
-    private static bool TryMatchUnordered(
-        JsonElement expectedItem, List<JsonElement> actualItems, bool[] matched, string childPath, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset)
+    /// <summary>
+    /// Kuhn's augmenting-path step for maximum bipartite matching between the expected and actual array
+    /// elements: tries to match the expected element at <paramref name="expectedIndex"/>, re-assigning
+    /// already-matched actual elements along an augmenting path when that frees a candidate.
+    /// </summary>
+    /// <remarks>
+    /// A first-fit greedy assignment is sufficient for full equivalence, because equality is symmetric
+    /// and transitive: two actual elements that both equal one expected element are equal to each other,
+    /// so which one is taken cannot matter to a later expected element. Subset containment has no such
+    /// property. An actual element may satisfy a broad expected element while being the <em>only</em> one
+    /// that can satisfy a later, more specific one, so a greedy choice can strand a satisfiable expected
+    /// element and report a false mismatch. Searching for an augmenting path finds a complete assignment
+    /// whenever one exists, so an expected element is reported unmatched only when it genuinely is.
+    /// </remarks>
+    /// <param name="expectedIndex">The expected element to match.</param>
+    /// <param name="expectedItems">The expected elements paired with their original indices.</param>
+    /// <param name="actualItems">The candidate actual elements.</param>
+    /// <param name="matchedBy">For each actual element, the expected index currently matched to it, or -1.</param>
+    /// <param name="visited">Actual elements already explored in this augmenting attempt (reset per attempt).</param>
+    /// <param name="path">The array's path, for the child paths used when comparing elements.</param>
+    /// <param name="options">The comparison options.</param>
+    /// <param name="ignored">The resolved ignored paths.</param>
+    /// <param name="subset">Whether elements are compared as subsets rather than for equality.</param>
+    /// <returns><see langword="true"/> when the expected element was matched (possibly by re-assigning others).</returns>
+    private static bool TryAugment(
+        int expectedIndex,
+        List<(int Index, JsonElement Element)> expectedItems,
+        List<JsonElement> actualItems,
+        int[] matchedBy,
+        bool[] visited,
+        string path,
+        JsonEquivalenceOptions options,
+        HashSet<string> ignored,
+        bool subset)
     {
-        for (var j = 0; j < actualItems.Count; j++)
+        var (index, expectedItem) = expectedItems[expectedIndex];
+        var childPath = ChildIndex(path, index);
+
+        for (var candidate = 0; candidate < actualItems.Count; candidate++)
         {
+            if (visited[candidate])
+            {
+                continue;
+            }
+
             // Probe each candidate with first-difference semantics and no sink: a probe that reported
             // into the real sink would record spurious differences for candidates that simply are not
             // this element's match. Only a genuine no-match is reported by the caller.
-            if (!matched[j] && CompareElement(expectedItem, actualItems[j], childPath, options, ignored, subset, sink: null) is null)
+            if (CompareElement(expectedItem, actualItems[candidate], childPath, options, ignored, subset, sink: null) is not null)
             {
-                matched[j] = true;
+                continue;
+            }
+
+            visited[candidate] = true;
+            if (matchedBy[candidate] is -1
+                || TryAugment(matchedBy[candidate], expectedItems, actualItems, matchedBy, visited, path, options, ignored, subset))
+            {
+                matchedBy[candidate] = expectedIndex;
                 return true;
             }
         }
