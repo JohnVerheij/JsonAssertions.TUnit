@@ -91,14 +91,48 @@ to have a JSON property at path "user.address.city"
 
 A response body or string that is not valid JSON fails the assertion with an explained message rather than throwing a raw `JsonException`.
 
-## Two namespaces
+## Subset matching (`ContainsJson`, 0.6.0+)
 
-The single package places types in two namespaces, the same shape as the rest of the assertion family:
+One declarative assertion in place of a block of per-property checks. The expected fields must be present and equal; the response may carry any additional fields the test does not want to pin. The failure lists every wrong path, not just the first.
+
+```csharp
+await Assert.That(response).ContainsJson("""
+    { "status": "Healthy",
+      "entries": [ { "name": "db", "status": "Healthy" } ] }
+    """, ct);
+```
+
+**Do not fold a volatile value into the expected subset.** `ContainsJson` asserts *equality* for every field you put in it - "subset" constrains which fields are checked, not how strictly they are compared. A duration reading, a server-generated identifier, or a status that legitimately varies gets pinned to whatever the response said the day the test was written, which asserts more than the contract does and fails on the first run that differs. Collapsing a block of per-property checks feels mechanical, so a volatile field is easy to sweep in with the stable ones, turning a presence check into an equality check. Keep those fields on their own presence or predicate assertion, or exclude them with `o => o.IgnorePath("...")`.
+
+## Namespaces
+
+The package places its own types in two namespaces, the same shape as the rest of the assertion family, and the source generator emits the fluent entry points into TUnit's:
 
 | Type | Namespace | Auto-imported? |
 |---|---|---|
 | `JsonPath`, `JsonPathResolution`, `JsonValueComparison`, `JsonShape`, `JsonRenderers`, `JsonFailureMessage` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
+| Typed extraction (`GetJsonValue<T>()`, `GetJsonString()`, `GetJsonElement()` and the `...Async` forms) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
+| `IJsonContextAssertionSource` + the `AsJsonContext()` bridge (the AOT-context assertions) | `JsonAssertions.TUnit` | No (needs `using JsonAssertions.TUnit;` when chaining `.AsJsonContext()`) |
 | Source-generated assertion entry points | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
+
+Only the source-generated entry points auto-import. The other three rows need **two** `using` directives between them (`using JsonAssertions;` covers both of its rows), which a single `GlobalUsings.cs` puts in front of every test file:
+
+```csharp
+global using JsonAssertions;       // core types + GetJsonValue<T>()
+global using JsonAssertions.TUnit; // .AsJsonContext()
+```
+
+The extraction methods are the one part of the package that does not hang off `Assert.That(...)`: they extend the **receiver**, because they return a value rather than asserting one.
+
+```csharp
+using JsonAssertions;   // the extraction methods live here, and do not auto-import
+
+// RIGHT: the receiver, not the assertion
+var orderId = await response.GetJsonValueAsync<int>("orderId", ct);
+
+// WRONG: ValueAssertion<HttpResponseMessage> has no such method
+// await Assert.That(response).GetJsonValueAsync<int>("orderId", ct);
+```
 
 ## Roadmap
 
