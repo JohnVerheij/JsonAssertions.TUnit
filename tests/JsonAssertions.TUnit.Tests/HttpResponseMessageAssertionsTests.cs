@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -31,6 +32,10 @@ internal sealed class HttpResponseMessageAssertionsTests
     }
 
     [Test]
+    [SuppressMessage(
+        "Major Bug",
+        "S8949:Pass the cancellationToken to this method",
+        Justification = "The omitted CancellationToken argument is the subject of this test; passing one would stop exercising the optional-parameter path.")]
     public async Task HasJsonProperty_WithoutExplicitCancellationToken_Passes(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

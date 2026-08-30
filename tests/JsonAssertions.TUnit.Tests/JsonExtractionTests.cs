@@ -94,7 +94,7 @@ internal sealed class JsonExtractionTests
     {
         ct.ThrowIfCancellationRequested();
         var ex = Assert.Throws<JsonExtractionException>(() => """{"n":5}""".GetJsonString("n"));
-        await Assert.That(ex!.Message).Contains("a JSON string", StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains("a JSON string", StringComparison.Ordinal);
     }
 
     [Test]
@@ -139,7 +139,7 @@ internal sealed class JsonExtractionTests
     {
         ct.ThrowIfCancellationRequested();
         var ex = Assert.Throws<JsonExtractionException>(() => """{"a":1}""".GetJsonValue<int>("a.b.c"));
-        await Assert.That(ex!.Message).Contains("path", StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains("path", StringComparison.Ordinal);
         await Assert.That(ex.Message).Contains("resolved as far as", StringComparison.Ordinal);
     }
 
@@ -148,7 +148,7 @@ internal sealed class JsonExtractionTests
     {
         ct.ThrowIfCancellationRequested();
         var ex = Assert.Throws<JsonExtractionException>(() => """{"id":"not-a-guid"}""".GetJsonValue<Guid>("id"));
-        await Assert.That(ex!.Message).Contains("Guid", StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains("Guid", StringComparison.Ordinal);
     }
 
     [Test]
@@ -157,7 +157,7 @@ internal sealed class JsonExtractionTests
         ct.ThrowIfCancellationRequested();
         // An object/array/null value has no scalar text to parse as T.
         var onObject = Assert.Throws<JsonExtractionException>(() => """{"a":{"b":1}}""".GetJsonValue<int>("a"));
-        await Assert.That(onObject!.Message).Contains("Int32", StringComparison.Ordinal);
+        await Assert.That(onObject.Message).Contains("Int32", StringComparison.Ordinal);
         Assert.Throws<JsonExtractionException>(() => """{"a":[1,2]}""".GetJsonValue<int>("a"));
         Assert.Throws<JsonExtractionException>(() => """{"a":null}""".GetJsonValue<int>("a"));
     }
@@ -167,7 +167,7 @@ internal sealed class JsonExtractionTests
     {
         ct.ThrowIfCancellationRequested();
         var ex = Assert.Throws<JsonExtractionException>(() => "{ not json".GetJsonValue<int>("a"));
-        await Assert.That(ex!.Message).Contains("parseable JSON", StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains("parseable JSON", StringComparison.Ordinal);
         await Assert.That(ex.InnerException).IsTypeOf<JsonException>();
     }
 

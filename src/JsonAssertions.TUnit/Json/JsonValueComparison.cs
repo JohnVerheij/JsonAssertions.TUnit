@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 
@@ -37,6 +38,10 @@ public static class JsonValueComparison
     /// <see cref="double"/> precision are out of scope for this overload (use the <see cref="long"/>
     /// / <see cref="ulong"/> overloads for exact 64-bit integers, which also accept the
     /// string-encoded form).</summary>
+    [SuppressMessage(
+        "Major Bug",
+        "S1244:Do not check floating point equality with exact values",
+        Justification = "Exact equality is the documented contract of this overload: the caller supplies the value to match. A tolerance would pass values the caller did not ask for, with no way to opt out.")]
     public static bool Matches(JsonElement element, double expected)
         => element.ValueKind is JsonValueKind.Number
             && element.TryGetDouble(out var actual)
@@ -129,6 +134,10 @@ public static class JsonValueComparison
     /// <summary>Reports whether <paramref name="element"/> is a JSON number equal to any of
     /// <paramref name="candidates"/>. Element values beyond <see cref="double"/> precision are
     /// out of scope for this overload.</summary>
+    [SuppressMessage(
+        "Major Bug",
+        "S1244:Do not check floating point equality with exact values",
+        Justification = "Exact equality is the documented contract of this overload: the caller supplies the candidate values to match. A tolerance would pass values the caller did not ask for, with no way to opt out.")]
     public static bool MatchesAny(JsonElement element, params double[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
