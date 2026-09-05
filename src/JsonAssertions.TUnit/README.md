@@ -53,7 +53,7 @@ The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **fail
 dotnet add package JsonAssertions.TUnit
 ```
 
-**Requirements:** TUnit 1.65.68 or later, .NET 10. `System.Text.Json` is in-box on .NET 10, so the package carries no runtime dependency beyond TUnit.
+**Requirements:** TUnit 1.66.8 or later, .NET 10. `System.Text.Json` is in-box on .NET 10, so the package carries no runtime dependency beyond TUnit.
 
 ## Quick start
 
