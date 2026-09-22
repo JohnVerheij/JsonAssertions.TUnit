@@ -10,6 +10,7 @@ namespace JsonAssertions;
 /// path uses <c>JsonSerializer.Deserialize(json, JsonTypeInfo)</c> for AOT-clean
 /// deserialization without runtime reflection.
 /// </summary>
+[JsonSourceGenerationOptions(RespectNullableAnnotations = true, RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(ProblemDetailsMirror))]
 [JsonSerializable(typeof(ValidationProblemDetailsMirror))]
 [SuppressMessage(

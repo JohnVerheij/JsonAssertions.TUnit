@@ -25,11 +25,11 @@ namespace JsonAssertions;
 /// API-surface breakage.</para>
 /// <para>RFC 7807 was published 2016 and is stable; the mirror's drift risk is bounded.
 /// The type is non-sealed so <see cref="ValidationProblemDetailsMirror"/> can derive from it.</para>
-/// <para>Properties use <c>get; set;</c> (not <c>init</c>) deliberately: STJ source-gen
-/// synthesizes a deserialization constructor when any property uses <c>init</c>, and
+/// <para>Properties use <c>get; set;</c> (not <see langword="init"/>) deliberately: STJ source-gen
+/// synthesizes a deserialization constructor when any property uses <see langword="init"/>, and
 /// <see cref="JsonExtensionDataAttribute"/> cannot bind to a constructor parameter. Object-
 /// initializer-based deserialization (via <c>set</c>) keeps the extension-member capture path
-/// intact. The mirror is internal, so the <c>init</c>-vs-<c>set</c> distinction is purely an
+/// intact. The mirror is internal, so the <see langword="init"/>-vs-<c>set</c> distinction is purely an
 /// internal-style choice.</para>
 /// </remarks>
 [SuppressMessage(
