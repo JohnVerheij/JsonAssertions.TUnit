@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-01: "the list includes these elements" cookbook, SPDX 3.0 SBOM
+
+Patch release. No API or behavior change.
+
+### Changed
+
+- **README:** a cookbook pattern for "the list includes these elements, among others" with `ContainsJson` and `IgnoreArrayOrder()`, the form that replaces a hand-written loop over `EnumerateArray()` on health, status, and listing endpoints.
+- **SBOM:** the package embeds an SPDX 3.0 software bill of materials (SPDX 2.2 before), like the other packages of the family.
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.58.0 to 1.77.0.
+
 ## [0.6.1] - 2026-07-12: document the 0.6.0 traps
 
 Patch release. Documentation only; no API or behavioral change. Everything here comes from migrating a real suite onto 0.6.0, where the two new features landed cleanly but three shapes in the surface misled a reader who was pattern-matching from the rest of the package.
@@ -146,7 +156,8 @@ The 0.0.1 scope is intentionally narrow. The release exists to establish the rep
 
 Both namespaces ship in the single `JsonAssertions.TUnit` assembly. The two-namespace split keeps the same consumer feel as the rest of the assertion family (a framework-agnostic core plus a TUnit adapter) and future-proofs a package split if the bare `JsonAssertions` identifier ever becomes available.
 
-[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.1...HEAD
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.2...v0.5.0

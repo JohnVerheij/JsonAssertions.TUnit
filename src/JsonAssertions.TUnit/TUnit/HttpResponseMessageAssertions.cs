@@ -565,31 +565,37 @@ public static class HttpResponseMessageAssertions
     {
         var mismatches = new List<(string Field, string? Expected, string? Actual)>();
 
-        if (mirror?.Status != status)
+        // A body that did not deserialize compares like one with every field absent.
+        var actual = mirror ?? new ProblemDetailsMirror();
+        if (actual.Status != status)
         {
             mismatches.Add(("status", status.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                mirror?.Status?.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                actual.Status?.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
-        if (title is not null && !string.Equals(mirror?.Title, title, StringComparison.Ordinal))
-        {
-            mismatches.Add(("title", title, mirror?.Title));
-        }
-        if (detail is not null && !string.Equals(mirror?.Detail, detail, StringComparison.Ordinal))
-        {
-            mismatches.Add(("detail", detail, mirror?.Detail));
-        }
-        if (type is not null && !string.Equals(mirror?.Type, type, StringComparison.Ordinal))
-        {
-            mismatches.Add(("type", type, mirror?.Type));
-        }
-        if (instance is not null && !string.Equals(mirror?.Instance, instance, StringComparison.Ordinal))
-        {
-            mismatches.Add(("instance", instance, mirror?.Instance));
-        }
+
+        AddFieldMismatch(mismatches, "title", title, actual.Title);
+        AddFieldMismatch(mismatches, "detail", detail, actual.Detail);
+        AddFieldMismatch(mismatches, "type", type, actual.Type);
+        AddFieldMismatch(mismatches, "instance", instance, actual.Instance);
 
         return mismatches.Count is 0
             ? AssertionResult.Passed
             : AssertionResult.Failed(JsonFailureMessage.ProblemDetailsFieldMismatch(mismatches));
+    }
+
+    /// <summary>Records a mismatch of an optional ProblemDetails string field: an expected value of
+    /// <see langword="null"/> means the field is not checked.</summary>
+    /// <param name="mismatches">The mismatches found so far.</param>
+    /// <param name="field">The field name, for the failure message.</param>
+    /// <param name="expected">The expected value, or <see langword="null"/> to skip the field.</param>
+    /// <param name="actual">The actual value.</param>
+    private static void AddFieldMismatch(
+        List<(string Field, string? Expected, string? Actual)> mismatches, string field, string? expected, string? actual)
+    {
+        if (expected is not null && !string.Equals(actual, expected, StringComparison.Ordinal))
+        {
+            mismatches.Add((field, expected, actual));
+        }
     }
 
     /// <summary>Compares the actual ValidationProblemDetails <c>errors</c> dictionary against
@@ -607,26 +613,12 @@ public static class HttpResponseMessageAssertions
         var hasMismatch = false;
         foreach (var kvp in expected)
         {
-            if (!actual!.TryGetValue(kvp.Key, out var actualMessages))
+            if (!actual!.TryGetValue(kvp.Key, out var actualMessages)
+                || !actualMessages.AsSpan().SequenceEqual(kvp.Value, StringComparer.Ordinal))
             {
                 hasMismatch = true;
                 break;
             }
-            if (actualMessages.Length != kvp.Value.Length)
-            {
-                hasMismatch = true;
-                break;
-            }
-            for (var i = 0; i < kvp.Value.Length; i++)
-            {
-                if (!string.Equals(actualMessages[i], kvp.Value[i], StringComparison.Ordinal))
-                {
-                    hasMismatch = true;
-                    break;
-                }
-            }
-            if (hasMismatch)
-                break;
         }
 
         return hasMismatch
