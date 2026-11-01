@@ -23,7 +23,7 @@ Patch release. No API or behavior change.
 
 - **README:** a cookbook pattern for "the list includes these elements, among others" with `ContainsJson` and `IgnoreArrayOrder()`, the form that replaces a hand-written loop over `EnumerateArray()` on health, status, and listing endpoints.
 - **SBOM:** the package embeds an SPDX 3.0 software bill of materials (SPDX 2.2 before), like the other packages of the family.
-- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.58.0 to 1.76.45.
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.58.0 to 1.77.0.
 
 ## [0.6.1] - 2026-07-12: document the 0.6.0 traps
 
