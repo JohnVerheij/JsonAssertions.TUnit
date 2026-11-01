@@ -386,6 +386,22 @@ Use `IsEquivalentJsonTo` instead when the test must reject unexpected fields (fu
 > await Assert.That(response).HasJsonProperty("totalDurationMs", ct);   // present, not pinned
 > ```
 
+### Pattern: the list includes these elements, among others (`ContainsJson` + `IgnoreArrayOrder`)
+
+Health, status, and listing endpoints return more entries than one test cares about, often in no guaranteed order. Name only the entries the test needs, with only the fields it checks; `IgnoreArrayOrder()` matches each expected element against some actual element (a multiset subset), so extra entries and any order pass:
+
+```csharp
+// Passes when "entries" holds a healthy "db" and a healthy "cache" entry, wherever they are,
+// whatever else the endpoint lists and whatever other fields each entry carries.
+await Assert.That(response).ContainsJson("""
+    { "entries": [
+        { "name": "db",    "status": "Healthy" },
+        { "name": "cache", "status": "Healthy" } ] }
+    """, o => o.IgnoreArrayOrder(), ct);
+```
+
+This replaces a hand-written loop over `EnumerateArray()` that searches for each name. Each actual element is used for one expected element at most, so two expected entries need two matching actual entries. Without `IgnoreArrayOrder()`, an expected array is a positional prefix: the first expected element must match the first actual element. On failure the message lists every expected element that found no match.
+
 ### Pattern: assert an HTTP-response JSON body in one fluent call
 
 `HasJsonResponse<T>` collapses the "check status + read body + deserialize + structural compare" pattern into a single fluent call. The deserialization is AOT-clean (uses the source-generated `JsonTypeInfo<T>`); the failure message includes the body (truncated at 256 chars) so non-200 responses or shape mismatches surface their actual content.
