@@ -10,10 +10,10 @@ namespace JsonAssertions.TUnit;
 
 /// <summary>
 /// Fluent assertion that a typed value round-trips cleanly through STJ source-gen via the
-/// consumer's <see cref="JsonTypeInfo{T}"/>. Catches the common "we added a property and
-/// forgot to update the <c>JsonSerializerContext</c>" regression class: a missing
-/// <c>[JsonSerializable(typeof(T))]</c> entry or a property the context doesn't know about
-/// causes the round-trip to produce a different JSON string than the original.
+/// consumer's <see cref="JsonTypeInfo{T}"/>. It reports a drift between the first and the second
+/// serialized form, a first-pass JSON that fails to deserialize with a
+/// <see cref="JsonException"/>, and a non-null value that deserializes back to
+/// <see langword="null"/>.
 /// </summary>
 /// <remarks>
 /// <para>Mechanism: <c>Serialize(value, jsonTypeInfo)</c> -&gt; <c>Deserialize(json1, jsonTypeInfo)</c>
@@ -27,7 +27,12 @@ namespace JsonAssertions.TUnit;
 /// AOT-compatible web APIs typically have a <c>JsonSerializerContext</c> but rarely write
 /// regression tests verifying that EVERY type in the context round-trips correctly. A
 /// <c>RoundtripsCleanlyVia</c> regression test for each type in each context is a 1-2 hour
-/// sweep that catches future "added a property, forgot the context" bugs at CI time.</para>
+/// sweep that catches future round-trip drift at CI time.</para>
+/// <para>Registrations: a missing <c>[JsonSerializable(typeof(T))]</c> entry for <c>T</c> itself is
+/// a compile-time error, because the context then exposes no <see cref="JsonTypeInfo{T}"/> to pass
+/// in. A nested type that the context does not register makes the serializer throw
+/// <see cref="NotSupportedException"/>, which this assertion does not catch, so the test errors
+/// rather than fails. Use <c>HasJsonTypeInfoFor</c> to check what a context registers.</para>
 /// </remarks>
 [SuppressMessage(
     "Usage",
@@ -38,8 +43,10 @@ public static class JsonRoundtripAssertions
     /// <summary>Asserts the value round-trips cleanly through the supplied
     /// <see cref="JsonTypeInfo{T}"/>: serializing it produces a JSON string that, when
     /// deserialized and re-serialized via the same context, yields a byte-identical JSON
-    /// string. Catches missing <c>[JsonSerializable]</c> entries, property orderings that
-    /// drift on round-trip, and serializer-options-vs-context inconsistencies.</summary>
+    /// string. Catches output that drifts on round-trip (for example an asymmetric converter or a
+    /// property ordering that changes) and serializer-options-vs-context inconsistencies. A nested
+    /// type missing from the context throws <see cref="NotSupportedException"/> instead of failing
+    /// the assertion.</summary>
     /// <typeparam name="T">The value type whose round-trip is asserted.</typeparam>
     /// <param name="value">The value to round-trip.</param>
     /// <param name="jsonTypeInfo">The <see cref="JsonTypeInfo{T}"/> from the consumer's

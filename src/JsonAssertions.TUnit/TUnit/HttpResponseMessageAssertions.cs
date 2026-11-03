@@ -28,8 +28,10 @@ namespace JsonAssertions.TUnit;
 /// <see cref="CancellationToken"/>, which defaults to <see cref="CancellationToken.None"/>.</para>
 /// <para>A response body that is not valid JSON fails the assertion with an explained message
 /// (via <see cref="JsonStringSource"/>) rather than throwing a raw <see cref="JsonException"/>.
-/// The body covers only the JSON payload; status-code assertions are intentionally out of
-/// scope (TUnit and HTTP-test libraries already cover those).</para>
+/// The path, value, and shape assertions cover only the JSON payload; standalone status-code
+/// assertions are intentionally out of scope (TUnit and HTTP-test libraries already cover
+/// those). <see cref="HasJsonResponse{T}"/> and the ProblemDetails assertions check the status
+/// only as part of their combined assertion.</para>
 /// </remarks>
 [SuppressMessage(
     "Usage",
@@ -402,8 +404,10 @@ public static class HttpResponseMessageAssertions
     /// AOT-clean: the supplied <see cref="JsonTypeInfo{T}"/> is the source-generated entry for
     /// <typeparamref name="T"/> in the consumer's <c>JsonSerializerContext</c>; the assertion
     /// uses no runtime reflection. Failure messages include the response body (truncated at
-    /// 256 chars) so the diagnostic surfaces the structured-error shape for non-200 responses
-    /// and the actual JSON shape for deserialization failures.</summary>
+    /// 256 chars) for an unexpected status (when the body is non-empty) and for a body that does
+    /// not deserialize, so the diagnostic surfaces the structured-error shape of a non-200
+    /// response and the actual JSON of an undeserializable body. A body that deserializes to a
+    /// different value reports the expected and actual values instead.</summary>
     /// <typeparam name="T">The expected response-body type.</typeparam>
     /// <param name="response">The HTTP response.</param>
     /// <param name="expectedStatus">The expected HTTP status code.</param>
@@ -452,8 +456,9 @@ public static class HttpResponseMessageAssertions
     /// <summary>Asserts the response is a valid RFC 7807 ProblemDetails (Content-Type
     /// <c>application/problem+json</c>, deserializable shape) and that each specified field
     /// matches. Unspecified fields are not asserted; pass <see langword="null"/> to skip a field.
-    /// Internal mirror type avoids the <c>Microsoft.AspNetCore.Mvc.Abstractions</c> dependency
-    /// (Apache 2.0) so the package stays MIT-clean and AOT-clean.</summary>
+    /// An internal mirror type avoids a dependency on the ASP.NET Core
+    /// <c>Microsoft.AspNetCore.Mvc.ProblemDetails</c> type, so the package takes no ASP.NET Core
+    /// reference and stays AOT-clean.</summary>
     /// <param name="response">The HTTP response.</param>
     /// <param name="status">The expected <c>status</c> field value.</param>
     /// <param name="title">The expected <c>title</c> field value, or <see langword="null"/> to skip.</param>
@@ -613,7 +618,10 @@ public static class HttpResponseMessageAssertions
         var hasMismatch = false;
         foreach (var kvp in expected)
         {
+            // A JSON null message array deserializes to null; it matches no expected array, not even an
+            // empty one (AsSpan() would treat it as empty).
             if (!actual!.TryGetValue(kvp.Key, out var actualMessages)
+                || actualMessages is null
                 || !actualMessages.AsSpan().SequenceEqual(kvp.Value, StringComparer.Ordinal))
             {
                 hasMismatch = true;

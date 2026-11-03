@@ -1,8 +1,9 @@
 namespace JsonAssertions;
 
 /// <summary>
-/// The first structural difference found between two JSON documents by
-/// <see cref="JsonEquivalence"/>. Captures the location and a rendered description of each side at
+/// A structural difference found between two JSON documents by
+/// <see cref="JsonEquivalence"/> (the first one for <c>Compare</c>, each one for
+/// <c>ContainsAll</c>). Captures the location and a rendered description of each side at
 /// the point they diverge, so the difference outlives the <see cref="System.Text.Json.JsonDocument"/>
 /// it was found in (a <see cref="System.Text.Json.JsonElement"/> is valid only while its backing
 /// document is alive).

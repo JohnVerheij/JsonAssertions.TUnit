@@ -17,13 +17,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.2] - 2026-11-01: "the list includes these elements" cookbook, SPDX 3.0 SBOM
 
-Patch release. No API or behavior change.
+Patch release. No change to the public API. It fixes how `MatchesValidationProblemDetails` handles a null message array, corrects documentation, embeds an SPDX 3.0 SBOM, and points the package at the project site.
 
 ### Changed
 
 - **README:** a cookbook pattern for "the list includes these elements, among others" with `ContainsJson` and `IgnoreArrayOrder()`, the form that replaces a hand-written loop over `EnumerateArray()` on health, status, and listing endpoints.
 - **SBOM:** the package embeds an SPDX 3.0 software bill of materials (SPDX 2.2 before), like the other packages of the family.
 - **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.58.0 to 1.77.0.
+- **Package project URL:** the NuGet package now links to `https://jsonassertions.dev` instead of the GitHub repository.
+- **`HasJsonProperty`** and the other path, value, and shape assertions are now documented as available over a JSON `string`, a `JsonElement`, and an `HttpResponseMessage`; the README no longer says every entry point has all three receivers.
+- **`IsEquivalentJsonTo`** is now documented as available over a JSON `string` and a `JsonElement` only, and the equivalence and subset heading in the README names the real overloads.
+- **`HasJsonResponse`** now says it compares the deserialized value with `object.Equals` instead of "structural equality": use a record whose members have value equality, or override `Equals` on the type.
+- **`HasJsonResponse`** now says the failure message includes the body only for an unexpected status (when the body is non-empty) and for an undeserializable body, not for a body that deserializes to a different value.
+- **`HasJsonResponse`** README failure sample now shows the text the value-mismatch message actually produces.
+- **`MatchesProblemDetails`** README failure sample now shows the text the field-mismatch message actually produces.
+- **`HasJsonValueParsableAs<T>`** no longer lists `Uri` as an example, because `Uri` does not implement `IParsable<Uri>`; it now lists `TimeSpan`.
+- **`JsonPath`** path errors are now documented exactly: an empty or whitespace path, a leading dot, and a `$` not followed by `.`, `[`, or the end of the path throw `ArgumentException` immediately. On a path without `[*]`, the other malformed shapes throw only when resolution reaches them, so a path that stops resolving earlier fails as not found; a path containing `[*]` is parsed in full first, so a malformed segment throws immediately. `$.` resolves to the root.
+- **`HasJsonValue`** now says the `int` / `uint` / `long` / `ulong` overloads need an integer literal in range, so `30.0` and `3e1` do not match `30`, while the `double` overload and `IsEquivalentJsonTo` accept them.
+- **`HasJsonProperty`** and the other path assertions now say that only a failure where the path does not resolve renders the `resolved as far as` block; other failures describe what differed.
+- **`RoundtripsCleanlyVia`** documentation now says it reports drift between the two serialized forms, a first-pass JSON that fails to deserialize, and a non-null value that deserializes to `null`.
+- **`RoundtripsCleanlyVia`** documentation now says a missing `[JsonSerializable(typeof(T))]` for `T` is a compile-time error and an unregistered nested type throws `NotSupportedException`, so the test errors instead of failing; `HasJsonTypeInfoFor` checks registrations.
+- **`ContainsJson`** documentation now says that under `IgnoreArrayOrder()` an unmatched array element is reported as a whole, at its position in the expected array, with no inner path.
+- **`JsonFailureMessage`** documentation now counts five public path-family factories (`ParseFailure`, `PropertyNotFound`, `PropertyShouldNotExist`, `ValueMismatch`, `ShapeMismatch`) and names `ExpectedParseFailure`, `EquivalenceMismatch`, and `ContainsMismatch` as the three others.
+- **`JsonCanonicalizer`** documentation now shows the `Action<JsonCanonicalizeOptions>` configure callback instead of an options value, and the README status table lists `Canonicalize`.
+- **Core types:** the README core-type lists now include `JsonEquivalence`, `JsonCanonicalizer`, and the options and difference types.
+- **`GetJsonValue<T>`** documentation now says it parses a JSON string, number, or boolean.
+- **`GetJsonValue<T>`** documentation now says an empty or whitespace path, a leading dot, or `$x` throws `ArgumentException`, and a malformed or `[*]` segment throws it only if resolution reaches that segment; otherwise the path is not found and `JsonExtractionException` is thrown.
+- **`GetJsonValue<T>`** and the other extraction methods are now described as the only fluent extension methods that extend the receiver instead of the assertion chain.
+- **`MatchesProblemDetails`** README and XML no longer call the ASP.NET Core `ProblemDetails` type "BCL" or Apache 2.0; they say it lives in the ASP.NET Core shared framework and that the internal mirror keeps the package free of an ASP.NET Core reference.
+- **`JsonPathResolution`** `ResolvedPrefix` documentation now describes the normalized resolved path (no leading `$`) instead of "the full path".
+- **`JsonDifference`** documentation no longer says it is always the first difference found.
+- **`HttpResponseMessageAssertions`** class remark no longer claims status assertions are out of scope: `HasJsonResponse` and the ProblemDetails assertions check the status as part of their combined assertion.
+- **README:** a missing blank line after the stability list is added.
+- **README:** the request body in the snapshot-composition sample is now valid C#.
+
+### Fixed
+
+- **`MatchesValidationProblemDetails`** now fails a null message array in `errors` (for example `"errors": { "Name": null }`) in the comparison, and the failure message renders it as `null`. 0.6.1 threw `NullReferenceException` for it.
 
 ## [0.6.1] - 2026-07-12: document the 0.6.0 traps
 

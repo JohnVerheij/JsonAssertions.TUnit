@@ -469,7 +469,7 @@ public static class JsonValueAssertions
     /// <summary>Asserts the value at <paramref name="path"/> is a JSON string whose text
     /// parses as <typeparamref name="T"/> via <see cref="IParsable{T}.TryParse(string, IFormatProvider, out T)"/>
     /// against <see cref="CultureInfo.InvariantCulture"/>. Covers the "value parses as
-    /// <see cref="Guid"/> / <see cref="DateTimeOffset"/> / <see cref="Uri"/>" pattern without
+    /// <see cref="Guid"/> / <see cref="DateTimeOffset"/> / <see cref="TimeSpan"/>" pattern without
     /// committing to a particular parser per call site.</summary>
     /// <typeparam name="T">The target type implementing <see cref="IParsable{T}"/>.</typeparam>
     /// <param name="json">The JSON document text.</param>

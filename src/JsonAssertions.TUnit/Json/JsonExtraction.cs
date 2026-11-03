@@ -15,7 +15,10 @@ namespace JsonAssertions;
 /// <see cref="JsonExtractionException"/> whose message says where the path stopped and why, replacing
 /// a hand-rolled <c>JsonDocument.Parse(...).RootElement.GetProperty(...).GetInt32()</c> chain (which
 /// throws bare BCL exceptions with no path context). These are plain extension methods, not TUnit
-/// assertions; the value they return is used directly.
+/// assertions; the value they return is used directly. An empty or whitespace path, a leading dot,
+/// or a <c>$x</c> path throws <see cref="ArgumentException"/>; a malformed segment (including the
+/// <c>[*]</c> wildcard) throws it only if <see cref="JsonPath.Resolve"/> reaches that segment, and a
+/// path that stops resolving earlier throws <see cref="JsonExtractionException"/> (not found).
 /// </summary>
 public static class JsonExtraction
 {

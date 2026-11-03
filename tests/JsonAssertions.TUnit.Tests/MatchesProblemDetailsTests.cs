@@ -328,6 +328,27 @@ internal sealed class MatchesProblemDetailsTests
     }
 
     [Test]
+    public async Task MatchesValidationProblemDetails_NullMessageArray_FailsAndRendersNull(CancellationToken ct)
+    {
+        // "errors": { "FieldX": null } deserializes to a null message array (nullable annotations are not
+        // applied to dictionary values). It must not match an expected empty array, and the diagnostic
+        // renders it instead of throwing.
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, """{"status":400,"errors":{"FieldX":null}}""");
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = [],
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("field \"FieldX\": expected [], got null");
+    }
+
+    [Test]
     public async Task MatchesValidationProblemDetails_BodyIsLiteralJsonNull_FailsWithErrorsDiagnostic(CancellationToken ct)
     {
         // Body deserializes to a null mirror; CompareValidationErrors receives mirror?.Errors
