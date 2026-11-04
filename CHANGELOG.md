@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.2] - 2026-11-01: "the list includes these elements" cookbook, SPDX 3.0 SBOM
+## [0.6.2] - 2026-11-04: "the list includes these elements" cookbook, SPDX 3.0 SBOM
 
 Patch release. No change to the public API. It fixes how `MatchesValidationProblemDetails` handles a null message array, corrects documentation, embeds an SPDX 3.0 SBOM, and points the package at the project site.
 
