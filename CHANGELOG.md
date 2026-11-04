@@ -36,7 +36,7 @@ Patch release. No change to the public API. It fixes how `MatchesValidationProbl
 - **`HasJsonValue`** now says the `int` / `uint` / `long` / `ulong` overloads need an integer literal in range, so `30.0` and `3e1` do not match `30`, while the `double` overload and `IsEquivalentJsonTo` accept them.
 - **`HasJsonProperty`** and the other path assertions now say that only a failure where the path does not resolve renders the `resolved as far as` block; other failures describe what differed.
 - **`RoundtripsCleanlyVia`** documentation now says it reports drift between the two serialized forms, a first-pass JSON that fails to deserialize, and a non-null value that deserializes to `null`.
-- **`RoundtripsCleanlyVia`** documentation now says that a type reachable from a registered type, such as a property type, gets its `JsonTypeInfo<T>` without a `[JsonSerializable]` of its own, and that a value whose runtime type the context does not know (for example an unregistered type in an `object` property) throws `NotSupportedException`, so the test errors instead of failing; `HasJsonTypeInfoFor` checks registrations.
+- **`RoundtripsCleanlyVia`** documentation now says that a type reachable from a registered type, such as a property type, gets its `JsonTypeInfo<T>` without a `[JsonSerializable]` of its own; that an unregistered type in an `object` property throws `NotSupportedException`, so the test errors instead of failing; and that a derived value held through a base type without polymorphic configuration is serialized with the base contract, so its derived-only properties are not checked. `HasJsonTypeInfoFor` checks registrations.
 - **`ContainsJson`** documentation now says that under `IgnoreArrayOrder()` an unmatched array element is reported as a whole, at its position in the expected array, with no inner path.
 - **`JsonFailureMessage`** documentation now counts five public path-family factories (`ParseFailure`, `PropertyNotFound`, `PropertyShouldNotExist`, `ValueMismatch`, `ShapeMismatch`) and names `ExpectedParseFailure`, `EquivalenceMismatch`, and `ContainsMismatch` as the three others.
 - **`JsonCanonicalizer`** documentation now shows the `Action<JsonCanonicalizeOptions>` configure callback instead of an options value, and the README status table lists `Canonicalize`.
@@ -55,7 +55,7 @@ Patch release. No change to the public API. It fixes how `MatchesValidationProbl
 
 ### Fixed
 
-- **`MatchesValidationProblemDetails`** now fails a null message array in `errors` (for example `"errors": { "Name": null }`) in the comparison, and the failure message renders it as `null`. 0.6.1 threw `NullReferenceException` for it.
+- **`MatchesValidationProblemDetails`** now fails when the response body has a null message array in `errors` (for example `"errors": { "Name": null }`), and the failure message renders it as `null`. A null message array in the expected `errors` dictionary now throws `ArgumentException` that names the field, whatever the response holds. 0.6.1 threw `NullReferenceException` in both cases when the response had the field.
 
 ## [0.6.1] - 2026-07-12: document the 0.6.0 traps
 

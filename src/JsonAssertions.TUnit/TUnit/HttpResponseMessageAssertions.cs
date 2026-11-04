@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -512,7 +513,9 @@ public static class HttpResponseMessageAssertions
     /// <param name="status">The expected value of the body's <c>status</c> field; the HTTP status
     /// code of the response is not checked.</param>
     /// <param name="errors">The expected validation errors keyed by field name. Every key in
-    /// this dictionary must appear in the response's errors dict with matching values.</param>
+    /// this dictionary must appear in the response's errors dict with matching values. A
+    /// <see langword="null"/> message array throws <see cref="ArgumentException"/>; use an empty
+    /// array to expect no messages.</param>
     /// <param name="title">The expected <c>title</c> field value, or <see langword="null"/> to skip.</param>
     /// <param name="detail">The expected <c>detail</c> field value, or <see langword="null"/> to skip.</param>
     /// <param name="type">The expected <c>type</c> URI field value, or <see langword="null"/> to skip.</param>
@@ -531,6 +534,7 @@ public static class HttpResponseMessageAssertions
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(errors);
+        ThrowIfAnyMessagesNull(errors);
 
         var contentTypeCheck = await ReadAndValidateProblemDetailsContentTypeAsync(response, cancellationToken).ConfigureAwait(false);
         if (contentTypeCheck.Failure is not null)
@@ -608,6 +612,21 @@ public static class HttpResponseMessageAssertions
         if (expected is not null && !string.Equals(actual, expected, StringComparison.Ordinal))
         {
             mismatches.Add((field, expected, actual));
+        }
+    }
+
+    /// <summary>Throws <see cref="ArgumentException"/> when a message array in
+    /// <paramref name="errors"/> is <see langword="null"/>. A null array is not an expectation (an
+    /// empty array expects no messages), and the comparison would read it as an empty one.</summary>
+    /// <param name="errors">The expected validation errors keyed by field name.</param>
+    private static void ThrowIfAnyMessagesNull(IReadOnlyDictionary<string, string[]> errors)
+    {
+        var nullField = errors.FirstOrDefault(static kvp => kvp.Value is null).Key;
+        if (nullField is not null)
+        {
+            throw new ArgumentException(
+                $"The expected message array for \"{nullField}\" is null; use an empty array to expect no messages.",
+                nameof(errors));
         }
     }
 

@@ -30,11 +30,14 @@ namespace JsonAssertions.TUnit;
 /// sweep that catches future round-trip drift at CI time.</para>
 /// <para>Registrations: the source generator also generates a <see cref="JsonTypeInfo{T}"/> for every
 /// type reachable from a <c>[JsonSerializable]</c> type, such as a property type, and the context
-/// exposes it as a property, so <c>T</c> needs no attribute of its own when it is reachable. A value
-/// whose runtime type the context does not know, for example an unregistered type held in an
-/// <see cref="object"/>-typed property, makes the serializer throw <see cref="NotSupportedException"/>,
-/// which this assertion does not catch, so the test errors rather than fails. Use
-/// <c>HasJsonTypeInfoFor</c> to check what a context registers.</para>
+/// exposes it as a property, so <c>T</c> needs no attribute of its own when it is reachable. An
+/// unregistered type held in an <see cref="object"/>-typed property makes the serializer throw
+/// <see cref="NotSupportedException"/>, which this assertion does not catch, so the test errors
+/// rather than fails. Use <c>HasJsonTypeInfoFor</c> to check what a context registers.</para>
+/// <para>Derived types: a derived value held through a base type (as <c>T</c> or as a property type)
+/// is serialized with the contract of the base type unless the base type is configured for
+/// polymorphism with <c>[JsonDerivedType]</c>. The properties that only the derived type declares
+/// are then left out of both serialized forms, so the assertion passes without checking them.</para>
 /// </remarks>
 [SuppressMessage(
     "Usage",
@@ -46,10 +49,11 @@ public static class JsonRoundtripAssertions
     /// <see cref="JsonTypeInfo{T}"/>: serializing it produces a JSON string that, when
     /// deserialized and re-serialized via the same context, yields a byte-identical JSON
     /// string. Catches output that drifts on round-trip (for example an asymmetric converter or a
-    /// property ordering that changes) and serializer-options-vs-context inconsistencies. A value whose
-    /// runtime type the context does not know (for example an unregistered type in an
-    /// <see cref="object"/>-typed property) throws <see cref="NotSupportedException"/> instead of
-    /// failing the assertion.</summary>
+    /// property ordering that changes) and serializer-options-vs-context inconsistencies. An
+    /// unregistered type in an <see cref="object"/>-typed property throws
+    /// <see cref="NotSupportedException"/> instead of failing the assertion, and a derived value held
+    /// through a base type without polymorphic configuration is serialized with the base contract, so
+    /// its derived-only properties are not checked.</summary>
     /// <typeparam name="T">The value type whose round-trip is asserted.</typeparam>
     /// <param name="value">The value to round-trip.</param>
     /// <param name="jsonTypeInfo">The <see cref="JsonTypeInfo{T}"/> from the consumer's

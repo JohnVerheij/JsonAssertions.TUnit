@@ -124,6 +124,19 @@ internal sealed partial class RoundtripsCleanlyViaTests
         }).Throws<NotSupportedException>();
     }
 
+    /// <summary>A derived value held through a base type without polymorphic configuration is
+    /// serialized with the base contract: the derived-only property is left out of both serialized
+    /// forms, so the assertion passes without checking it.</summary>
+    [Test]
+    public async Task RoundtripsCleanlyVia_DerivedValueThroughBaseType_PassesWithoutDerivedProperties(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        BasePart value = new DerivedPart(3, "dropped");
+
+        await Assert.That(JsonSerializer.Serialize(value, HolderContext.Default.BasePart)).IsEqualTo("""{"Value":3}""");
+        await Assert.That(value).RoundtripsCleanlyVia(HolderContext.Default.BasePart);
+    }
+
     /// <summary>A registered type with a property type that has no attribute of its own, and an
     /// <see cref="object"/>-typed property.</summary>
     internal sealed record Holder(HolderPart Part, object? Extra);
@@ -134,7 +147,14 @@ internal sealed partial class RoundtripsCleanlyViaTests
     /// <summary>Not reachable from any registration.</summary>
     internal sealed record UnregisteredPart(int Value);
 
+    /// <summary>A base type without polymorphic configuration.</summary>
+    internal record BasePart(int Value);
+
+    /// <summary>Adds a property that the contract of <see cref="BasePart"/> does not have.</summary>
+    internal sealed record DerivedPart(int Value, string Extra) : BasePart(Value);
+
     [JsonSerializable(typeof(Holder))]
+    [JsonSerializable(typeof(BasePart))]
     internal sealed partial class HolderContext : JsonSerializerContext;
 
     /// <summary>A small record used as the round-trip target. Records get value-equality
