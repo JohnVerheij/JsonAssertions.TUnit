@@ -33,8 +33,9 @@ public readonly record struct JsonPathResolution
 
     /// <summary>The longest path prefix that resolved before the failure point, for example
     /// <c>user.address</c> when resolving <c>user.address.city</c> stopped at <c>city</c>. An
-    /// empty string when the very first segment failed against the root element. The full path
-    /// when <see cref="Found"/> is <see langword="true"/>.</summary>
+    /// empty string when the very first segment failed against the root element. When
+    /// <see cref="Found"/> is <see langword="true"/>, the normalized resolved path (without a
+    /// leading <c>$</c>, and empty when the path names the root itself).</summary>
     public string ResolvedPrefix { get; }
 
     /// <summary>The segment that could not be resolved, or <see langword="null"/> when

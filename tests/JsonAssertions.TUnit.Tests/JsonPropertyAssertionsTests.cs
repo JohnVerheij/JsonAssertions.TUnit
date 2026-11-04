@@ -112,4 +112,18 @@ internal sealed class JsonPropertyAssertionsTests
 
         await Assert.That(ex!.Message).Contains("but a String exists at that path");
     }
+
+    /// <summary><c>DoesNotHaveJsonProperty</c> does not expand <c>[*]</c>: it passes when resolution stops
+    /// before the wildcard, and throws <see cref="System.ArgumentException"/> when resolution reaches it.</summary>
+    [Test]
+    public async Task DoesNotHaveJsonProperty_Wildcard_PassesBeforeItAndThrowsAtIt(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That("{}").DoesNotHaveJsonProperty("missing[*]");
+
+        await Assert.That(async () =>
+        {
+            await Assert.That("{\"items\":[{\"a\":1}]}").DoesNotHaveJsonProperty("items[*].b");
+        }).Throws<System.ArgumentException>();
+    }
 }

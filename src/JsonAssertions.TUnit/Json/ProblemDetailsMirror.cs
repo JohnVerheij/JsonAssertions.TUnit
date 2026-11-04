@@ -7,11 +7,9 @@ namespace JsonAssertions;
 
 /// <summary>
 /// Internal mirror of the RFC 7807 ProblemDetails wire shape. Deliberately NOT a reference to
-/// <c>Microsoft.AspNetCore.Mvc.ProblemDetails</c>: taking that dep would pull
-/// <c>Microsoft.AspNetCore.Mvc.Abstractions</c> (Apache 2.0) into the package's transitive
-/// dependencies, weakening the family's MIT-only consumer-facing posture and adding an
-/// ASP.NET-specific reference for consumers doing Refit / gRPC-Web / raw <c>HttpClient</c>
-/// testing.
+/// <c>Microsoft.AspNetCore.Mvc.ProblemDetails</c>: that type lives in the ASP.NET Core shared
+/// framework, and referencing it would add an ASP.NET-specific dependency for consumers doing
+/// Refit / gRPC-Web / raw <c>HttpClient</c> testing.
 /// </summary>
 /// <remarks>
 /// <para>STJ deserialization is structural-by-property-name, not by type-identity: a server

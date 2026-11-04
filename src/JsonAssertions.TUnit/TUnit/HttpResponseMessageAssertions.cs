@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -28,8 +29,13 @@ namespace JsonAssertions.TUnit;
 /// <see cref="CancellationToken"/>, which defaults to <see cref="CancellationToken.None"/>.</para>
 /// <para>A response body that is not valid JSON fails the assertion with an explained message
 /// (via <see cref="JsonStringSource"/>) rather than throwing a raw <see cref="JsonException"/>.
-/// The body covers only the JSON payload; status-code assertions are intentionally out of
-/// scope (TUnit and HTTP-test libraries already cover those).</para>
+/// The path, value, and shape assertions cover only the JSON payload; standalone status-code
+/// assertions are intentionally out of scope (TUnit and HTTP-test libraries already cover
+/// those). <see cref="HasJsonResponse{T}"/> checks the HTTP status code as part of its combined
+/// assertion. The ProblemDetails assertions compare the body's <c>status</c> field and do not
+/// read the HTTP status code, so a 200 response whose body has <c>"status": 400</c> passes
+/// <c>MatchesProblemDetails(status: 400)</c>; assert <see cref="HttpResponseMessage.StatusCode"/>
+/// as well when the status code matters.</para>
 /// </remarks>
 [SuppressMessage(
     "Usage",
@@ -57,7 +63,10 @@ public static class HttpResponseMessageAssertions
     /// <summary>Asserts the response body has no JSON property at the dot-separated
     /// <paramref name="path"/>.</summary>
     /// <param name="response">The HTTP response whose body is the JSON document.</param>
-    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>.</param>
+    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>.
+    /// A <c>[*]</c> wildcard is not expanded: it reads as a non-numeric index, so the assertion throws
+    /// <see cref="ArgumentException"/> when resolution reaches it and passes when resolution stops earlier
+    /// (<c>missing[*]</c> on <c>{}</c>).</param>
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> DoesNotHaveJsonProperty(
@@ -402,8 +411,10 @@ public static class HttpResponseMessageAssertions
     /// AOT-clean: the supplied <see cref="JsonTypeInfo{T}"/> is the source-generated entry for
     /// <typeparamref name="T"/> in the consumer's <c>JsonSerializerContext</c>; the assertion
     /// uses no runtime reflection. Failure messages include the response body (truncated at
-    /// 256 chars) so the diagnostic surfaces the structured-error shape for non-200 responses
-    /// and the actual JSON shape for deserialization failures.</summary>
+    /// 256 chars) for an unexpected status (when the body is non-empty) and for a body that does
+    /// not deserialize, so the diagnostic surfaces the structured-error shape of a non-200
+    /// response and the actual JSON of an undeserializable body. A body that deserializes to a
+    /// different value reports the expected and actual values instead.</summary>
     /// <typeparam name="T">The expected response-body type.</typeparam>
     /// <param name="response">The HTTP response.</param>
     /// <param name="expectedStatus">The expected HTTP status code.</param>
@@ -452,10 +463,12 @@ public static class HttpResponseMessageAssertions
     /// <summary>Asserts the response is a valid RFC 7807 ProblemDetails (Content-Type
     /// <c>application/problem+json</c>, deserializable shape) and that each specified field
     /// matches. Unspecified fields are not asserted; pass <see langword="null"/> to skip a field.
-    /// Internal mirror type avoids the <c>Microsoft.AspNetCore.Mvc.Abstractions</c> dependency
-    /// (Apache 2.0) so the package stays MIT-clean and AOT-clean.</summary>
+    /// An internal mirror type avoids a dependency on the ASP.NET Core
+    /// <c>Microsoft.AspNetCore.Mvc.ProblemDetails</c> type, so the package takes no ASP.NET Core
+    /// reference and stays AOT-clean.</summary>
     /// <param name="response">The HTTP response.</param>
-    /// <param name="status">The expected <c>status</c> field value.</param>
+    /// <param name="status">The expected value of the body's <c>status</c> field; the HTTP status
+    /// code of the response is not checked.</param>
     /// <param name="title">The expected <c>title</c> field value, or <see langword="null"/> to skip.</param>
     /// <param name="detail">The expected <c>detail</c> field value, or <see langword="null"/> to skip.</param>
     /// <param name="type">The expected <c>type</c> URI field value, or <see langword="null"/> to skip.</param>
@@ -497,9 +510,12 @@ public static class HttpResponseMessageAssertions
     /// validation messages, the ASP.NET Core convention). Both the base ProblemDetails fields
     /// and the <paramref name="errors"/> dictionary are asserted.</summary>
     /// <param name="response">The HTTP response.</param>
-    /// <param name="status">The expected <c>status</c> field value.</param>
+    /// <param name="status">The expected value of the body's <c>status</c> field; the HTTP status
+    /// code of the response is not checked.</param>
     /// <param name="errors">The expected validation errors keyed by field name. Every key in
-    /// this dictionary must appear in the response's errors dict with matching values.</param>
+    /// this dictionary must appear in the response's errors dict with matching values. A
+    /// <see langword="null"/> message array throws <see cref="ArgumentException"/>; use an empty
+    /// array to expect no messages.</param>
     /// <param name="title">The expected <c>title</c> field value, or <see langword="null"/> to skip.</param>
     /// <param name="detail">The expected <c>detail</c> field value, or <see langword="null"/> to skip.</param>
     /// <param name="type">The expected <c>type</c> URI field value, or <see langword="null"/> to skip.</param>
@@ -518,6 +534,7 @@ public static class HttpResponseMessageAssertions
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(errors);
+        ThrowIfAnyMessagesNull(errors);
 
         var contentTypeCheck = await ReadAndValidateProblemDetailsContentTypeAsync(response, cancellationToken).ConfigureAwait(false);
         if (contentTypeCheck.Failure is not null)
@@ -565,31 +582,52 @@ public static class HttpResponseMessageAssertions
     {
         var mismatches = new List<(string Field, string? Expected, string? Actual)>();
 
-        if (mirror?.Status != status)
+        // A body that did not deserialize compares like one with every field absent.
+        var actual = mirror ?? new ProblemDetailsMirror();
+        if (actual.Status != status)
         {
             mismatches.Add(("status", status.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                mirror?.Status?.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                actual.Status?.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
-        if (title is not null && !string.Equals(mirror?.Title, title, StringComparison.Ordinal))
-        {
-            mismatches.Add(("title", title, mirror?.Title));
-        }
-        if (detail is not null && !string.Equals(mirror?.Detail, detail, StringComparison.Ordinal))
-        {
-            mismatches.Add(("detail", detail, mirror?.Detail));
-        }
-        if (type is not null && !string.Equals(mirror?.Type, type, StringComparison.Ordinal))
-        {
-            mismatches.Add(("type", type, mirror?.Type));
-        }
-        if (instance is not null && !string.Equals(mirror?.Instance, instance, StringComparison.Ordinal))
-        {
-            mismatches.Add(("instance", instance, mirror?.Instance));
-        }
+
+        AddFieldMismatch(mismatches, "title", title, actual.Title);
+        AddFieldMismatch(mismatches, "detail", detail, actual.Detail);
+        AddFieldMismatch(mismatches, "type", type, actual.Type);
+        AddFieldMismatch(mismatches, "instance", instance, actual.Instance);
 
         return mismatches.Count is 0
             ? AssertionResult.Passed
             : AssertionResult.Failed(JsonFailureMessage.ProblemDetailsFieldMismatch(mismatches));
+    }
+
+    /// <summary>Records a mismatch of an optional ProblemDetails string field: an expected value of
+    /// <see langword="null"/> means the field is not checked.</summary>
+    /// <param name="mismatches">The mismatches found so far.</param>
+    /// <param name="field">The field name, for the failure message.</param>
+    /// <param name="expected">The expected value, or <see langword="null"/> to skip the field.</param>
+    /// <param name="actual">The actual value.</param>
+    private static void AddFieldMismatch(
+        List<(string Field, string? Expected, string? Actual)> mismatches, string field, string? expected, string? actual)
+    {
+        if (expected is not null && !string.Equals(actual, expected, StringComparison.Ordinal))
+        {
+            mismatches.Add((field, expected, actual));
+        }
+    }
+
+    /// <summary>Throws <see cref="ArgumentException"/> when a message array in
+    /// <paramref name="errors"/> is <see langword="null"/>. A null array is not an expectation (an
+    /// empty array expects no messages), and the comparison would read it as an empty one.</summary>
+    /// <param name="errors">The expected validation errors keyed by field name.</param>
+    private static void ThrowIfAnyMessagesNull(IReadOnlyDictionary<string, string[]> errors)
+    {
+        var nullField = errors.FirstOrDefault(static kvp => kvp.Value is null).Key;
+        if (nullField is not null)
+        {
+            throw new ArgumentException(
+                $"The expected message array for \"{nullField}\" is null; use an empty array to expect no messages.",
+                nameof(errors));
+        }
     }
 
     /// <summary>Compares the actual ValidationProblemDetails <c>errors</c> dictionary against
@@ -607,26 +645,15 @@ public static class HttpResponseMessageAssertions
         var hasMismatch = false;
         foreach (var kvp in expected)
         {
-            if (!actual!.TryGetValue(kvp.Key, out var actualMessages))
+            // A JSON null message array deserializes to null; it matches no expected array, not even an
+            // empty one (AsSpan() would treat it as empty).
+            if (!actual!.TryGetValue(kvp.Key, out var actualMessages)
+                || actualMessages is null
+                || !actualMessages.AsSpan().SequenceEqual(kvp.Value, StringComparer.Ordinal))
             {
                 hasMismatch = true;
                 break;
             }
-            if (actualMessages.Length != kvp.Value.Length)
-            {
-                hasMismatch = true;
-                break;
-            }
-            for (var i = 0; i < kvp.Value.Length; i++)
-            {
-                if (!string.Equals(actualMessages[i], kvp.Value[i], StringComparison.Ordinal))
-                {
-                    hasMismatch = true;
-                    break;
-                }
-            }
-            if (hasMismatch)
-                break;
         }
 
         return hasMismatch

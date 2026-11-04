@@ -109,6 +109,109 @@ internal sealed partial class RoundtripsCleanlyViaTests
         await Assert.That(ex!.Message).Contains("deserializing the first-pass JSON produced null");
     }
 
+    /// <summary>A type reachable from a registered type gets its own <c>JsonTypeInfo</c> property without
+    /// an attribute; in an <see cref="object"/>-typed property, a runtime type the context does not
+    /// register and that has no registered base type or interface throws
+    /// <see cref="NotSupportedException"/> instead of failing the assertion.</summary>
+    [Test]
+    public async Task RoundtripsCleanlyVia_Registrations_ReachableTypeWorksUnknownRuntimeTypeThrows(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(new HolderPart(7)).RoundtripsCleanlyVia(HolderContext.Default.HolderPart);
+
+        await Assert.That(async () =>
+        {
+            await Assert.That(new Holder(new HolderPart(1), new UnregisteredPart(2))).RoundtripsCleanlyVia(HolderContext.Default.Holder);
+        }).Throws<NotSupportedException>();
+    }
+
+    /// <summary>A derived value held through a base type without polymorphic configuration is
+    /// serialized with the base contract: the derived-only property is left out of both serialized
+    /// forms, so the assertion passes without checking it.</summary>
+    [Test]
+    public async Task RoundtripsCleanlyVia_DerivedValueThroughBaseType_PassesWithoutDerivedProperties(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        BasePart value = new DerivedPart(3, "dropped");
+
+        await Assert.That(JsonSerializer.Serialize(value, HolderContext.Default.BasePart)).IsEqualTo("""{"Value":3}""");
+        await Assert.That(value).RoundtripsCleanlyVia(HolderContext.Default.BasePart);
+    }
+
+    /// <summary>In an <see cref="object"/>-typed property, a runtime type the context does not register
+    /// is serialized with the contract of a registered base type or interface: the properties only it
+    /// declares are left out of both serialized forms, so the assertion passes without checking them.</summary>
+    [Test]
+    public async Task RoundtripsCleanlyVia_UnregisteredTypeInObjectProperty_UsesRegisteredAncestorContract(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var viaBaseType = new Holder(new HolderPart(1), new DerivedPart(3, "dropped"));
+        var viaInterface = new Holder(new HolderPart(1), new InterfacePart(4, "dropped"));
+
+        await Assert.That(JsonSerializer.Serialize(viaBaseType, HolderContext.Default.Holder))
+            .IsEqualTo("""{"Part":{"Value":1},"Extra":{"Value":3}}""");
+        await Assert.That(viaBaseType).RoundtripsCleanlyVia(HolderContext.Default.Holder);
+        await Assert.That(JsonSerializer.Serialize(viaInterface, HolderContext.Default.Holder))
+            .IsEqualTo("""{"Part":{"Value":1},"Extra":{"Value":4}}""");
+        await Assert.That(viaInterface).RoundtripsCleanlyVia(HolderContext.Default.Holder);
+    }
+
+    /// <summary>An <see cref="object"/>-typed property whose JSON is not <see langword="null"/>
+    /// deserializes to a <see cref="JsonElement"/> by default, so the second serialization throws
+    /// <see cref="NotSupportedException"/> unless the context registers <see cref="JsonElement"/>. The
+    /// value here has a registered type, so the first serialization succeeds.</summary>
+    [Test]
+    public async Task RoundtripsCleanlyVia_ObjectPropertyWithoutJsonElementRegistration_Throws(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var holder = new Holder(new HolderPart(1), new HolderPart(2));
+
+        await Assert.That(JsonSerializer.Serialize(holder, HolderWithoutJsonElementContext.Default.Holder))
+            .IsEqualTo("""{"Part":{"Value":1},"Extra":{"Value":2}}""");
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(holder).RoundtripsCleanlyVia(HolderWithoutJsonElementContext.Default.Holder);
+        }).Throws<NotSupportedException>();
+        await Assert.That(ex!.Message).Contains("System.Text.Json.JsonElement");
+        await Assert.That(holder).RoundtripsCleanlyVia(HolderContext.Default.Holder);
+    }
+
+    /// <summary>A registered type with a property type that has no attribute of its own, and an
+    /// <see cref="object"/>-typed property.</summary>
+    internal sealed record Holder(HolderPart Part, object? Extra);
+
+    /// <summary>Reachable from <see cref="Holder"/> only.</summary>
+    internal sealed record HolderPart(int Value);
+
+    /// <summary>Not reachable from any registration.</summary>
+    internal sealed record UnregisteredPart(int Value);
+
+    /// <summary>A base type without polymorphic configuration.</summary>
+    internal record BasePart(int Value);
+
+    /// <summary>Adds a property that the contract of <see cref="BasePart"/> does not have.</summary>
+    internal sealed record DerivedPart(int Value, string Extra) : BasePart(Value);
+
+    /// <summary>An interface that the context registers.</summary>
+    internal interface IPart
+    {
+        /// <summary>The only property in the contract of the interface.</summary>
+        int Value { get; }
+    }
+
+    /// <summary>Implements <see cref="IPart"/> and adds a property that its contract does not have.</summary>
+    internal sealed record InterfacePart(int Value, string Extra) : IPart;
+
+    [JsonSerializable(typeof(Holder))]
+    [JsonSerializable(typeof(BasePart))]
+    [JsonSerializable(typeof(IPart))]
+    [JsonSerializable(typeof(JsonElement))]
+    internal sealed partial class HolderContext : JsonSerializerContext;
+
+    /// <summary>Registers <see cref="Holder"/> but not <see cref="JsonElement"/>.</summary>
+    [JsonSerializable(typeof(Holder))]
+    internal sealed partial class HolderWithoutJsonElementContext : JsonSerializerContext;
+
     /// <summary>A small record used as the round-trip target. Records get value-equality
     /// for free; STJ source-gen produces a stable JSON shape for them in v0.3.0.</summary>
     internal sealed record RoundtripDto(int Id, string? Name, bool IsActive);

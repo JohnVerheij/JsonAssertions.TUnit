@@ -41,9 +41,14 @@ public static class JsonPath
     /// <paramref name="element"/> itself.</param>
     /// <returns>A <see cref="JsonPathResolution"/> describing the outcome.</returns>
     /// <exception cref="ArgumentException"><paramref name="path"/> is <see langword="null"/>,
-    /// empty, whitespace, contains an empty property segment (a leading, trailing, or doubled
-    /// dot), or contains a malformed index segment (an empty <c>[]</c>, a non-numeric or
-    /// negative index, or an unclosed <c>[</c>).</exception>
+    /// empty, whitespace, begins with a dot, or begins with <c>$</c> followed by anything other
+    /// than <c>.</c>, <c>[</c>, or the end of the path (for example <c>$x</c>); these are rejected
+    /// before any navigation. Resolution is lazy, so the other malformed shapes (an empty
+    /// property segment from a doubled or trailing dot, an empty <c>[]</c>, a non-numeric or
+    /// negative index such as <c>[*]</c>, an unclosed <c>[</c>, or a property name directly after
+    /// <c>]</c>) throw only when navigation reaches them; a path that stops resolving earlier
+    /// returns a not-found resolution instead. <c>$.</c> resolves to <paramref name="element"/>
+    /// itself.</exception>
     public static JsonPathResolution Resolve(JsonElement element, string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

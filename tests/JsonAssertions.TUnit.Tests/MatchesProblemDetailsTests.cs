@@ -70,6 +70,21 @@ internal sealed class MatchesProblemDetailsTests
             cancellationToken: ct);
     }
 
+    /// <summary><c>status</c> is the body's field: an HTTP 200 response whose body says 400 passes
+    /// <c>MatchesProblemDetails(status: 400)</c>, and one whose body says 200 fails it.</summary>
+    [Test]
+    public async Task MatchesProblemDetails_Status_ComparesTheBodyFieldNotTheHttpStatus(CancellationToken ct)
+    {
+        using var bodySays400 = ProblemResponse(HttpStatusCode.OK, SerializeReal(new ProblemDetails { Status = 400 }));
+        using var bodySays200 = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(new ProblemDetails { Status = 200 }));
+
+        await Assert.That(bodySays400).MatchesProblemDetails(status: 400, cancellationToken: ct);
+        await Assert.That(async () =>
+        {
+            await Assert.That(bodySays200).MatchesProblemDetails(status: 400, cancellationToken: ct);
+        }).Throws<AssertionException>();
+    }
+
     [Test]
     public async Task MatchesProblemDetails_OnlyStatusSpecified_PassesIfStatusMatches(CancellationToken ct)
     {
@@ -325,6 +340,56 @@ internal sealed class MatchesProblemDetailsTests
         }).Throws<AssertionException>();
 
         await Assert.That(ex!.Message).Contains("no \"errors\" property");
+    }
+
+    [Test]
+    public async Task MatchesValidationProblemDetails_NullMessageArray_FailsAndRendersNull(CancellationToken ct)
+    {
+        // "errors": { "FieldX": null } deserializes to a null message array (nullable annotations are not
+        // applied to dictionary values). It must not match an expected empty array, and the diagnostic
+        // renders it instead of throwing.
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, """{"status":400,"errors":{"FieldX":null}}""");
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = [],
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("field \"FieldX\": expected [], got null");
+    }
+
+    [Test]
+    public async Task MatchesValidationProblemDetails_NullExpectedMessageArray_ThrowsArgumentException(CancellationToken ct)
+    {
+        // A null expected message array (for example from a fixture deserialized with "FieldX": null) is not
+        // an expectation: it throws instead of matching the empty array in the body, and it throws before the
+        // response is compared, so a body without the field throws too.
+        using var response = ProblemResponse(HttpStatusCode.BadRequest, """{"status":400,"errors":{"FieldX":[]}}""");
+        using var responseWithoutField = ProblemResponse(HttpStatusCode.BadRequest, """{"status":400,"errors":{}}""");
+        var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
+        {
+            ["FieldX"] = null!,
+        };
+
+        var ex = await Assert.That(async () =>
+        {
+            await Assert.That(response).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<System.ArgumentException>();
+
+        await Assert.That(ex!.Message).Contains("\"FieldX\" is null");
+        await Assert.That(ex.ParamName).IsEqualTo("errors");
+
+        await Assert.That(async () =>
+        {
+            await Assert.That(responseWithoutField).MatchesValidationProblemDetails(
+                status: 400, errors: expectedErrors, cancellationToken: ct);
+        }).Throws<System.ArgumentException>();
     }
 
     [Test]

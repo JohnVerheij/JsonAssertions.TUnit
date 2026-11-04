@@ -17,13 +17,15 @@ namespace JsonAssertions;
 /// <remarks>
 /// <para>The point of the package over a hand-rolled <c>TryGetProperty(...).IsTrue()</c>
 /// helper is that a failure says <em>where</em> on the path resolution stopped. Every
-/// path-resolution failure renders a two-line block: <c>resolved as far as:</c> (the longest
-/// prefix that resolved) and a reason line distinguishing "the object has no such property"
-/// from "the path tried to read a property off a non-object".</para>
+/// path-resolution failure (a path that does not resolve) renders a two-line block:
+/// <c>resolved as far as:</c> (the longest prefix that resolved) and a reason line distinguishing
+/// "the object has no such property" from "the path tried to read a property off a
+/// non-object".</para>
 /// <para>Lines are terminated with the literal LF byte so the rendered text is byte-stable
 /// across platforms. Numeric formatting uses <see cref="CultureInfo.InvariantCulture"/>.</para>
 /// <para><strong>Public surface (extension point for consumer-authored typed JSON assertions):</strong>
-/// the four path-family factories (<see cref="PropertyNotFound(string, JsonPathResolution)"/>,
+/// the five path-family factories (<see cref="PropertyNotFound(string, JsonPathResolution)"/>,
+/// <see cref="PropertyShouldNotExist(string, JsonPathResolution)"/>,
 /// <see cref="ValueMismatch(string, JsonPathResolution, string)"/>,
 /// <see cref="ShapeMismatch(string, JsonPathResolution, string)"/>, and
 /// <see cref="ParseFailure(JsonException)"/>) are part of the v0.3.0+ stable public API.
@@ -31,6 +33,10 @@ namespace JsonAssertions;
 /// custom <c>[GenerateAssertion]</c> methods to produce failure messages that match the
 /// package's diagnostic style. Family-pattern consistency: mirrors
 /// <c>MathAssertions.MathFailureMessage</c>.</para>
+/// <para>The equivalence and subset assertions add three more public factories:
+/// <see cref="ExpectedParseFailure(JsonException)"/>,
+/// <see cref="EquivalenceMismatch(JsonDifference)"/>, and
+/// <see cref="ContainsMismatch(IReadOnlyList{JsonDifference})"/>.</para>
 /// <para><strong>Internal surface:</strong> HTTP-response, ProblemDetails, and roundtrip-specific
 /// factories stay <see langword="internal"/>. Those failure modes are bound to the specific
 /// assertions that produce them (no extension value); keeping them internal preserves
@@ -221,8 +227,16 @@ public static class JsonFailureMessage
                 continue;
             }
             sb.Append("  field \"").Append(kvp.Key).Append("\": expected [")
-                .AppendJoin(", ", kvp.Value).Append("], got [")
-                .AppendJoin(", ", actualMessages).Append(']').Append('\n');
+                .AppendJoin(", ", kvp.Value).Append("], got ");
+            if (actualMessages is null)
+            {
+                sb.Append("null");
+            }
+            else
+            {
+                sb.Append('[').AppendJoin(", ", actualMessages).Append(']');
+            }
+            sb.Append('\n');
         }
         return sb.ToString();
     }

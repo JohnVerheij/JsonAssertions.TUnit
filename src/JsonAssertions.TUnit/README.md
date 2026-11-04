@@ -32,20 +32,20 @@ Each path / value / shape entry point is available over a JSON `string`, a `Syst
 | `HasNonEmptyJsonArray(path)` / `HasEmptyJsonArray(path)` | Asserts the value at `path` is a non-empty / empty JSON array. |
 | `IsEquivalentJsonTo(expected)` / `IsEquivalentJsonTo(expected, configure)` over a JSON `string` or `JsonElement` | Asserts the whole document is structurally equivalent to `expected`, independent of property order and number form (`1` == `1.0`). The configure callback sets `IgnorePath` and `IgnoreArrayOrder`. |
 | `ContainsJson(expectedSubset)` / `ContainsJson(expectedSubset, configure)` over a JSON `string`, `JsonElement`, or `HttpResponseMessage` *(v0.6.0+)* | Asserts the document contains the expected subset (extra actual properties ignored); the failure lists every missing or mismatched path. Same options as `IsEquivalentJsonTo`. |
-| `GetJsonValue<T>(path)` / `GetJsonString(path)` / `GetJsonElement(path)` over a JSON `string` or `JsonElement` (and `...Async` on `HttpResponseMessage`) *(v0.6.0+)* | Reads a typed value out at `path` and returns it (not an assertion), for driving later requests or cross-checks; throws `JsonExtractionException` with path context on failure. |
-| `HasJsonResponse<T>(status, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + structural equality in one chain. |
-| `MatchesProblemDetails(status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields. |
+| `GetJsonValue<T>(path)` / `GetJsonString(path)` / `GetJsonElement(path)` over a JSON `string` or `JsonElement` (and `...Async` on `HttpResponseMessage`) *(v0.6.0+)* | Reads a typed value out at `path` and returns it (not an assertion), for driving later requests or cross-checks; `GetJsonValue<T>` parses a JSON string, number, or boolean. Throws `JsonExtractionException` with path context when the path does not resolve or the value does not parse (`ArgumentException` for an empty or whitespace path, a leading dot, or `$x`). |
+| `HasJsonResponse<T>(status, JsonTypeInfo<T>, T expected, ct)` on `HttpResponseMessage` | Asserts status + AOT-clean deserialization + equality under `object.Equals` in one chain (use a record whose members have value equality, or override `Equals` on `T`). |
+| `MatchesProblemDetails(status, ..., ct)` on `HttpResponseMessage` | Asserts an RFC 7807 `application/problem+json` response with matching fields (`status` is the body's field, not the HTTP status code). |
 | `MatchesValidationProblemDetails(status, errors, ..., ct)` on `HttpResponseMessage` | Like `MatchesProblemDetails` plus the ASP.NET Core `errors` dictionary. |
 | `RoundtripsCleanlyVia<T>(JsonTypeInfo<T>)` on any `T` | Asserts serialize -> deserialize -> re-serialize is byte-identical via the supplied source-generated `JsonTypeInfo<T>`. |
 | `AsJsonContext().HasJsonTypeInfoFor<T>()` on a `JsonSerializerContext`-typed source | Asserts the supplied source-generated context registers a `JsonTypeInfo<T>` for `T`. |
 | `JsonRenderers.ReformatJson<T>(JsonTypeInfo<T>)` *(static factory)* | Returns `Func<string, string>` that canonicalizes a JSON string via the consumer's `JsonSerializerContext`; composes with `SnapshotAssertions.TUnit`'s `MatchesSnapshot(Func<>)` at the consumer's call site. |
-| `JsonCanonicalizer.Canonicalize(json, opts)` *(static, v0.4.0+)* | Typeless structural canonical form (sorted keys, stable indent, all fields preserved) with `[*]`-aware `ScrubPath` scrubbing of volatile values; for pinning a whole response shape as a snapshot. Needs no `JsonSerializerContext` (unlike `ReformatJson<T>`) and keeps unknown fields. |
+| `JsonCanonicalizer.Canonicalize(json)` / `Canonicalize(json, configure)` *(static, v0.4.0+)* | Typeless structural canonical form (sorted keys, stable indent, all fields preserved) with `[*]`-aware `ScrubPath` scrubbing of volatile values; for pinning a whole response shape as a snapshot. Needs no `JsonSerializerContext` (unlike `ReformatJson<T>`) and keeps unknown fields. |
 
 The path is a dot-separated property navigation with optional `[N]` zero-based bracket indices and an optional leading `$` JSONPath root reference: `user.name`, `items[0].id`, `objects[0].entries[1].id`, `$[0]` for a root-array first element. The `[*]` wildcard (v0.4.0+) matches every element of an array on `HasJsonProperty` and `HasJsonValueMatching` (`items[*].id`). See [the path-syntax notes on GitHub](https://github.com/JohnVerheij/JsonAssertions.TUnit#path-syntax) for the full grammar.
 
 Two notes on `[*]`. It is a "for all" quantifier, so `[*].id` passes **vacuously** on an empty array, whereas `[0].id` *fails* on one; a naive `[0]` to `[*]` migration silently drops the implicit non-emptiness check, so pair the wildcard with `HasNonEmptyJsonArray("items")` when emptiness should fail the test. And `[*]` fits existence and genuinely-uniform value checks only: an element-specific check (for example "the element at index 2 has `id` 2", `HasJsonValue("items[2].id", 2)`) must stay index-scoped rather than become `[*]`.
 
-The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: every assertion renders a path-context block saying *where* resolution stopped, not merely that it did.
+The point over a hand-rolled `TryGetProperty(...).IsTrue()` helper is the **failure message**: a path assertion whose path does not resolve renders a path-context block (`resolved as far as`) saying *where* resolution stopped, not merely that it did.
 
 ## Install
 
@@ -79,7 +79,7 @@ await Assert.That(response).HasJsonProperty("user.name", ct);
 await Assert.That(response).HasJsonValue("user.age", 30, ct);
 ```
 
-Each integer overload (`int` / `uint` / `long` / `ulong`) matches the value whether the JSON encodes it as a number or a numeric string; `long` / `ulong` exist because protobuf serializes 64-bit ints as JSON strings (to avoid 53-bit precision loss) while System.Text.Json writes them as numbers. `double` matches a JSON number only. Use the `L` / `UL` suffix to assert a 64-bit value (`HasJsonValue("guid.high", 123456789012345L)`).
+Each integer overload (`int` / `uint` / `long` / `ulong`) matches the value whether the JSON encodes it as a number or a numeric string; `long` / `ulong` exist because protobuf serializes 64-bit ints as JSON strings (to avoid 53-bit precision loss) while System.Text.Json writes them as numbers. `double` matches a JSON number only. An integer overload needs an integer literal (`30.0` and `3e1` do not match `30`); `double` and `IsEquivalentJsonTo` accept them. Use the `L` / `UL` suffix to assert a 64-bit value (`HasJsonValue("guid.high", 123456789012345L)`).
 
 When an assertion fails, the message names the failure point:
 
@@ -93,7 +93,7 @@ A response body or string that is not valid JSON fails the assertion with an exp
 
 ## Subset matching (`ContainsJson`, 0.6.0+)
 
-One declarative assertion in place of a block of per-property checks. The expected fields must be present and equal; the response may carry any additional fields the test does not want to pin. The failure lists every wrong path, not just the first.
+One declarative assertion in place of a block of per-property checks. The expected fields must be present and equal; the response may carry any additional fields the test does not want to pin. The failure lists every wrong path, not just the first (under `IgnoreArrayOrder()` an unmatched array element is reported as a whole, at its position in the expected array, with no inner path).
 
 ```csharp
 await Assert.That(response).ContainsJson("""
@@ -110,7 +110,7 @@ The package places its own types in two namespaces, the same shape as the rest o
 
 | Type | Namespace | Auto-imported? |
 |---|---|---|
-| `JsonPath`, `JsonPathResolution`, `JsonValueComparison`, `JsonShape`, `JsonRenderers`, `JsonFailureMessage` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
+| `JsonPath`, `JsonPathResolution`, `JsonValueComparison`, `JsonShape`, `JsonRenderers`, `JsonFailureMessage`, `JsonEquivalence`, `JsonEquivalenceOptions`, `JsonDifference`, `JsonDifferenceKind`, `JsonCanonicalizer`, `JsonCanonicalizeOptions` (framework-agnostic core) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
 | Typed extraction (`GetJsonValue<T>()`, `GetJsonString()`, `GetJsonElement()` and the `...Async` forms) | `JsonAssertions` | No (needs `using JsonAssertions;`) |
 | `IJsonContextAssertionSource` + the `AsJsonContext()` bridge (the AOT-context assertions) | `JsonAssertions.TUnit` | No (needs `using JsonAssertions.TUnit;` when chaining `.AsJsonContext()`) |
 | Source-generated assertion entry points | `TUnit.Assertions.Extensions` | Yes (TUnit auto-imports) |
@@ -122,7 +122,7 @@ global using JsonAssertions;       // core types + GetJsonValue<T>()
 global using JsonAssertions.TUnit; // .AsJsonContext()
 ```
 
-The extraction methods are the one part of the package that does not hang off `Assert.That(...)`: they extend the **receiver**, because they return a value rather than asserting one.
+The extraction methods are the only fluent extension methods in the package that extend the **receiver** instead of the assertion chain, because they return a value rather than asserting one.
 
 ```csharp
 using JsonAssertions;   // the extraction methods live here, and do not auto-import
@@ -148,6 +148,8 @@ Part of an assertion family for TUnit:
 - [MathAssertions.TUnit](https://github.com/JohnVerheij/MathAssertions.TUnit)
 - [SseAssertions.TUnit](https://github.com/JohnVerheij/SseAssertions.TUnit)
 - [GrpcAssertions.TUnit](https://github.com/JohnVerheij/GrpcAssertions.TUnit)
+- [TracingAssertions.TUnit](https://github.com/JohnVerheij/TracingAssertions.TUnit)
+- [MetricsAssertions.TUnit](https://github.com/JohnVerheij/MetricsAssertions.TUnit)
 
 ## License
 

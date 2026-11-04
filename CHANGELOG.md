@@ -15,6 +15,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-04: "the list includes these elements" cookbook, SPDX 3.0 SBOM
+
+Patch release. No change to the public API. It fixes how `MatchesValidationProblemDetails` handles a null message array, corrects documentation, embeds an SPDX 3.0 SBOM, and points the package at the project site.
+
+### Changed
+
+- **README:** a cookbook pattern for "the list includes these elements, among others" with `ContainsJson` and `IgnoreArrayOrder()`, the form that replaces a hand-written loop over `EnumerateArray()` on health, status, and listing endpoints.
+- **SBOM:** the package embeds an SPDX 3.0 software bill of materials (SPDX 2.2 before), like the other packages of the family.
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.58.0 to 1.77.0.
+- **Package project URL:** the NuGet package now links to `https://jsonassertions.dev` instead of the GitHub repository.
+- **`HasJsonProperty`** and the other path, value, and shape assertions are now documented as available over a JSON `string`, a `JsonElement`, and an `HttpResponseMessage`; the README no longer says every entry point has all three receivers.
+- **`IsEquivalentJsonTo`** is now documented as available over a JSON `string` and a `JsonElement` only, and the equivalence and subset heading in the README names the real overloads.
+- **`HasJsonResponse`** now says it compares the deserialized value with `object.Equals` instead of "structural equality": use a record whose members have value equality, or override `Equals` on the type.
+- **`HasJsonResponse`** now says the failure message includes the body only for an unexpected status (when the body is non-empty) and for an undeserializable body, not for a body that deserializes to a different value.
+- **`HasJsonResponse`** README failure sample now shows the text the value-mismatch message actually produces.
+- **`MatchesProblemDetails`** README failure sample now shows the text the field-mismatch message actually produces.
+- **`HasJsonValueParsableAs<T>`** no longer lists `Uri` as an example, because `Uri` does not implement `IParsable<Uri>`; it now lists `TimeSpan`.
+- **`JsonPath`** path errors are now documented exactly: an empty or whitespace path, a leading dot, and a `$` not followed by `.`, `[`, or the end of the path throw `ArgumentException` immediately. On a path without `[*]`, the other malformed shapes throw only when resolution reaches them, so a path that stops resolving earlier fails as not found; `HasJsonProperty` and `HasJsonValueMatching` parse a path containing `[*]` in full first, so a malformed segment throws immediately. `$.` resolves to the root.
+- **`HasJsonValue`** now says the `int` / `uint` / `long` / `ulong` overloads need an integer literal in range, so `30.0` and `3e1` do not match `30`, while the `double` overload and `IsEquivalentJsonTo` accept them.
+- **`HasJsonProperty`** and the other path assertions now say that only a failure where the path does not resolve renders the `resolved as far as` block; other failures describe what differed.
+- **`RoundtripsCleanlyVia`** documentation now says it reports drift between the two serialized forms, a first-pass JSON that fails to deserialize, and a non-null value that deserializes to `null`.
+- **`RoundtripsCleanlyVia`** documentation now says that a type reachable from a registered type, such as a property type, gets its `JsonTypeInfo<T>` without a `[JsonSerializable]` of its own; that a derived value held through a base type without polymorphic configuration, or an unregistered type in an `object` property that has a registered base type or interface, is serialized with that contract, so the properties only it declares are not checked; and that an unregistered type with no registered ancestor besides `object`, or an `object` property whose JSON is not `null` when the context does not register `JsonElement`, throws `NotSupportedException`, so the test errors instead of failing. `HasJsonTypeInfoFor` checks registrations. The README round-trip pattern says the same.
+- **`ContainsJson`** documentation now says that under `IgnoreArrayOrder()` an unmatched array element is reported as a whole, at its position in the expected array, with no inner path.
+- **`JsonFailureMessage`** documentation now counts five public path-family factories (`ParseFailure`, `PropertyNotFound`, `PropertyShouldNotExist`, `ValueMismatch`, `ShapeMismatch`) and names `ExpectedParseFailure`, `EquivalenceMismatch`, and `ContainsMismatch` as the three others.
+- **`JsonCanonicalizer`** documentation now shows the `Action<JsonCanonicalizeOptions>` configure callback instead of an options value, and the README status table lists `Canonicalize`.
+- **Core types:** the README core-type lists now include `JsonEquivalence`, `JsonCanonicalizer`, and the options and difference types.
+- **`GetJsonValue<T>`** documentation now says it parses a JSON string, number, or boolean.
+- **`GetJsonValue<T>`** documentation now says an empty or whitespace path, a leading dot, or `$x` throws `ArgumentException`, and a malformed or `[*]` segment throws it only if resolution reaches that segment; otherwise the path is not found and `JsonExtractionException` is thrown.
+- **`GetJsonValue<T>`** and the other extraction methods are now described as the only fluent extension methods that extend the receiver instead of the assertion chain.
+- **`MatchesProblemDetails`** README and XML no longer call the ASP.NET Core `ProblemDetails` type "BCL" or Apache 2.0; they say it lives in the ASP.NET Core shared framework and that the internal mirror keeps the package free of an ASP.NET Core reference.
+- **`JsonPathResolution`** `ResolvedPrefix` documentation now describes the normalized resolved path (no leading `$`) instead of "the full path".
+- **`JsonDifference`** documentation no longer says it is always the first difference found.
+- **`HttpResponseMessageAssertions`** class remark no longer claims status assertions are out of scope: `HasJsonResponse` checks the HTTP status code as part of its combined assertion.
+- **`MatchesProblemDetails`** and **`MatchesValidationProblemDetails`** now say that `status` is compared with the body's `status` field and that the HTTP status code is not checked, so a 200 response whose body has `"status": 400` passes; assert `response.StatusCode` as well when it matters.
+- **`DoesNotHaveJsonProperty`** now says it does not expand `[*]`: the wildcard reads as a non-numeric index, so it throws `ArgumentException` when resolution reaches it and the assertion passes when resolution stops earlier (`missing[*]` on `{}`).
+- **README:** a missing blank line after the stability list is added.
+- **README:** the request body in the snapshot-composition sample is now valid C#.
+
+### Fixed
+
+- **`MatchesValidationProblemDetails`** now fails when the response body has a null message array for a field that the expected `errors` dictionary lists (for example `"errors": { "Name": null }` when `Name` is expected), and the failure message renders it as `null`; fields the dictionary does not list are not checked. A null message array in the expected `errors` dictionary now throws `ArgumentException` that names the field, whatever the response holds. 0.6.1 threw `NullReferenceException` in both cases when the response had the field.
+
 ## [0.6.1] - 2026-07-12: document the 0.6.0 traps
 
 Patch release. Documentation only; no API or behavioral change. Everything here comes from migrating a real suite onto 0.6.0, where the two new features landed cleanly but three shapes in the surface misled a reader who was pattern-matching from the rest of the package.
@@ -146,7 +188,8 @@ The 0.0.1 scope is intentionally narrow. The release exists to establish the rep
 
 Both namespaces ship in the single `JsonAssertions.TUnit` assembly. The two-namespace split keeps the same consumer feel as the rest of the assertion family (a framework-agnostic core plus a TUnit adapter) and future-proofs a package split if the bare `JsonAssertions` identifier ever becomes available.
 
-[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.1...HEAD
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.4.2...v0.5.0

@@ -96,4 +96,27 @@ internal sealed class ConsumerSurfaceSmokeTests
         await Assert.That(response).HasJsonValue("user.age", 30, ct);
         await Assert.That(response).HasJsonArrayLength("items", 3, ct);
     }
+
+    /// <summary>
+    /// Pins the README's "the list includes these elements, among others" pattern (v0.6.2) for an external consumer:
+    /// <c>ContainsJson</c> with <c>IgnoreArrayOrder()</c> on a response that lists more entries, in another order.
+    /// </summary>
+    [Test]
+    public async Task ListIncludesTheseElementsPatternResolvesAndPassesAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var response = new HttpResponseMessage
+        {
+            Content = new StringContent(
+                """{"entries":[{"name":"queue","status":"Healthy"},{"name":"cache","status":"Healthy","ms":3},{"name":"db","status":"Healthy"}]}""",
+                Encoding.UTF8,
+                "application/json"),
+        };
+
+        await Assert.That(response).ContainsJson("""
+            { "entries": [
+                { "name": "db",    "status": "Healthy" },
+                { "name": "cache", "status": "Healthy" } ] }
+            """, o => o.IgnoreArrayOrder(), ct);
+    }
 }
