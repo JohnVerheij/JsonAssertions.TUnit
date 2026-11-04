@@ -62,9 +62,10 @@ public static class HttpResponseMessageAssertions
     /// <summary>Asserts the response body has no JSON property at the dot-separated
     /// <paramref name="path"/>.</summary>
     /// <param name="response">The HTTP response whose body is the JSON document.</param>
-    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>. A <c>[*]</c> wildcard is not expanded: it reads as a non-numeric index, so the assertion
-    /// throws <see cref="ArgumentException"/> when resolution reaches it and passes when resolution stops
-    /// earlier (<c>missing[*]</c> on <c>{}</c>).</param>
+    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>.
+    /// A <c>[*]</c> wildcard is not expanded: it reads as a non-numeric index, so the assertion throws
+    /// <see cref="ArgumentException"/> when resolution reaches it and passes when resolution stops earlier
+    /// (<c>missing[*]</c> on <c>{}</c>).</param>
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> DoesNotHaveJsonProperty(

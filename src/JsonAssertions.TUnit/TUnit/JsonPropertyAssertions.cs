@@ -63,9 +63,10 @@ public static class JsonPropertyAssertions
     /// <paramref name="path"/>. A malformed JSON string fails the assertion (a body that
     /// cannot be parsed must not vacuously satisfy a negative assertion).</summary>
     /// <param name="json">The JSON document text.</param>
-    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>. A <c>[*]</c> wildcard is not expanded: it reads as a non-numeric index, so the assertion
-    /// throws <see cref="System.ArgumentException"/> when resolution reaches it and passes when resolution stops
-    /// earlier (<c>missing[*]</c> on <c>{}</c>).</param>
+    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>.
+    /// A <c>[*]</c> wildcard is not expanded: it reads as a non-numeric index, so the assertion throws
+    /// <see cref="System.ArgumentException"/> when resolution reaches it and passes when resolution stops earlier
+    /// (<c>missing[*]</c> on <c>{}</c>).</param>
     [GenerateAssertion]
     public static AssertionResult DoesNotHaveJsonProperty(this string json, string path)
         => JsonStringSource.Assert(json, root => DoesNotHaveJsonProperty(root, path));
@@ -73,9 +74,10 @@ public static class JsonPropertyAssertions
     /// <summary>Asserts the JSON element has no property at the dot-separated
     /// <paramref name="path"/>.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
-    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>. A <c>[*]</c> wildcard is not expanded: it reads as a non-numeric index, so the assertion
-    /// throws <see cref="System.ArgumentException"/> when resolution reaches it and passes when resolution stops
-    /// earlier (<c>missing[*]</c> on <c>{}</c>).</param>
+    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>.
+    /// A <c>[*]</c> wildcard is not expanded: it reads as a non-numeric index, so the assertion throws
+    /// <see cref="System.ArgumentException"/> when resolution reaches it and passes when resolution stops earlier
+    /// (<c>missing[*]</c> on <c>{}</c>).</param>
     [GenerateAssertion]
     public static AssertionResult DoesNotHaveJsonProperty(this JsonElement element, string path)
     {
