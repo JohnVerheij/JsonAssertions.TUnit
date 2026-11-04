@@ -156,8 +156,8 @@ internal sealed partial class RoundtripsCleanlyViaTests
         await Assert.That(viaInterface).RoundtripsCleanlyVia(HolderContext.Default.Holder);
     }
 
-    /// <summary>An <see cref="object"/>-typed property deserializes to a <see cref="JsonElement"/> by
-    /// default, so a non-null value in it makes the second serialization throw
+    /// <summary>An <see cref="object"/>-typed property whose JSON is not <see langword="null"/>
+    /// deserializes to a <see cref="JsonElement"/> by default, so the second serialization throws
     /// <see cref="NotSupportedException"/> unless the context registers <see cref="JsonElement"/>. The
     /// value here has a registered type, so the first serialization succeeds.</summary>
     [Test]

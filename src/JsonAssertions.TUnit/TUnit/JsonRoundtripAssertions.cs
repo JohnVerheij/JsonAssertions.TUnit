@@ -39,11 +39,11 @@ namespace JsonAssertions.TUnit;
 /// <para><see cref="object"/>-typed properties: a value whose runtime type the context does not
 /// register is serialized with the contract of a registered base type or interface, which leaves out
 /// the properties only the runtime type declares in the same way; with no registered ancestor besides
-/// <see cref="object"/>, the serializer throws <see cref="NotSupportedException"/>. The property
-/// deserializes to a <see cref="JsonElement"/> by default, so any non-null value also makes the second
-/// serialization throw <see cref="NotSupportedException"/> unless the context registers
-/// <see cref="JsonElement"/> (<c>[JsonSerializable(typeof(JsonElement))]</c>). This assertion does not
-/// catch these exceptions, so the test errors rather than fails.</para>
+/// <see cref="object"/>, the serializer throws <see cref="NotSupportedException"/>. When the JSON of
+/// the property is not <see langword="null"/>, it deserializes to a <see cref="JsonElement"/> by
+/// default, so the second serialization throws <see cref="NotSupportedException"/> unless the context
+/// registers <see cref="JsonElement"/> (<c>[JsonSerializable(typeof(JsonElement))]</c>). This assertion
+/// does not catch these exceptions, so the test errors rather than fails.</para>
 /// </remarks>
 [SuppressMessage(
     "Usage",
@@ -59,9 +59,10 @@ public static class JsonRoundtripAssertions
     /// serialized with the contract of a base type or interface (a derived value held through a base
     /// type without polymorphic configuration, or an unregistered type in an <see cref="object"/>-typed
     /// property) passes without its own properties being checked. An unregistered type with no
-    /// registered ancestor besides <see cref="object"/>, or any non-null value in an
-    /// <see cref="object"/>-typed property when the context does not register <see cref="JsonElement"/>,
-    /// throws <see cref="NotSupportedException"/> instead of failing the assertion.</summary>
+    /// registered ancestor besides <see cref="object"/>, or an <see cref="object"/>-typed property whose
+    /// JSON is not <see langword="null"/> when the context does not register
+    /// <see cref="JsonElement"/>, throws <see cref="NotSupportedException"/> instead of failing the
+    /// assertion.</summary>
     /// <typeparam name="T">The value type whose round-trip is asserted.</typeparam>
     /// <param name="value">The value to round-trip.</param>
     /// <param name="jsonTypeInfo">The <see cref="JsonTypeInfo{T}"/> from the consumer's

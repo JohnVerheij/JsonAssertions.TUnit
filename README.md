@@ -470,7 +470,7 @@ public async Task SerializerContextStaysInSyncWithDomainTypes()
 
 `RoundtripsCleanlyVia` compares the JSON the serializer writes, and the serializer writes what the contract it uses describes: the properties and converters of a registered type. When that contract belongs to a base type or interface, the properties that only the value's own type declares are left out of the JSON, so differences in them are never detected. That happens to a derived value held through a base type without `[JsonDerivedType]`, and to an unregistered type in an `object` property that has a registered base type or interface. To cover those properties, register the type with `[JsonSerializable]` and round-trip it through its own `JsonTypeInfo<T>`.
 
-Two cases throw `NotSupportedException`, so the test errors instead of failing. An unregistered type in an `object` property with no registered ancestor besides `object` has no contract at all. And an `object` property deserializes to a `JsonElement` by default, so any non-null value in it makes the second serialization throw unless the context registers `JsonElement` (`[JsonSerializable(typeof(JsonElement))]`).
+Two cases throw `NotSupportedException`, so the test errors instead of failing. An unregistered type in an `object` property with no registered ancestor besides `object` has no contract at all. And an `object` property whose JSON is not `null` deserializes to a `JsonElement` by default, so the second serialization throws unless the context registers `JsonElement` (`[JsonSerializable(typeof(JsonElement))]`).
 
 ### Pattern: compose with `SnapshotAssertions.TUnit` for canonicalized body snapshots
 
