@@ -30,8 +30,11 @@ namespace JsonAssertions.TUnit;
 /// (via <see cref="JsonStringSource"/>) rather than throwing a raw <see cref="JsonException"/>.
 /// The path, value, and shape assertions cover only the JSON payload; standalone status-code
 /// assertions are intentionally out of scope (TUnit and HTTP-test libraries already cover
-/// those). <see cref="HasJsonResponse{T}"/> and the ProblemDetails assertions check the status
-/// only as part of their combined assertion.</para>
+/// those). <see cref="HasJsonResponse{T}"/> checks the HTTP status code as part of its combined
+/// assertion. The ProblemDetails assertions compare the body's <c>status</c> field and do not
+/// read the HTTP status code, so a 200 response whose body has <c>"status": 400</c> passes
+/// <c>MatchesProblemDetails(status: 400)</c>; assert <see cref="HttpResponseMessage.StatusCode"/>
+/// as well when the status code matters.</para>
 /// </remarks>
 [SuppressMessage(
     "Usage",
@@ -59,7 +62,9 @@ public static class HttpResponseMessageAssertions
     /// <summary>Asserts the response body has no JSON property at the dot-separated
     /// <paramref name="path"/>.</summary>
     /// <param name="response">The HTTP response whose body is the JSON document.</param>
-    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>.</param>
+    /// <param name="path">A dot-separated property path, for example <c>user.address.city</c>. A <c>[*]</c> wildcard is not expanded: it reads as a non-numeric index, so the assertion
+    /// throws <see cref="ArgumentException"/> when resolution reaches it and passes when resolution stops
+    /// earlier (<c>missing[*]</c> on <c>{}</c>).</param>
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     [GenerateAssertion]
     public static Task<AssertionResult> DoesNotHaveJsonProperty(
@@ -460,7 +465,8 @@ public static class HttpResponseMessageAssertions
     /// <c>Microsoft.AspNetCore.Mvc.ProblemDetails</c> type, so the package takes no ASP.NET Core
     /// reference and stays AOT-clean.</summary>
     /// <param name="response">The HTTP response.</param>
-    /// <param name="status">The expected <c>status</c> field value.</param>
+    /// <param name="status">The expected value of the body's <c>status</c> field; the HTTP status
+    /// code of the response is not checked.</param>
     /// <param name="title">The expected <c>title</c> field value, or <see langword="null"/> to skip.</param>
     /// <param name="detail">The expected <c>detail</c> field value, or <see langword="null"/> to skip.</param>
     /// <param name="type">The expected <c>type</c> URI field value, or <see langword="null"/> to skip.</param>
@@ -502,7 +508,8 @@ public static class HttpResponseMessageAssertions
     /// validation messages, the ASP.NET Core convention). Both the base ProblemDetails fields
     /// and the <paramref name="errors"/> dictionary are asserted.</summary>
     /// <param name="response">The HTTP response.</param>
-    /// <param name="status">The expected <c>status</c> field value.</param>
+    /// <param name="status">The expected value of the body's <c>status</c> field; the HTTP status
+    /// code of the response is not checked.</param>
     /// <param name="errors">The expected validation errors keyed by field name. Every key in
     /// this dictionary must appear in the response's errors dict with matching values.</param>
     /// <param name="title">The expected <c>title</c> field value, or <see langword="null"/> to skip.</param>

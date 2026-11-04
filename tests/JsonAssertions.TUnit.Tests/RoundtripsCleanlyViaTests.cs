@@ -109,6 +109,34 @@ internal sealed partial class RoundtripsCleanlyViaTests
         await Assert.That(ex!.Message).Contains("deserializing the first-pass JSON produced null");
     }
 
+    /// <summary>A type reachable from a registered type gets its own <c>JsonTypeInfo</c> property without
+    /// an attribute; a runtime type the context does not know throws <see cref="NotSupportedException"/>
+    /// instead of failing the assertion.</summary>
+    [Test]
+    public async Task RoundtripsCleanlyVia_Registrations_ReachableTypeWorksUnknownRuntimeTypeThrows(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await Assert.That(new HolderPart(7)).RoundtripsCleanlyVia(HolderContext.Default.HolderPart);
+
+        await Assert.That(async () =>
+        {
+            await Assert.That(new Holder(new HolderPart(1), new UnregisteredPart(2))).RoundtripsCleanlyVia(HolderContext.Default.Holder);
+        }).Throws<NotSupportedException>();
+    }
+
+    /// <summary>A registered type with a property type that has no attribute of its own, and an
+    /// <see cref="object"/>-typed property.</summary>
+    internal sealed record Holder(HolderPart Part, object? Extra);
+
+    /// <summary>Reachable from <see cref="Holder"/> only.</summary>
+    internal sealed record HolderPart(int Value);
+
+    /// <summary>Not reachable from any registration.</summary>
+    internal sealed record UnregisteredPart(int Value);
+
+    [JsonSerializable(typeof(Holder))]
+    internal sealed partial class HolderContext : JsonSerializerContext;
+
     /// <summary>A small record used as the round-trip target. Records get value-equality
     /// for free; STJ source-gen produces a stable JSON shape for them in v0.3.0.</summary>
     internal sealed record RoundtripDto(int Id, string? Name, bool IsActive);

@@ -70,6 +70,21 @@ internal sealed class MatchesProblemDetailsTests
             cancellationToken: ct);
     }
 
+    /// <summary><c>status</c> is the body's field: an HTTP 200 response whose body says 400 passes
+    /// <c>MatchesProblemDetails(status: 400)</c>, and one whose body says 200 fails it.</summary>
+    [Test]
+    public async Task MatchesProblemDetails_Status_ComparesTheBodyFieldNotTheHttpStatus(CancellationToken ct)
+    {
+        using var bodySays400 = ProblemResponse(HttpStatusCode.OK, SerializeReal(new ProblemDetails { Status = 400 }));
+        using var bodySays200 = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(new ProblemDetails { Status = 200 }));
+
+        await Assert.That(bodySays400).MatchesProblemDetails(status: 400, cancellationToken: ct);
+        await Assert.That(async () =>
+        {
+            await Assert.That(bodySays200).MatchesProblemDetails(status: 400, cancellationToken: ct);
+        }).Throws<AssertionException>();
+    }
+
     [Test]
     public async Task MatchesProblemDetails_OnlyStatusSpecified_PassesIfStatusMatches(CancellationToken ct)
     {
