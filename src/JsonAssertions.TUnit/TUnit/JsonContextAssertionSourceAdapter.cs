@@ -23,6 +23,7 @@ internal sealed class JsonContextAssertionSourceAdapter<TContext> : IJsonContext
     public JsonContextAssertionSourceAdapter(IAssertionSource<TContext> source)
     {
         ArgumentNullException.ThrowIfNull(source);
+        source.Context.ExpressionBuilder.Append(".AsJsonContext()");
         // Map performs an implicit reference upcast (TContext : JsonSerializerContext); safe and AOT-clean.
         _context = source.Context.Map<JsonSerializerContext>(static x => x);
     }

@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Text;
@@ -84,7 +85,7 @@ internal sealed class HttpResponseMessageAssertionsTests
             await Assert.That(response).HasJsonValue("user.name", "bob", ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: \"alice\"");
+        await Assert.That(ex!.Message).Contains("Expected to have the JSON string 'bob' at path 'user.name'\nbut found \"alice\"");
     }
 
     [Test]
@@ -199,8 +200,7 @@ internal sealed class HttpResponseMessageAssertionsTests
             await Assert.That(response).HasJsonProperty("user.name", ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("parseable JSON");
-        await Assert.That(ex.Message).Contains("but parsing failed:");
+        await Assert.That(ex!.Message).Contains("but the value is not valid JSON: ");
     }
 
     [Test]
@@ -241,8 +241,26 @@ internal sealed class HttpResponseMessageAssertionsTests
         await Assert.That(response).HasJsonValueOneOf("user.age", [25.0, 30.0, 35.0], ct);
     }
 
-    // HasJsonValueParsableAs<T>(HttpResponseMessage, ...) — known F8 gap. The TUnit
-    // [GenerateAssertion] generator skips emitting the IAssertionSource<HttpResponseMessage>
-    // extension when the source method carries `where T : IParsable<T>`. Tracked upstream as
-    // thomhurst/TUnit#5934/#5935; closes when that release ships and the dependency is bumped.
+    [Test]
+    public async Task HasJsonValueParsableAs_Guid_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"id":"550e8400-e29b-41d4-a716-446655440000"}""");
+        await Assert.That(response).HasJsonValueParsableAs<Guid>("id", ct);
+    }
+
+    [Test]
+    public async Task HasJsonValueParsableAs_NotParsable_Fails(CancellationToken ct)
+    {
+        using var response = Response(BodyJson);
+
+        await Assert.That(async () => await Assert.That(response).HasJsonValueParsableAs<Guid>("user.name", ct))
+            .Throws<AssertionException>();
+    }
+
+    [Test]
+    public async Task HasJsonValue_Double_Match_Passes(CancellationToken ct)
+    {
+        using var response = Response("""{"ratio":2.5}""");
+        await Assert.That(response).HasJsonValue("ratio", 2.5, ct);
+    }
 }

@@ -31,4 +31,9 @@
     <ProjectReference Include="../../src/JsonAssertions.TUnit/JsonAssertions.TUnit.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Generated once from the 0.6.2 code; read by JsonEquivalenceDifferentialTests. -->
+    <EmbeddedResource Include="Baselines/JsonEquivalenceDifferential.baseline.txt" LogicalName="JsonEquivalenceDifferential.baseline.txt" />
+  </ItemGroup>
+
 </Project>

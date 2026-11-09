@@ -44,9 +44,21 @@ internal sealed partial class HasJsonResponseTests
             await Assert.That(response).HasJsonResponse(HttpStatusCode.OK, TestJsonContext.Default.TestDto, expected, ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("status 200");
-        await Assert.That(ex.Message).Contains("got: 400");
+        await Assert.That(ex!.Message).Contains("Expected to have status OK and a JSON body equal to TestDto");
+        await Assert.That(ex.Message).Contains("but the status was 400 BadRequest; body: ");
         await Assert.That(ex.Message).Contains("validation failed");
+    }
+
+    /// <summary>A status mismatch on a response with no body names the status alone.</summary>
+    [Test]
+    public async Task HasJsonResponse_StatusMismatchWithoutABody_OmitsTheBody(CancellationToken ct)
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.NoContent);
+
+        var ex = await Assert.That(async () => await Assert.That(response).HasJsonResponse(HttpStatusCode.OK, TestJsonContext.Default.TestDto, new TestDto(1, "a"), ct))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("but the status was 204 NoContent\n\nat Assert.That(response)");
     }
 
     [Test]
@@ -61,7 +73,7 @@ internal sealed partial class HasJsonResponseTests
         }).Throws<AssertionException>();
 
         await Assert.That(ex!.Message).Contains("TestDto");
-        await Assert.That(ex.Message).Contains("parsing failed");
+        await Assert.That(ex.Message).Contains("but the body did not deserialize as TestDto: ");
     }
 
     [Test]
@@ -76,7 +88,7 @@ internal sealed partial class HasJsonResponseTests
         }).Throws<AssertionException>();
 
         await Assert.That(ex!.Message).Contains("TestDto");
-        await Assert.That(ex.Message).Contains("structurally equal");
+        await Assert.That(ex.Message).Contains("but the body deserialized to TestDto { Id = 99, Name = bob }");
     }
 
     [Test]
@@ -110,7 +122,7 @@ internal sealed partial class HasJsonResponseTests
         }).Throws<AssertionException>();
 
         await Assert.That(ex!.Message).Contains("...");
-        await Assert.That(ex.Message).Contains("parsing failed");
+        await Assert.That(ex.Message).Contains("but the body did not deserialize as TestDto: ");
     }
 
     [Test]

@@ -65,8 +65,8 @@ internal sealed class JsonContainsCoreTests
         var differences = JsonEquivalence.ContainsAll(
             """{"a":1,"b":2}""", """{"a":9}""", new JsonEquivalenceOptions());
         var message = JsonFailureMessage.ContainsMismatch(differences);
-        await Assert.That(message).Contains("\"a\"", StringComparison.Ordinal);
-        await Assert.That(message).Contains("\"b\"", StringComparison.Ordinal);
+        await Assert.That(message).Contains("2 paths differ:\n  at 'a' the value differs", StringComparison.Ordinal);
+        await Assert.That(message).Contains("\n  at 'b' the property is missing from the actual document", StringComparison.Ordinal);
     }
 
     [Test]

@@ -25,7 +25,7 @@ internal static class JsonStringSource
         JsonDocument document;
         try
         {
-            document = JsonDocument.Parse(json);
+            document = JsonText.Parse(json);
         }
         catch (JsonException exception)
         {

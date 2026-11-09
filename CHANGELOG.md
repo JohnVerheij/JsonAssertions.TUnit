@@ -15,6 +15,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-09: several paths at once, every value of a list, one failure-message rule, stricter paths and numbers
+
+Minor release. Adds `HasJsonProperties` and `GetJsonValues<T>`, rewrites every failure message to one rule, and makes paths, numbers, ProblemDetails, default elements and cancellation strict, each loudly (a check that passed by accident now fails or throws). Requires TUnit 1.81.10: raise TUnit and this package together.
+
+### BREAKING
+
+- **`HasJsonProperty`**, every other path assertion, the extraction methods, **`JsonPath.Resolve`** / **`Exists`** / **`ResolveAll`**, and `IgnorePath` / `ScrubPath` now throw `ArgumentException` for a malformed path before any navigation, naming the path and the character where it goes wrong. 0.6.2 threw only when resolution reached the bad segment, so a malformed segment after a missing property failed as not found, or passed `DoesNotHaveJsonProperty`. `$.` (which 0.6.2 resolved to the root) and `$.[0]` are now malformed. Migration: fix the path; `$.` becomes `$`, and `$.[0]` becomes `$[0]`.
+- **`DoesNotHaveJsonProperty`**, the single-location assertions (`HasJsonValue`, `HasJsonArrayLength`, ...), `GetJsonValue<T>` / `GetJsonString` / `GetJsonElement`, and **`JsonPath.Resolve`** / **`Exists`** now throw `ArgumentException` for the `[*]` wildcard wherever it sits (`JsonPath.ResolveAll` expands it); 0.6.2 let `DoesNotHaveJsonProperty("missing[*]")` pass on `{}`. Migration: "no element has `x`" is `HasJsonValueMatching("items[*]", e => !e.TryGetProperty("x", out _))`.
+- **`HasJsonValue`**, **`HasJsonValueOneOf`**, **`JsonValueComparison.Matches`** and **`JsonValueComparison.MatchesAny`** with `int` / `uint` / `long` / `ulong` now match a JSON string only when it holds a JSON integer literal (an optional `-`, then `0` or digits that do not start with `0`); 0.6.2 matched `" 42 "`, `"+42"` and `"042"`. Migration: fix the producer, or use the `string` overload when a padded or signed string is the contract.
+- **`MatchesProblemDetails`** and **`MatchesValidationProblemDetails`** now also fail when the HTTP status code is not `status`, as RFC 7807 section 3.1 requires; 0.6.2 passed a 200 response whose body said `"status": 400`. Migration: none for a server that follows RFC 7807; a separate status-code assertion next to it is now redundant.
+- **`IsEquivalentJsonTo`**, **`ContainsJson`**, **`JsonEquivalence.Compare`** and **`JsonEquivalence.ContainsAll`** now compare numbers exactly, by value; 0.6.2 rounded through `decimal`, so `1e-30` equaled `0` and `1.00000000000000000000000000001` equaled `1`. An exponent beyond `int` range now compares by value as well (0.6.2 compared the text). Migration: write the expected number as the document holds it; where a tolerance is the contract, exclude the path with `IgnorePath(...)` and assert it with `HasJsonValueMatching(path, e => Math.Abs(e.GetDouble() - expected) < tolerance)`.
+- **Every assertion on a `default(JsonElement)`** now fails with `the JsonElement is default: it holds no JSON value`, and the extraction methods throw `JsonExtractionException`; 0.6.2 passed `DoesNotHaveJsonProperty`, `HasJsonProperty("$")` and `HasJsonValueMatching("$", ...)` on it. Migration: assign the element before asserting.
+- **Every response assertion and response extraction method** now throws `OperationCanceledException` for a token that is already canceled, also when the body is in memory (0.6.2 asserted it anyway), and a read that the token cancels throws `OperationCanceledException` that carries the token and says so: `The response body read was canceled before the JSON assertion ran.` (`... before the JSON value was read.` for an extraction method). Migration: none for a token that isn't canceled.
+- **`HasJsonValue(double)`** and **`HasJsonValueOneOf(double[])`** now throw `ArgumentOutOfRangeException` for a NaN or infinite expected value, which JSON cannot hold, and a literal beyond `double` range (`1e400`) never matches, also in `JsonValueComparison.Matches(double)` and `MatchesAny(double[])`; 0.6.2 passed `HasJsonValue("v", double.PositiveInfinity)` on `1e400`. Migration: use a finite value, or the string overload.
+
+### Added
+
+- **`HasJsonProperties(string[] paths)`** asserts a property exists at each of several paths against one parse of the document, over a JSON `string`, a `JsonElement`, and an `HttpResponseMessage` (body read once; the token follows the paths). The paths take a collection expression (`HasJsonProperties(["user.name", "items[*].id"])`) and are checked before the JSON is read: an empty list, or a null, blank, repeated or malformed path, throws `ArgumentException` naming its index (`paths[1]`). The failure lists every path that does not resolve, in the given order; a `[*]` path names its first failing element and, when it expands to more than one element, how many failed.
+- **`String_HasJsonProperties_StringArray_Assertion`**, **`JsonElement_HasJsonProperties_StringArray_Assertion`** and **`HttpResponseMessage_HasJsonProperties_StringArray_CancellationToken_Assertion`** are the public assertion classes TUnit's generator emits for `HasJsonProperties`.
+- **`GetJsonValues<T>(path)`** over a JSON `string` and a `JsonElement`, and **`GetJsonValuesAsync<T>(path, cancellationToken)`** on an `HttpResponseMessage`, read every value a `[*]` path expands to, in document order, each parsed as `GetJsonValue<T>` parses one. A path without `[*]` throws `ArgumentException`; an empty array gives an empty list; every element that does not resolve or parse is listed in the `JsonExtractionException` by its concrete path, so no value is dropped silently.
+
+### Changed
+
+- **Every failure message** now follows one rule. The expectation line comes from the assertion's `ExpectationMessage` (`Expected to have a JSON property at path 'user.email'`), the `but` line says only what was found (`but resolved as far as 'user', which has no property 'email'`), names are in single quotes and values are JSON literals, and a value the expectation cannot show follows in parentheses (`found 31 (expected 30.5)`, `found "alice" (candidates: "bob", "carol")`). Equivalence and subset differences show strings escaped and objects or arrays on one line. The texts have no trailing newline, and the numbers the package renders use the invariant culture. Two parts follow the current culture: what TUnit prints into the expectation line itself (a negative integer in `HasJsonValue`, the expected value of `HasJsonResponse`), and the value `HasJsonResponse` deserialized, printed with its own `ToString`. A test that pinned a 0.6 failure text needs its pin updated.
+- **`JsonFailureMessage`** public factories (`ParseFailure`, `PropertyNotFound`, `PropertyShouldNotExist`, `ValueMismatch`, `ShapeMismatch`, `ExpectedParseFailure`, `EquivalenceMismatch`, `ContainsMismatch`) now return only the text after `but`; a consumer's own assertion states its expectation in `ExpectationMessage`. `ValueMismatch` and `ShapeMismatch` still take, and null-check, `expectedDescription`, but no longer render it: a custom assertion that relied on that text for its expected part sets `ExpectationMessage` instead, or its failure no longer shows the expected value.
+- **`MatchesValidationProblemDetails`** now lists the HTTP status, field and `errors` differences in one list, with only the keys that differ (absent, null, or other messages); 0.6.2 stopped at the first field mismatch and listed matching keys too.
+- **`HasJsonValueOneOf`** with an integer type now says when the string it found is not a JSON integer literal, as `HasJsonValue` does.
+- **`HasJsonValueMatching`** with `[*]` now names the concrete element that did not resolve or failed the predicate (`'items[1].id' did not resolve: ...`); 0.6.2 named its prefix.
+- **`HasJsonTypeInfoFor<T>`** failure call line now reads `.AsJsonContext().HasJsonTypeInfoFor<DateTime>()`; 0.6.2 showed `.HasJsonTypeInfoFor()`.
+- **`JsonPathResolution`** equality now also compares, for an index past the end of an array, the array's length (used by the failure text).
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.77.0 to 1.81.10.
+- **README:** a section comparing the package with TUnit's built-in JSON assertions; a response-bodies section (buffering a body read through its stream or shared by parallel tests, the empty-body text, cancellation); the integer literal grammar and where `GetJsonValue<T>` differs; names that appear twice resolve to their last occurrence; extract before `Assert.Multiple`; and a known issue: `.Or` acts as `.And` on an `HttpResponseMessage` in TUnit, with two workarounds. Every failure sample is copied from the full-message tests.
+- **README:** additive changes ship in a minor version, not in any patch.
+
+### Fixed
+
+- **`HasJsonProperty`**, every other path assertion and extraction method, and **`JsonPath`** now address a root property whose name starts with `$` (`$type`, as System.Text.Json writes it for polymorphic types); 0.6.2 threw `ArgumentException` for any `$x` path.
+- **Path errors** now name the right cause: an index too large for `int` says it is too large (the maximum is 2147483647), and `..` is named as JSONPath's recursive descent, which is not supported.
+- **Every response assertion and response extraction method** now says `the response body is empty` for an empty, absent or already-consumed body, with a hint about `LoadIntoBufferAsync`; 0.6.2 reported it as invalid JSON.
+- **Every assertion and extraction on a JSON `string`**, the expected documents of `IsEquivalentJsonTo` and `ContainsJson`, the string overloads of `JsonEquivalence.Compare` and `ContainsAll`, `JsonCanonicalizer`, and the renderer of `JsonRenderers.ReformatJson` now skip one leading byte order mark (U+FEFF, which `Encoding.UTF8.GetString` keeps); 0.6.2 rejected the text as invalid JSON.
+- **`HasJsonValue`**, **`HasJsonValueOneOf`** and **`JsonValueComparison`** with `uint` / `ulong` now match the number `-0` as `0`, as the signed overloads already did.
+- **`IsEquivalentJsonTo`** and **`ContainsJson`** now compare a number literal with a long run of zeros in time linear in its length; 0.6.2's comparison was quadratic.
+- **`JsonFailureMessage.PropertyNotFound`**, **`PropertyShouldNotExist`**, **`ValueMismatch`** and **`ShapeMismatch`** now throw `ArgumentException` naming `resolution` for a resolution of the wrong outcome; 0.6.2 threw `NullReferenceException` or rendered "an undefined value exists".
+- **`HasNonEmptyJsonString`** failure now shows the empty string it found (`found ""`); 0.6.2 said "a String".
+
 ## [0.6.2] - 2026-11-04: "the list includes these elements" cookbook, SPDX 3.0 SBOM
 
 Patch release. No change to the public API. It fixes how `MatchesValidationProblemDetails` handles a null message array, corrects documentation, embeds an SPDX 3.0 SBOM, and points the package at the project site.
@@ -188,7 +233,8 @@ The 0.0.1 scope is intentionally narrow. The release exists to establish the rep
 
 Both namespaces ship in the single `JsonAssertions.TUnit` assembly. The two-namespace split keeps the same consumer feel as the rest of the assertion family (a framework-agnostic core plus a TUnit adapter) and future-proofs a package split if the bare `JsonAssertions` identifier ever becomes available.
 
-[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.2...HEAD
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.5.0...v0.6.0

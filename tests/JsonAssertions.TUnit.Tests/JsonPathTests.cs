@@ -278,15 +278,15 @@ internal sealed class JsonPathTests
     }
 
     [Test]
-    public async Task Resolve_BareDollarFollowedByLetter_ThrowsArgumentException(CancellationToken ct)
+    public async Task Resolve_DollarFollowedByLetter_IsAName(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         using var document = JsonDocument.Parse("""{"user":{}}""");
         var root = document.RootElement;
 
-        // '$user' is not a valid JSONPath root form: the root reference must be '$', '$.',
-        // or '$['.
-        await Assert.That(() => JsonPath.Resolve(root, "$user")).Throws<ArgumentException>();
+        // A '$' not followed by '.', '[' or the end starts a name, such as System.Text.Json's '$type'
+        // discriminator: '$user' is the property "$user", which this document does not have.
+        await Assert.That(JsonPath.Resolve(root, "$user").Found).IsFalse();
     }
 
     [Test]

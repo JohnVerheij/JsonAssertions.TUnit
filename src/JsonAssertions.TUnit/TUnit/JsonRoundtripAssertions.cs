@@ -67,7 +67,7 @@ public static class JsonRoundtripAssertions
     /// <param name="value">The value to round-trip.</param>
     /// <param name="jsonTypeInfo">The <see cref="JsonTypeInfo{T}"/> from the consumer's
     /// <c>JsonSerializerContext</c>; AOT-clean.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.RoundtripsCleanlyVia)]
     public static AssertionResult RoundtripsCleanlyVia<T>(this T value, JsonTypeInfo<T> jsonTypeInfo)
     {
         ArgumentNullException.ThrowIfNull(jsonTypeInfo);

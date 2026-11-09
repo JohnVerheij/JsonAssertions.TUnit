@@ -72,7 +72,7 @@ internal sealed partial class RoundtripsCleanlyViaTests
             await Assert.That(new Drifter(7)).RoundtripsCleanlyVia(DrifterContext.Default.Drifter);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("drifted between trips");
+        await Assert.That(ex!.Message).Contains("but the second serialization differed:\n  first:  {\"v\":7}\n  second: {\"v\":7,\"drift\":true}");
         await Assert.That(ex.Message).Contains("first:");
         await Assert.That(ex.Message).Contains("second:");
     }
@@ -89,8 +89,8 @@ internal sealed partial class RoundtripsCleanlyViaTests
             await Assert.That(new Unparseable()).RoundtripsCleanlyVia(UnparseableContext.Default.Unparseable);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("deserializing the first-pass JSON failed");
-        await Assert.That(ex.Message).Contains("first-pass JSON:");
+        await Assert.That(ex!.Message).Contains("but the first serialization did not deserialize: ");
+        await Assert.That(ex.Message).Contains("\n  first:  {not-json");
     }
 
     [Test]
@@ -106,7 +106,7 @@ internal sealed partial class RoundtripsCleanlyViaTests
             await Assert.That(new VanishesToNull()).RoundtripsCleanlyVia(VanishesContext.Default.VanishesToNull);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("deserializing the first-pass JSON produced null");
+        await Assert.That(ex!.Message).Contains("but the first serialization deserialized to null\n  first:  null");
     }
 
     /// <summary>A type reachable from a registered type gets its own <c>JsonTypeInfo</c> property without

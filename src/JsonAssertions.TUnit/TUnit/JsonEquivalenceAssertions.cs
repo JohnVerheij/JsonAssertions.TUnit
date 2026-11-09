@@ -22,7 +22,7 @@ public static class JsonEquivalenceAssertions
     /// <summary>Asserts that the JSON string is structurally equivalent to <paramref name="expected"/>.</summary>
     /// <param name="actual">The actual JSON document text.</param>
     /// <param name="expected">The expected JSON document text.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.IsEquivalentJsonTo)]
     public static AssertionResult IsEquivalentJsonTo(this string actual, string expected)
         => IsEquivalentJsonTo(actual, expected, configure: null);
 
@@ -33,7 +33,7 @@ public static class JsonEquivalenceAssertions
     /// <param name="expected">The expected JSON document text.</param>
     /// <param name="configure">A callback that sets comparison options. May be
     /// <see langword="null"/> for the defaults.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.IsEquivalentJsonTo)]
     public static AssertionResult IsEquivalentJsonTo(this string actual, string expected, Action<JsonEquivalenceOptions>? configure)
     {
         ArgumentNullException.ThrowIfNull(expected);
@@ -44,7 +44,7 @@ public static class JsonEquivalenceAssertions
     /// <summary>Asserts that the JSON element is structurally equivalent to <paramref name="expected"/>.</summary>
     /// <param name="actual">The actual JSON element.</param>
     /// <param name="expected">The expected JSON document text.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.IsEquivalentJsonTo)]
     public static AssertionResult IsEquivalentJsonTo(this JsonElement actual, string expected)
         => IsEquivalentJsonTo(actual, expected, configure: null);
 
@@ -55,12 +55,12 @@ public static class JsonEquivalenceAssertions
     /// <param name="expected">The expected JSON document text.</param>
     /// <param name="configure">A callback that sets comparison options. May be
     /// <see langword="null"/> for the defaults.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.IsEquivalentJsonTo)]
     public static AssertionResult IsEquivalentJsonTo(this JsonElement actual, string expected, Action<JsonEquivalenceOptions>? configure)
     {
         ArgumentNullException.ThrowIfNull(expected);
         var options = BuildOptions(configure);
-        return CompareAgainst(actual, expected, options);
+        return JsonElementSource.Assert(actual, root => CompareAgainst(root, expected, options));
     }
 
     private static JsonEquivalenceOptions BuildOptions(Action<JsonEquivalenceOptions>? configure)
@@ -75,7 +75,7 @@ public static class JsonEquivalenceAssertions
         JsonDocument expectedDocument;
         try
         {
-            expectedDocument = JsonDocument.Parse(expected);
+            expectedDocument = JsonText.Parse(expected);
         }
         catch (JsonException exception)
         {

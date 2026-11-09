@@ -46,8 +46,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.name", "bob");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value \"bob\" at path \"user.name\"");
-        await Assert.That(ex.Message).Contains("found: \"alice\"");
+        await Assert.That(ex!.Message).Contains("Expected to have the JSON string 'bob' at path 'user.name'\nbut found \"alice\"");
     }
 
     [Test]
@@ -59,8 +58,8 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.email", "x@y.z");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: user");
-        await Assert.That(ex.Message).Contains("no property \"email\"");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user', which has no property '");
+        await Assert.That(ex.Message).Contains("which has no property 'email'");
     }
 
     [Test]
@@ -88,8 +87,44 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.active", false);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value false at path \"user.active\"");
-        await Assert.That(ex.Message).Contains("found: true");
+        await Assert.That(ex!.Message).Contains("Expected to have the given JSON boolean at path 'user.active'\nbut found true (expected false)");
+    }
+
+    [Test]
+    public async Task HasJsonValue_Boolean_ExpectedTrueFoundFalse_FailsShowingFound(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var ex = await Assert.That(async () => await Assert.That("""{"on":false}""").HasJsonValue("on", true))
+            .Throws<AssertionException>();
+
+        await Assert.That(ex!.Message).Contains("but found false (expected true)");
+    }
+
+    [Test]
+    public async Task HasJsonValue_Double_String_MatchAndMismatch(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        await Assert.That("""{"ratio":2.5}""").HasJsonValue("ratio", 2.5);
+        await Assert.That("""{"ratio":25e-1}""").HasJsonValue("ratio", 2.5);
+        await Assert.That(async () => await Assert.That("""{"ratio":2.5}""").HasJsonValue("ratio", 2.25))
+            .Throws<AssertionException>();
+    }
+
+    [Test]
+    public async Task HasJsonValue_Double_JsonElement_MatchMismatchAndMissingPath(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"ratio":2.5,"name":"x"}""");
+
+        await Assert.That(document.RootElement).HasJsonValue("ratio", 2.5);
+        await Assert.That(async () => await Assert.That(document.RootElement).HasJsonValue("ratio", 2.25))
+            .Throws<AssertionException>();
+        await Assert.That(async () => await Assert.That(document.RootElement).HasJsonValue("name", 2.5))
+            .Throws<AssertionException>();
+        await Assert.That(async () => await Assert.That(document.RootElement).HasJsonValue("missing", 2.5))
+            .Throws<AssertionException>();
     }
 
     [Test]
@@ -119,8 +154,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.age", 25);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value 25 at path \"user.age\"");
-        await Assert.That(ex.Message).Contains("found: 30");
+        await Assert.That(ex!.Message).Contains("Expected to have the JSON integer 25 at path 'user.age'\nbut found 30");
     }
 
     [Test]
@@ -132,7 +166,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.name", 30);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: \"alice\"");
+        await Assert.That(ex!.Message).Contains("but found \"alice\", which is not a JSON integer literal");
     }
 
     [Test]
@@ -144,7 +178,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.meta", "x");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: an object");
+        await Assert.That(ex!.Message).Contains("but found an Object");
     }
 
     [Test]
@@ -156,7 +190,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.tags", "x");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: an array");
+        await Assert.That(ex!.Message).Contains("but found an Array");
     }
 
     [Test]
@@ -168,7 +202,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.note", "x");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: null");
+        await Assert.That(ex!.Message).Contains("but found null");
     }
 
     [Test]
@@ -203,8 +237,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"high":"123456789012345"}""").HasJsonValue("high", 999L);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value 999 at path \"high\"");
-        await Assert.That(ex.Message).Contains("found: \"123456789012345\"");
+        await Assert.That(ex!.Message).Contains("Expected to have the JSON integer 999 at path 'high'\nbut found \"123456789012345\"");
     }
 
     [Test]
@@ -218,7 +251,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"high":"not-a-number"}""").HasJsonValue("high", 1L);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: \"not-a-number\"");
+        await Assert.That(ex!.Message).Contains("but found \"not-a-number\", which is not a JSON integer literal");
     }
 
     [Test]
@@ -253,8 +286,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"low":"42"}""").HasJsonValue("low", 43UL);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value 43 at path \"low\"");
-        await Assert.That(ex.Message).Contains("found: \"42\"");
+        await Assert.That(ex!.Message).Contains("Expected to have the JSON integer 43 at path 'low'\nbut found \"42\"");
     }
 
     [Test]
@@ -266,7 +298,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValue("user.high", 1L);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: user");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user', which has no property '");
     }
 
     [Test]
@@ -301,8 +333,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"seq":"500"}""").HasJsonValueOneOf("seq", [100L, 200L]);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value one of { 100, 200 } at path \"seq\"");
-        await Assert.That(ex.Message).Contains("found: \"500\"");
+        await Assert.That(ex!.Message).Contains("Expected to have one of the given values at path 'seq'\nbut found \"500\" (candidates: 100, 200)");
     }
 
     [Test]
@@ -330,8 +361,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"seq":"9"}""").HasJsonValueOneOf("seq", [1UL, 2UL]);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value one of { 1, 2 } at path \"seq\"");
-        await Assert.That(ex.Message).Contains("found: \"9\"");
+        await Assert.That(ex!.Message).Contains("Expected to have one of the given values at path 'seq'\nbut found \"9\" (candidates: 1, 2)");
     }
 
     [Test]
@@ -375,8 +405,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"age":30}""").HasJsonValue("age", 31);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value 31 at path \"age\"");
-        await Assert.That(ex.Message).Contains("found: 30");
+        await Assert.That(ex!.Message).Contains("Expected to have the JSON integer 31 at path 'age'\nbut found 30");
     }
 
     [Test]
@@ -398,7 +427,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"age":"thirty"}""").HasJsonValue("age", 30);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: \"thirty\"");
+        await Assert.That(ex!.Message).Contains("but found \"thirty\", which is not a JSON integer literal");
     }
 
     [Test]
@@ -456,8 +485,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"code":418}""").HasJsonValueOneOf("code", [200, 404]);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value one of { 200, 404 } at path \"code\"");
-        await Assert.That(ex.Message).Contains("found: 418");
+        await Assert.That(ex!.Message).Contains("Expected to have one of the given values at path 'code'\nbut found 418 (candidates: 200, 404)");
     }
 
     [Test]
@@ -485,8 +513,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"code":7}""").HasJsonValue("code", 8U);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value 8 at path \"code\"");
-        await Assert.That(ex.Message).Contains("found: 7");
+        await Assert.That(ex!.Message).Contains("Expected to have the JSON integer 8 at path 'code'\nbut found 7");
     }
 
     [Test]
@@ -498,8 +525,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"code":9}""").HasJsonValueOneOf("code", [1U, 2U]);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value one of { 1, 2 } at path \"code\"");
-        await Assert.That(ex.Message).Contains("found: 9");
+        await Assert.That(ex!.Message).Contains("Expected to have one of the given values at path 'code'\nbut found 9 (candidates: 1, 2)");
     }
 
     [Test]
@@ -534,7 +560,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValueMatching("user.age", static e => e.GetInt32() < 18);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value a value matching the predicate at path \"user.age\"");
+        await Assert.That(ex!.Message).Contains("Expected to have a value matching the predicate at path 'user.age'\nbut found 30");
     }
 
     [Test]
@@ -555,8 +581,7 @@ internal sealed class JsonValueAssertionsTests
                 .HasJsonValueOneOf("status", ["Healthy", "Degraded", "Unhealthy"]);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have JSON value one of { \"Healthy\", \"Degraded\", \"Unhealthy\" } at path \"status\"");
-        await Assert.That(ex.Message).Contains("found: \"Critical\"");
+        await Assert.That(ex!.Message).Contains("Expected to have one of the given values at path 'status'\nbut found \"Critical\" (candidates: \"Healthy\", \"Degraded\", \"Unhealthy\")");
     }
 
     [Test]
@@ -590,8 +615,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"id":"not-a-guid"}""").HasJsonValueParsableAs<Guid>("id");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("a JSON string parseable as Guid");
-        await Assert.That(ex.Message).Contains("found: \"not-a-guid\"");
+        await Assert.That(ex!.Message).Contains("but found \"not-a-guid\", which does not parse as Guid");
     }
 
     [Test]
@@ -603,7 +627,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That("""{"id":42}""").HasJsonValueParsableAs<Guid>("id");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("a JSON string parseable as Guid");
+        await Assert.That(ex!.Message).Contains("Expected to have a JSON string parseable as the given type at path 'id'\nbut found 42");
     }
 
     [Test]
@@ -718,7 +742,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValueMatching("user.missing", static _ => true);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: user");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user', which has no property '");
     }
 
     [Test]
@@ -730,7 +754,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValueOneOf("user.missing", ["a"]);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: user");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user', which has no property '");
     }
 
     [Test]
@@ -742,7 +766,7 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValueOneOf("user.missing", [1d]);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: user");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user', which has no property '");
     }
 
     [Test]
@@ -754,6 +778,6 @@ internal sealed class JsonValueAssertionsTests
             await Assert.That(SampleJson).HasJsonValueParsableAs<Guid>("user.missing");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: user");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user', which has no property '");
     }
 }

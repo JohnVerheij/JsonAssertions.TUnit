@@ -39,19 +39,19 @@ public static class JsonRenderers
     /// <c>JsonSerializerContext</c> options: property ordering follows the context's source-gen
     /// emission order, and whitespace / naming / null handling are inherited from the supplied
     /// context. AOT-clean: no runtime reflection, only the supplied <see cref="JsonTypeInfo{T}"/>'s
-    /// pre-generated metadata.</summary>
+    /// pre-generated metadata. One leading byte order mark (U+FEFF) in the string is skipped, as at every other
+    /// entry point that takes JSON text.</summary>
     /// <typeparam name="T">The expected JSON document type.</typeparam>
     /// <param name="jsonTypeInfo">The source-generated <see cref="JsonTypeInfo{T}"/> from the
     /// consumer's <c>JsonSerializerContext</c>.</param>
-    /// <returns>A reusable sync renderer that canonicalises a JSON string.</returns>
+    /// <returns>A reusable sync renderer that canonicalizes a JSON string.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="jsonTypeInfo"/> is <see langword="null"/>.</exception>
     public static Func<string, string> ReformatJson<T>(JsonTypeInfo<T> jsonTypeInfo)
     {
         ArgumentNullException.ThrowIfNull(jsonTypeInfo);
         return json =>
         {
-            ArgumentNullException.ThrowIfNull(json);
-            var value = JsonSerializer.Deserialize(json, jsonTypeInfo);
+            var value = JsonSerializer.Deserialize(JsonText.Content(json), jsonTypeInfo);
             // null deserialization result canonicalizes to the literal "null" JSON token
             // (STJ overload-set mismatch on nullable reference types is the reason for the
             // explicit branch rather than passing T? directly to Serialize).

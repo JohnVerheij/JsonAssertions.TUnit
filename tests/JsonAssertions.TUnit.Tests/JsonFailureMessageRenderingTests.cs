@@ -9,7 +9,7 @@ namespace JsonAssertions.TUnit.Tests;
 /// Drives the kind-dependent rendering arms of <c>JsonFailureMessage</c> end-to-end: the
 /// <c>DescribeKind</c> branch reached by a negative-existence failure for each JSON value
 /// kind, and the <c>RenderElement</c> branch reached by a value-mismatch failure whose found
-/// element is each kind. These are the switch arms the happy-path behaviour tests do not
+/// element is each kind. These are the switch arms the happy-path behavior tests do not
 /// otherwise reach.
 /// </summary>
 [Category("Smoke")]
@@ -28,7 +28,7 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That(KindsJson).DoesNotHaveJsonProperty("obj");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but an Object exists at that path");
+        await Assert.That(ex!.Message).Contains("but found an Object");
     }
 
     [Test]
@@ -40,7 +40,7 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That(KindsJson).DoesNotHaveJsonProperty("num");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but a Number exists at that path");
+        await Assert.That(ex!.Message).Contains("but found 5");
     }
 
     [Test]
@@ -52,7 +52,7 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That(KindsJson).DoesNotHaveJsonProperty("flag");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but a Boolean exists at that path");
+        await Assert.That(ex!.Message).Contains("but found true");
     }
 
     [Test]
@@ -64,7 +64,7 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That(KindsJson).DoesNotHaveJsonProperty("nothing");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but a Null exists at that path");
+        await Assert.That(ex!.Message).Contains("but found null");
     }
 
     [Test]
@@ -76,21 +76,30 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That(KindsJson).DoesNotHaveJsonProperty("list");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but an Array exists at that path");
+        await Assert.That(ex!.Message).Contains("but found an Array");
     }
 
+    /// <summary>The assertions refuse a default element before resolving, so a default element's resolution reaches
+    /// the factories only through the public API: the fallback arm of the kind description.</summary>
     [Test]
-    public async Task HasJsonProperty_OnDefaultElement_NamesUndefinedKind(CancellationToken ct)
+    public async Task PropertyNotFound_ForADefaultElementResolution_NamesUndefinedKind(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // A default JsonElement has ValueKind Undefined; this is the only way to reach the
-        // fallback arm of the kind-description switch.
-        var ex = await Assert.That(async () =>
-        {
-            await Assert.That(default(JsonElement)).HasJsonProperty("anything");
-        }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("an undefined value");
+        var message = JsonFailureMessage.PropertyNotFound("anything", JsonPath.Resolve(default, "anything"));
+
+        await Assert.That(message).Contains("an undefined value");
+    }
+
+    /// <summary>The fallback arm of the found-element rendering, reached the same way.</summary>
+    [Test]
+    public async Task ValueMismatch_ForADefaultElementFoundAtTheRoot_RendersUndefined(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var message = JsonFailureMessage.ValueMismatch("$", JsonPath.Resolve(default, "$"), "1");
+
+        await Assert.That(message).IsEqualTo("found an undefined value");
     }
 
     [Test]
@@ -102,7 +111,7 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That(KindsJson).HasJsonValue("flagOff", "x");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: false");
+        await Assert.That(ex!.Message).Contains("but found false");
     }
 
     [Test]
@@ -129,8 +138,7 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That("""{"items":[1,2]}""").HasJsonProperty("items[5]");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: items");
-        await Assert.That(ex.Message).Contains("no element at index [5] on \"items\"");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'items', which has 2 elements, so no index [5]");
     }
 
     [Test]
@@ -142,8 +150,7 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That("""{"user":{"name":"a"}}""").HasJsonProperty("user[0]");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("cannot index [0]");
-        await Assert.That(ex.Message).Contains("\"user\" is an Object, not an array");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user', which is an Object, not an array");
     }
 
     [Test]
@@ -155,7 +162,33 @@ internal sealed class JsonFailureMessageRenderingTests
             await Assert.That("""[1,2,3]""").HasJsonProperty("[5]");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: (root)");
-        await Assert.That(ex.Message).Contains("no element at index [5] on the root");
+        await Assert.That(ex!.Message).Contains("but resolved as far as the root, which has 3 elements, so no index [5]");
+    }
+
+    /// <summary>A path that runs into a scalar names the scalar's kind, Boolean and Null included.</summary>
+    [Test]
+    public async Task HasJsonProperty_ThroughABooleanOrANull_NamesTheKind(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var throughBoolean = await Assert.That(async () => await Assert.That(KindsJson).HasJsonProperty("flag.x"))
+            .Throws<AssertionException>();
+        var throughNull = await Assert.That(async () => await Assert.That(KindsJson).HasJsonProperty("nothing[0]"))
+            .Throws<AssertionException>();
+
+        await Assert.That(throughBoolean!.Message).Contains("but resolved as far as 'flag', which is a Boolean, not an object");
+        await Assert.That(throughNull!.Message).Contains("but resolved as far as 'nothing', which is a Null, not an array");
+    }
+
+    [Test]
+    public async Task HasJsonArrayLength_OnAScalar_NamesTheKind(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var onNull = await Assert.That(async () => await Assert.That(KindsJson).HasJsonArrayLength("nothing", 1))
+            .Throws<AssertionException>();
+        var onBoolean = await Assert.That(async () => await Assert.That(KindsJson).HasJsonArrayLength("flagOff", 1))
+            .Throws<AssertionException>();
+
+        await Assert.That(onNull!.Message).Contains("but found a Null\n");
+        await Assert.That(onBoolean!.Message).Contains("but found a Boolean\n");
     }
 }

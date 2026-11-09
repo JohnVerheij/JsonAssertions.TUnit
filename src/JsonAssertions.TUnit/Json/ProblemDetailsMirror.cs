@@ -58,11 +58,10 @@ internal class ProblemDetailsMirror
     public string? Instance { get; set; }
 
     /// <summary>RFC 7807 §3.2 problem-type extension members captured into a dictionary so the
-    /// mirror tolerates server-side custom fields without losing them. Captured in v0.3.0 but
-    /// not asserted by <c>MatchesProblemDetails</c>'s current surface; a future
-    /// <c>WithExtension(name, value)</c> chain method may expose the assertion surface (tracked
-    /// as a v0.3.1 / v0.4.0 candidate). The capture-into-dictionary behaviour means an
-    /// extension-member-bearing response does not lose its extension data on deserialization.</summary>
+    /// mirror tolerates server-side custom fields without losing them. Captured since v0.3.0 but
+    /// not asserted by <c>MatchesProblemDetails</c>; an assertion on them would be a new, demand-driven
+    /// chain method. The capture-into-dictionary behavior means an extension-member-bearing response
+    /// does not lose its extension data on deserialization.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Extensions { get; set; }
 }

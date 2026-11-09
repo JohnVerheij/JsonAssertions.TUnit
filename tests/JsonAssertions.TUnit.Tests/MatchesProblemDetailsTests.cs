@@ -70,19 +70,25 @@ internal sealed class MatchesProblemDetailsTests
             cancellationToken: ct);
     }
 
-    /// <summary><c>status</c> is the body's field: an HTTP 200 response whose body says 400 passes
-    /// <c>MatchesProblemDetails(status: 400)</c>, and one whose body says 200 fails it.</summary>
+    /// <summary><c>status</c> is checked against both the HTTP status code and the body's field (RFC 7807 section
+    /// 3.1): on 0.6.2 an HTTP 200 response whose body says 400 passed <c>MatchesProblemDetails(status: 400)</c>.</summary>
     [Test]
-    public async Task MatchesProblemDetails_Status_ComparesTheBodyFieldNotTheHttpStatus(CancellationToken ct)
+    public async Task MatchesProblemDetails_Status_ChecksTheHttpStatusAndTheBodyField(CancellationToken ct)
     {
-        using var bodySays400 = ProblemResponse(HttpStatusCode.OK, SerializeReal(new ProblemDetails { Status = 400 }));
+        using var httpSays200 = ProblemResponse(HttpStatusCode.OK, SerializeReal(new ProblemDetails { Status = 400 }));
         using var bodySays200 = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(new ProblemDetails { Status = 200 }));
+        using var httpSays299 = ProblemResponse((HttpStatusCode)299, SerializeReal(new ProblemDetails { Status = 400 }));
 
-        await Assert.That(bodySays400).MatchesProblemDetails(status: 400, cancellationToken: ct);
-        await Assert.That(async () =>
-        {
-            await Assert.That(bodySays200).MatchesProblemDetails(status: 400, cancellationToken: ct);
-        }).Throws<AssertionException>();
+        var http = await Assert.That(async () => await Assert.That(httpSays200).MatchesProblemDetails(status: 400, cancellationToken: ct))
+            .Throws<AssertionException>();
+        var body = await Assert.That(async () => await Assert.That(bodySays200).MatchesProblemDetails(status: 400, cancellationToken: ct))
+            .Throws<AssertionException>();
+        var unnamed = await Assert.That(async () => await Assert.That(httpSays299).MatchesProblemDetails(status: 400, cancellationToken: ct))
+            .Throws<AssertionException>();
+
+        await Assert.That(http!.Message).Contains("but 1 field differed:\n  HTTP status: 200 OK (expected 400)");
+        await Assert.That(body!.Message).Contains("but 1 field differed:\n  status: 200 (expected 400)");
+        await Assert.That(unnamed!.Message).Contains("HTTP status: 299 (expected 400)");
     }
 
     [Test]
@@ -125,8 +131,8 @@ internal sealed class MatchesProblemDetailsTests
             await Assert.That(response).MatchesProblemDetails(status: 400, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("status: expected 400");
-        await Assert.That(ex.Message).Contains("got 500");
+        await Assert.That(ex!.Message).Contains(
+            "but 2 fields differed:\n  HTTP status: 500 InternalServerError (expected 400)\n  status: 500 (expected 400)");
     }
 
     private static readonly string[] FieldXMessages = ["is required"];
@@ -222,11 +228,9 @@ internal sealed class MatchesProblemDetailsTests
     }
 
     [Test]
-    public async Task MatchesProblemDetails_EmptyBody_FailsWithParseDiagnostic(CancellationToken ct)
+    public async Task MatchesProblemDetails_EmptyBody_FailsSayingTheBodyIsEmpty(CancellationToken ct)
     {
-        // Empty body + correct Content-Type: the deserialization throws JsonException; the
-        // failure message renders ProblemDetailsParseFailed without a body-preview line
-        // (covers the body.Length > 0 false branch).
+        // Empty body + correct Content-Type: the same text as every other response reader, not a parse failure.
         using var response = ProblemResponse(HttpStatusCode.BadRequest, string.Empty);
 
         var ex = await Assert.That(async () =>
@@ -234,7 +238,7 @@ internal sealed class MatchesProblemDetailsTests
             await Assert.That(response).MatchesProblemDetails(status: 400, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("parsing failed");
+        await Assert.That(ex!.Message).Contains("but the response body is empty");
     }
 
     [Test]
@@ -265,8 +269,7 @@ internal sealed class MatchesProblemDetailsTests
             await Assert.That(response).MatchesProblemDetails(status: 400, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("deserialize as RFC 7807 ProblemDetails");
-        await Assert.That(ex.Message).Contains("parsing failed");
+        await Assert.That(ex!.Message).Contains("but the body did not deserialize as ProblemDetails: ");
     }
 
     [Test]
@@ -323,8 +326,7 @@ internal sealed class MatchesProblemDetailsTests
     [Test]
     public async Task MatchesValidationProblemDetails_NoErrorsProperty_FailsExplicitly(CancellationToken ct)
     {
-        // Response body is plain ProblemDetails (no "errors" property at all); the assertion
-        // must surface the absent-errors case via the dedicated diagnostic branch.
+        // Response body is plain ProblemDetails (no "errors" property at all); the list says so in one entry.
         var real = new ProblemDetails { Status = 400, Title = "No errors here" };
         using var response = ProblemResponse(HttpStatusCode.BadRequest, SerializeReal(real));
 
@@ -339,7 +341,7 @@ internal sealed class MatchesProblemDetailsTests
                 status: 400, errors: expectedErrors, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("no \"errors\" property");
+        await Assert.That(ex!.Message).Contains("but 1 entry differed:\n  errors: absent");
     }
 
     [Test]
@@ -360,7 +362,7 @@ internal sealed class MatchesProblemDetailsTests
                 status: 400, errors: expectedErrors, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("field \"FieldX\": expected [], got null");
+        await Assert.That(ex!.Message).Contains("errors.FieldX: null (expected [])");
     }
 
     [Test]
@@ -395,9 +397,7 @@ internal sealed class MatchesProblemDetailsTests
     [Test]
     public async Task MatchesValidationProblemDetails_BodyIsLiteralJsonNull_FailsWithErrorsDiagnostic(CancellationToken ct)
     {
-        // Body deserializes to a null mirror; CompareValidationErrors receives mirror?.Errors
-        // which is null. The expected errors dictionary is non-empty, so the null-errors branch
-        // of CompareValidationErrors fires.
+        // Body deserializes to a null mirror: its status and its errors are both absent, and both are listed.
         using var response = ProblemResponse(HttpStatusCode.BadRequest, "null");
         var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
         {
@@ -410,9 +410,7 @@ internal sealed class MatchesProblemDetailsTests
                 status: 400, errors: expectedErrors, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        // Status diagnostic fires first (mirror?.Status is null != 400); the test name reflects
-        // the deeper-truth (literal-null body) but the message is the status-level diagnostic.
-        await Assert.That(ex!.Message).Contains("status");
+        await Assert.That(ex!.Message).Contains("but 2 entries differed:\n  status: absent (expected 400)\n  errors: absent");
     }
 
     [Test]
@@ -462,14 +460,14 @@ internal sealed class MatchesProblemDetailsTests
                 status: 400, errors: expectedErrors, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("parsing failed");
+        await Assert.That(ex!.Message).Contains("but the body did not deserialize as ProblemDetails: ");
     }
 
     [Test]
-    public async Task MatchesValidationProblemDetails_StatusMismatch_FailsEarlyBeforeErrorsCheck(CancellationToken ct)
+    public async Task MatchesValidationProblemDetails_StatusMismatch_ListsTheErrorsInTheSameList(CancellationToken ct)
     {
-        // When the base ProblemDetails fields don't match, the assertion short-circuits with
-        // the field-mismatch diagnostic and never inspects the errors dictionary.
+        // The status, field and error mismatches come in one list; on 0.6.2 a field mismatch returned before the
+        // errors were compared.
         var real = new ValidationProblemDetails(new Dictionary<string, string[]>(System.StringComparer.Ordinal)
         {
             ["FieldX"] = FieldXMessages,
@@ -481,7 +479,7 @@ internal sealed class MatchesProblemDetailsTests
 
         var expectedErrors = new Dictionary<string, string[]>(System.StringComparer.Ordinal)
         {
-            ["FieldX"] = FieldXMessages,
+            ["FieldX"] = FieldYMessages,
         };
 
         var ex = await Assert.That(async () =>
@@ -490,7 +488,11 @@ internal sealed class MatchesProblemDetailsTests
                 status: 400, errors: expectedErrors, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("status: expected 400");
+        await Assert.That(ex!.Message).Contains(
+            "but 3 entries differed:\n"
+            + "  HTTP status: 500 InternalServerError (expected 400)\n"
+            + "  status: 500 (expected 400)\n"
+            + "  errors.FieldX: [\"is required\"] (expected [\"must be positive\"])");
     }
 
     [Test]
@@ -520,7 +522,7 @@ internal sealed class MatchesProblemDetailsTests
                 status: 400, errors: expectedErrors, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("FieldX");
+        await Assert.That(ex!.Message).Contains("errors.FieldX: [\"first\"] (expected [\"first\", \"second\"])");
     }
 
     [Test]
@@ -577,6 +579,7 @@ internal sealed class MatchesProblemDetailsTests
                 status: 400, errors: expectedErrors, cancellationToken: ct);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("FieldY");
+        // Only the key that differs is listed: FieldX matches.
+        await Assert.That(ex!.Message).Contains("but 1 entry differed:\n  errors.FieldY: absent (expected [\"must be positive\"])");
     }
 }
