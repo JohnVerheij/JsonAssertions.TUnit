@@ -167,7 +167,7 @@ internal sealed class JsonExtractionTests
     {
         ct.ThrowIfCancellationRequested();
         var ex = Assert.Throws<JsonExtractionException>(() => "{ not json".GetJsonValue<int>("a"));
-        await Assert.That(ex.Message).Contains("parseable JSON", StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains("The value is not valid JSON: ", StringComparison.Ordinal);
         await Assert.That(ex.InnerException).IsTypeOf<JsonException>();
     }
 

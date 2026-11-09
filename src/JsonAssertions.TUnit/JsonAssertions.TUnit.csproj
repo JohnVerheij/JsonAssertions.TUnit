@@ -11,10 +11,10 @@
     <IsPackable>true</IsPackable>
     <PackageId>JsonAssertions.TUnit</PackageId>
     <ProductName>JsonAssertions.TUnit</ProductName>
-    <Version>0.6.2</Version>
+    <Version>0.7.0</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
-    <Description>TUnit-native JSON assertions for .NET tests. Fluent .Method(...) entry points (generated via TUnit's [GenerateAssertion]) for asserting paths, values, and shapes against a JSON string, a System.Text.Json JsonElement, or an HttpResponseMessage. Supports nested property navigation, zero-based array indices (items[0].id), and the JSONPath root reference ($, $.user, $[0]); ships value-at-path (including long/ulong overloads that read string-encoded 64-bit integers such as Protobuf int64/uint64), kind, array-shape, non-empty-string, boolean, predicate, one-of, and IParsable&lt;T&gt;-via-string assertions. AOT-compatible, trimmable, no runtime reflection.</Description>
+    <Description>TUnit-native JSON assertions for .NET tests. Fluent entry points (generated via TUnit's [GenerateAssertion]) assert paths, values, and shapes against a JSON string, a System.Text.Json JsonElement, or an HttpResponseMessage body, and a failure says where the path stopped. Paths take zero-based indices (items[0].id), the [*] wildcard, and the JSONPath root reference ($); one assertion can check several paths. Also ships whole-document equivalence and subset matching with ignored paths and unordered arrays, typed extraction of one value or every value of a list, RFC 7807 ProblemDetails and ValidationProblemDetails assertions, and source-generated JsonSerializerContext checks (HasJsonTypeInfoFor, RoundtripsCleanlyVia). AOT-compatible, trimmable, no runtime reflection.</Description>
     <PackageTags>tunit;assertions;testing;json;dotnet;aot</PackageTags>
     <PackageProjectUrl>https://jsonassertions.dev</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -35,11 +35,11 @@
          catches binary breaks at pack time. Each minor version bumps the baseline to the
          immediately previous shipped version; CompatibilitySuppressions.xml is regenerated
          alongside to capture the accepted additive surface from that baseline. Current baseline:
-         0.6.1 (the immediately previous shipped version). -->
+         0.6.2 (the immediately previous shipped version). -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.6.1</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.6.2</PackageValidationBaselineVersion>
     <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
     <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
     <ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>

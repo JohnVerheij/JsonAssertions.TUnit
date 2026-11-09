@@ -15,13 +15,15 @@ public readonly record struct JsonPathResolution
         JsonElement element,
         string resolvedPrefix,
         string? failedSegment,
-        JsonValueKind containerKind)
+        JsonValueKind containerKind,
+        int containerLength)
     {
         Found = found;
         Element = element;
         ResolvedPrefix = resolvedPrefix;
         FailedSegment = failedSegment;
         ContainerKind = containerKind;
+        ContainerLength = containerLength;
     }
 
     /// <summary>Whether the full path resolved to an existing property.</summary>
@@ -50,14 +52,19 @@ public readonly record struct JsonPathResolution
     /// <see langword="false"/>.</summary>
     public JsonValueKind ContainerKind { get; }
 
+    /// <summary>The number of elements of the array at <see cref="ResolvedPrefix"/> when an index into it was out of
+    /// range, so a failure can say how many there are; 0 for any other outcome.</summary>
+    internal int ContainerLength { get; }
+
     /// <summary>Creates a successful resolution carrying the resolved <paramref name="element"/>.</summary>
     internal static JsonPathResolution Resolved(JsonElement element, string path)
-        => new(found: true, element, path, failedSegment: null, element.ValueKind);
+        => new(found: true, element, path, failedSegment: null, element.ValueKind, containerLength: 0);
 
     /// <summary>Creates a failed resolution carrying the failure-point context.</summary>
     internal static JsonPathResolution NotFound(
         string resolvedPrefix,
         string failedSegment,
-        JsonValueKind containerKind)
-        => new(found: false, default, resolvedPrefix, failedSegment, containerKind);
+        JsonValueKind containerKind,
+        int containerLength = 0)
+        => new(found: false, default, resolvedPrefix, failedSegment, containerKind, containerLength);
 }

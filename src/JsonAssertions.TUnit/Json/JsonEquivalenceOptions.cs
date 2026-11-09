@@ -16,7 +16,7 @@ public sealed class JsonEquivalenceOptions
     /// <summary>The JSON paths excluded from the comparison, in registration order. Each is resolved
     /// (wildcards expanded) against both documents; a value at an ignored path contributes nothing to
     /// equivalence, whether it is present, absent, or differs. Returned as a read-only view; register
-    /// paths through <see cref="IgnorePath"/> so the non-empty validation is enforced.</summary>
+    /// paths through <see cref="IgnorePath"/> so the path is validated.</summary>
     public IReadOnlyList<string> IgnoredPaths => _ignoredPaths.AsReadOnly();
 
     /// <summary>Whether arrays are compared without regard to element order. Off by default: arrays
@@ -31,12 +31,13 @@ public sealed class JsonEquivalenceOptions
     /// Combining a positional array-index path with <see cref="IgnoreArrayOrder"/> is not meaningful,
     /// since order-insensitive matching makes indices ambiguous; use the <c>[*]</c> wildcard to ignore
     /// a field across all elements instead.</summary>
-    /// <param name="path">The JSON path to ignore. Must be non-empty.</param>
+    /// <param name="path">The JSON path to ignore.</param>
     /// <returns>This instance, for chaining.</returns>
-    /// <exception cref="ArgumentException"><paramref name="path"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is null, empty, whitespace, or malformed (see
+    /// <see cref="JsonPath.Resolve"/>); it is checked here, when it is registered.</exception>
     public JsonEquivalenceOptions IgnorePath(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        JsonPath.Validate(path);
         _ignoredPaths.Add(path);
         return this;
     }

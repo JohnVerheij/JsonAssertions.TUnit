@@ -41,7 +41,7 @@ internal sealed class JsonContainsAssertionsTests
             await Assert.That("""{"status":"Healthy"}""").ContainsJson("""{"status":"Healthy","version":"1.2"}"""))
             .Throws<AssertionException>();
         await Assert.That(ex!.Message).Contains("\"version\"", StringComparison.Ordinal);
-        await Assert.That(ex.Message).Contains("property missing", StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains("at 'version' the property is missing from the actual document\n    expected: \"1.2\"\n    actual:   absent", StringComparison.Ordinal);
     }
 
     [Test]
@@ -99,7 +99,7 @@ internal sealed class JsonContainsAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"a":{"b":1}}""").ContainsJson("""{"a":{"b":2}}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"a.b\"", StringComparison.Ordinal);
+        await Assert.That(ex!.Message).Contains("but 1 path differs:\n  at 'a.b' the value differs\n    expected: 2\n    actual:   1", StringComparison.Ordinal);
         await Assert.That(ex.Message).Contains("value differs", StringComparison.Ordinal);
     }
 
@@ -164,7 +164,7 @@ internal sealed class JsonContainsAssertionsTests
             await Assert.That("""{"items":[{"type":"x"}]}""")
                 .ContainsJson("""{"items":[{"type":"x"},{"type":"y"}]}""", o => o.IgnoreArrayOrder()))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("no equivalent element", StringComparison.Ordinal);
+        await Assert.That(ex!.Message).Contains("at 'items[1]' no element of the actual array is equivalent\n    expected: {\"type\":\"y\"}\n\n", StringComparison.Ordinal);
     }
 
     [Test]
@@ -212,7 +212,7 @@ internal sealed class JsonContainsAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That(response).ContainsJson("""{"a":1}""", ct))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("parseable JSON", StringComparison.Ordinal);
+        await Assert.That(ex!.Message).Contains("but the value is not valid JSON: ", StringComparison.Ordinal);
     }
 
     [Test]
@@ -222,7 +222,7 @@ internal sealed class JsonContainsAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"a":1}""").ContainsJson("{ not json"))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("expected JSON to be parseable", StringComparison.Ordinal);
+        await Assert.That(ex!.Message).Contains("but the expected document is not valid JSON: ", StringComparison.Ordinal);
     }
 
     [Test]

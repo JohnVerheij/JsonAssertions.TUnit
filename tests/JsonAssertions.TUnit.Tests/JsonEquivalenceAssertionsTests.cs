@@ -100,10 +100,7 @@ internal sealed class JsonEquivalenceAssertionsTests
     public async Task ZeroAgainstBeyondDoubleRange_TerminatesAndIsNotEquivalent(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // Zero reaches canonicalization only when the other operand is non-finite as a double (1e400
-        // reads as +Infinity, so the double path is skipped). The zero guard keeps the trailing-zero
-        // loop terminating; the values are distinct, so they must not be equated. Without the guard
-        // this assertion would hang and trip the timeout.
+        // Zero has a single normalized form with no digits, which must not be confused with 1e400.
         var ex = await Assert.That(async () =>
             await Assert.That("""{"n":0}""").IsEquivalentJsonTo("""{"n":1e400}"""))
             .Throws<AssertionException>();
@@ -111,12 +108,14 @@ internal sealed class JsonEquivalenceAssertionsTests
     }
 
     [Test]
-    public async Task BeyondDoubleRange_ExponentOverflowingInt_FallsBackToRawText(CancellationToken ct)
+    public async Task BeyondDoubleRange_ExponentOverflowingInt_ComparesByValue(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // An exponent that overflows Int32 cannot canonicalize, so equality falls back to raw text:
-        // identical literals still match, and differing ones do not.
+        // An exponent beyond Int32 range still compares by value, not by text: 0.6.2 fell back to raw-text equality,
+        // so 1e9999999999 and 10e9999999998 differed there.
         await Assert.That("""{"n":1e9999999999}""").IsEquivalentJsonTo("""{"n":1e9999999999}""");
+        await Assert.That("""{"n":1e9999999999}""").IsEquivalentJsonTo("""{"n":10e9999999998}""");
+        await Assert.That("""{"n":1e9999999999}""").IsEquivalentJsonTo("""{"n":0.1e+10000000000}""");
         await Assert.That(async () =>
             await Assert.That("""{"n":1e9999999999}""").IsEquivalentJsonTo("""{"n":2e9999999999}"""))
             .Throws<AssertionException>();
@@ -137,7 +136,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"user":{"name":"alice"}}""").IsEquivalentJsonTo("""{"user":{"name":"bob"}}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"user.name\": value differs");
+        await Assert.That(ex!.Message).Contains("but at 'user.name' the value differs\n  expected: \"bob\"\n  actual:   \"alice\"");
         await Assert.That(ex.Message).Contains("expected: \"bob\"");
         await Assert.That(ex.Message).Contains("actual:   \"alice\"");
     }
@@ -149,9 +148,39 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"a":{"x":1}}""").IsEquivalentJsonTo("""{"a":[1,2]}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"a\": JSON kind differs");
+        await Assert.That(ex!.Message).Contains("but at 'a' the JSON kind differs\n  expected: [1,2]\n  actual:   {\"x\":1}");
         await Assert.That(ex.Message).Contains("expected: [1,2]");   // array raw text, not "an array"
         await Assert.That(ex.Message).Contains("actual:   {\"x\":1}"); // object raw text, not "an object"
+    }
+
+    /// <summary>A difference shows its values as JSON literals: a string escaped, and a container from an indented
+    /// document written compactly on one line, non-ASCII text kept as it is.</summary>
+    [Test]
+    public async Task Difference_RendersValuesAsOneLineJsonLiterals(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        const string Indented = "{\n  \"a\": {\n    \"name\": \"Zoë\",\n    \"q\": \"a \\\"b\\\\\",\n    \"n\": [1, 2]\n  },\n  \"s\": \"say \\\"hi\\\"\"\n}";
+
+        var container = await Assert.That(async () => await Assert.That(Indented).IsEquivalentJsonTo("""{"a":[1],"s":"say \"hi\""}"""))
+            .Throws<AssertionException>();
+        var text = await Assert.That(async () => await Assert.That(Indented).ContainsJson("""{"s":"say hi"}"""))
+            .Throws<AssertionException>();
+
+        await Assert.That(container!.Message).Contains("  actual:   {\"name\":\"Zoë\",\"q\":\"a \\\"b\\\\\",\"n\":[1,2]}\n");
+        await Assert.That(text!.Message).Contains("    expected: \"say hi\"\n    actual:   \"say \\\"hi\\\"\"\n");
+    }
+
+    /// <summary>The options are built before the default-element check, so a malformed <c>IgnorePath</c> throws
+    /// whatever the element holds.</summary>
+    [Test]
+    public async Task MalformedIgnorePath_ThrowsAlsoOnADefaultElement(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        await Assert.That(async () => await Assert.That(default(JsonElement)).IsEquivalentJsonTo("{}", static o => o.IgnorePath("a..b")))
+            .Throws<ArgumentException>();
+        await Assert.That(async () => await Assert.That(default(JsonElement)).ContainsJson("{}", static o => o.IgnorePath("a..b")))
+            .Throws<ArgumentException>();
     }
 
     [Test]
@@ -161,7 +190,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"ok":false}""").IsEquivalentJsonTo("""{"ok":true}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"ok\": value differs");
+        await Assert.That(ex!.Message).Contains("but at 'ok' the value differs\n  expected: true\n  actual:   false");
         await Assert.That(ex.Message).Contains("expected: true");
         await Assert.That(ex.Message).Contains("actual:   false");
     }
@@ -180,7 +209,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"n":1}""").IsEquivalentJsonTo("""{"n":null}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"n\": JSON kind differs");
+        await Assert.That(ex!.Message).Contains("but at 'n' the JSON kind differs");
         await Assert.That(ex.Message).Contains("expected: null");
         await Assert.That(ex.Message).Contains("actual:   1");
     }
@@ -192,7 +221,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"a":1}""").IsEquivalentJsonTo("""{"a":1,"b":2}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"b\": property missing in the actual document");
+        await Assert.That(ex!.Message).Contains("but at 'b' the property is missing from the actual document\n  expected: 2\n  actual:   absent");
         await Assert.That(ex.Message).Contains("actual:   absent");
     }
 
@@ -203,7 +232,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"a":1,"b":2}""").IsEquivalentJsonTo("""{"a":1}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"b\": unexpected property in the actual document");
+        await Assert.That(ex!.Message).Contains("but at 'b' the property is not in the expected document\n  expected: absent\n  actual:   2");
         await Assert.That(ex.Message).Contains("expected: absent");
     }
 
@@ -214,7 +243,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("\"x\"").IsEquivalentJsonTo("\"y\""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("at the root: value differs");
+        await Assert.That(ex!.Message).Contains("but at the root the value differs");
     }
 
     [Test]
@@ -224,7 +253,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"a":[1,2,3]}""").IsEquivalentJsonTo("""{"a":[3,2,1]}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"a[0]\": value differs");
+        await Assert.That(ex!.Message).Contains("but at 'a[0]' the value differs");
     }
 
     [Test]
@@ -242,7 +271,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""[1,2,4]""").IsEquivalentJsonTo("""[1,2,3]""", o => o.IgnoreArrayOrder()))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("no equivalent element in the actual array");
+        await Assert.That(ex!.Message).Contains("but at '[2]' no element of the actual array is equivalent\n  expected: 3\n\n");
     }
 
     [Test]
@@ -252,7 +281,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"a":[1,2]}""").IsEquivalentJsonTo("""{"a":[1,2,3]}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("\"a\": array length differs");
+        await Assert.That(ex!.Message).Contains("but at 'a' the array length differs\n  expected: 3 element(s)\n  actual:   2 element(s)");
         await Assert.That(ex.Message).Contains("expected: 3 element(s)");
         await Assert.That(ex.Message).Contains("actual:   2 element(s)");
     }
@@ -364,7 +393,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("""{"a":1}""").IsEquivalentJsonTo("{not json"))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("expected JSON to be parseable");
+        await Assert.That(ex!.Message).Contains("but the expected document is not valid JSON: ");
     }
 
     [Test]
@@ -374,7 +403,7 @@ internal sealed class JsonEquivalenceAssertionsTests
         var ex = await Assert.That(async () =>
             await Assert.That("{not json").IsEquivalentJsonTo("""{"a":1}"""))
             .Throws<AssertionException>();
-        await Assert.That(ex!.Message).Contains("parseable JSON");
+        await Assert.That(ex!.Message).Contains("but the value is not valid JSON: ");
     }
 
     [Test]

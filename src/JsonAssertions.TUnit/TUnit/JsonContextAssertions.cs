@@ -66,7 +66,7 @@ public static class JsonContextAssertions
     public static HasJsonTypeInfoForAssertion<T> HasJsonTypeInfoFor<T>(this IJsonContextAssertionSource source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        source.Context.ExpressionBuilder.Append(".HasJsonTypeInfoFor()");
+        source.Context.ExpressionBuilder.Append(".HasJsonTypeInfoFor<").Append(typeof(T).Name).Append(">()");
         return new HasJsonTypeInfoForAssertion<T>(source.Context);
     }
 }

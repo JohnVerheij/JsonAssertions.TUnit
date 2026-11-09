@@ -28,7 +28,7 @@ public sealed class HasJsonTypeInfoForAssertion<T> : Assertion<JsonSerializerCon
         }
         if (value is null)
         {
-            return Task.FromResult(AssertionResult.Failed("Actual value is null"));
+            return Task.FromResult(AssertionResult.Failed("the context is null"));
         }
         return Task.FromResult(value.GetTypeInfo(typeof(T)) is not null
             ? AssertionResult.Passed

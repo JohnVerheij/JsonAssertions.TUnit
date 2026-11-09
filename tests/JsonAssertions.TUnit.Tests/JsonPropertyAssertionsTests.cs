@@ -43,8 +43,7 @@ internal sealed class JsonPropertyAssertionsTests
             await Assert.That(SampleJson).HasJsonProperty("user.email");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: user");
-        await Assert.That(ex.Message).Contains("no property \"email\" on \"user\"");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user', which has no property 'email'");
     }
 
     [Test]
@@ -56,8 +55,7 @@ internal sealed class JsonPropertyAssertionsTests
             await Assert.That(SampleJson).HasJsonProperty("account");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: (root)");
-        await Assert.That(ex.Message).Contains("no property \"account\" on the root");
+        await Assert.That(ex!.Message).Contains("but resolved as far as the root, which has no property 'account'");
     }
 
     [Test]
@@ -69,7 +67,7 @@ internal sealed class JsonPropertyAssertionsTests
             await Assert.That(SampleJson).HasJsonProperty("user.name.first");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("cannot read property \"first\"");
+        await Assert.That(ex!.Message).Contains("but resolved as far as 'user.name', which is a String, not an object");
         await Assert.That(ex.Message).Contains("is a String, not an object");
     }
 
@@ -82,7 +80,7 @@ internal sealed class JsonPropertyAssertionsTests
             await Assert.That("[1,2,3]").HasJsonProperty("user");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("the root is an Array, not an object");
+        await Assert.That(ex!.Message).Contains("but resolved as far as the root, which is an Array, not an object");
     }
 
     [Test]
@@ -110,20 +108,20 @@ internal sealed class JsonPropertyAssertionsTests
             await Assert.That(SampleJson).DoesNotHaveJsonProperty("user.name");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but a String exists at that path");
+        await Assert.That(ex!.Message).Contains("but found \"alice\"");
     }
 
-    /// <summary><c>DoesNotHaveJsonProperty</c> does not expand <c>[*]</c>: it passes when resolution stops
-    /// before the wildcard, and throws <see cref="System.ArgumentException"/> when resolution reaches it.</summary>
+    /// <summary><c>DoesNotHaveJsonProperty</c> does not expand <c>[*]</c>, so it rejects the wildcard up front with
+    /// <see cref="System.ArgumentException"/>, whether or not the document reaches it: a vacuous pass on
+    /// <c>missing[*]</c> would claim an absence nobody checked.</summary>
     [Test]
-    public async Task DoesNotHaveJsonProperty_Wildcard_PassesBeforeItAndThrowsAtIt(CancellationToken ct)
+    public async Task DoesNotHaveJsonProperty_Wildcard_ThrowsWhereverResolutionWouldStop(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        await Assert.That("{}").DoesNotHaveJsonProperty("missing[*]");
 
-        await Assert.That(async () =>
-        {
-            await Assert.That("{\"items\":[{\"a\":1}]}").DoesNotHaveJsonProperty("items[*].b");
-        }).Throws<System.ArgumentException>();
+        await Assert.That(async () => await Assert.That("{}").DoesNotHaveJsonProperty("missing[*]"))
+            .Throws<System.ArgumentException>();
+        await Assert.That(async () => await Assert.That("{\"items\":[{\"a\":1}]}").DoesNotHaveJsonProperty("items[*].b"))
+            .Throws<System.ArgumentException>();
     }
 }

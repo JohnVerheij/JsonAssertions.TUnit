@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
+using System.Text;
 using System.Text.Json;
 
 namespace JsonAssertions;
@@ -35,8 +36,8 @@ public static class JsonEquivalence
         ArgumentNullException.ThrowIfNull(actual);
         ArgumentNullException.ThrowIfNull(options);
 
-        using var expectedDocument = JsonDocument.Parse(expected);
-        using var actualDocument = JsonDocument.Parse(actual);
+        using var expectedDocument = JsonText.Parse(expected);
+        using var actualDocument = JsonText.Parse(actual);
         return Compare(expectedDocument.RootElement, actualDocument.RootElement, options);
     }
 
@@ -71,8 +72,8 @@ public static class JsonEquivalence
         ArgumentNullException.ThrowIfNull(actual);
         ArgumentNullException.ThrowIfNull(options);
 
-        using var expectedDocument = JsonDocument.Parse(expected);
-        using var actualDocument = JsonDocument.Parse(actual);
+        using var expectedDocument = JsonText.Parse(expected);
+        using var actualDocument = JsonText.Parse(actual);
         return ContainsAll(expectedDocument.RootElement, actualDocument.RootElement, options);
     }
 
@@ -140,75 +141,100 @@ public static class JsonEquivalence
             return null;
         }
 
-        if (expected.ValueKind != actual.ValueKind)
-        {
-            // True and False are distinct value kinds but the same JSON type, so a differing boolean
-            // is a value difference, not a kind difference.
-            var kind = IsBoolean(expected.ValueKind) && IsBoolean(actual.ValueKind)
-                ? JsonDifferenceKind.Value
-                : JsonDifferenceKind.Kind;
-            return Report(new JsonDifference(path, kind, RenderValue(expected), RenderValue(actual)), sink);
-        }
+        return expected.ValueKind == actual.ValueKind
+            ? CompareSameKind(expected, actual, path, options, ignored, subset, sink)
+            : Report(KindDifference(expected, actual, path), sink);
+    }
 
-        return expected.ValueKind switch
+    /// <summary>The difference between two elements of different value kinds. True and False are distinct value
+    /// kinds but the same JSON type, so a differing boolean is a value difference, not a kind difference.</summary>
+    private static JsonDifference KindDifference(JsonElement expected, JsonElement actual, string path)
+    {
+        var kind = IsBoolean(expected.ValueKind) && IsBoolean(actual.ValueKind)
+            ? JsonDifferenceKind.Value
+            : JsonDifferenceKind.Kind;
+        return new JsonDifference(path, kind, RenderValue(expected), RenderValue(actual));
+    }
+
+    private static JsonDifference? CompareSameKind(
+        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
+        => expected.ValueKind switch
         {
             JsonValueKind.Object => CompareObject(expected, actual, path, options, ignored, subset, sink),
-            JsonValueKind.Array => options.IgnoreArrayOrderEnabled
-                ? CompareArrayUnordered(expected, actual, path, options, ignored, subset, sink)
-                : CompareArrayOrdered(expected, actual, path, options, ignored, subset, sink),
-            JsonValueKind.Number => NumbersEqual(expected, actual)
-                ? null
-                : Report(new JsonDifference(path, JsonDifferenceKind.Value, RenderValue(expected), RenderValue(actual)), sink),
-            JsonValueKind.String => string.Equals(expected.GetString(), actual.GetString(), StringComparison.Ordinal)
-                ? null
-                : Report(new JsonDifference(path, JsonDifferenceKind.Value, RenderValue(expected), RenderValue(actual)), sink),
+            JsonValueKind.Array => CompareArray(expected, actual, path, options, ignored, subset, sink),
+            JsonValueKind.Number or JsonValueKind.String => CompareScalar(expected, actual, path, sink),
             _ => null, // True / False / Null: equal value kinds already imply equal values.
         };
+
+    private static JsonDifference? CompareArray(
+        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
+        => options.IgnoreArrayOrderEnabled
+            ? CompareArrayUnordered(expected, actual, path, options, ignored, subset, sink)
+            : CompareArrayOrdered(expected, actual, path, options, ignored, subset, sink);
+
+    /// <summary>Compares two numbers or two strings of the same value kind.</summary>
+    private static JsonDifference? CompareScalar(JsonElement expected, JsonElement actual, string path, List<JsonDifference>? sink)
+    {
+        var equal = expected.ValueKind is JsonValueKind.Number
+            ? NumbersEqual(expected, actual)
+            : string.Equals(expected.GetString(), actual.GetString(), StringComparison.Ordinal);
+        return equal
+            ? null
+            : Report(new JsonDifference(path, JsonDifferenceKind.Value, RenderValue(expected), RenderValue(actual)), sink);
     }
 
     private static JsonDifference? CompareObject(
         JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
     {
+        // The reverse pass (flagging actual-only properties) applies to full equivalence only; a
+        // subset match permits the actual document to carry properties beyond the expected set.
+        return CompareExpectedProperties(expected, actual, path, options, ignored, subset, sink)
+            ?? (subset ? null : CompareUnexpectedProperties(expected, actual, path, ignored, sink));
+    }
+
+    private static JsonDifference? CompareExpectedProperties(
+        JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
+    {
         foreach (var property in expected.EnumerateObject())
         {
-            var childPath = ChildPath(path, property.Name);
-            if (ignored.Contains(childPath))
-            {
-                continue;
-            }
-
-            if (!actual.TryGetProperty(property.Name, out var actualValue))
-            {
-                var missing = Report(new JsonDifference(childPath, JsonDifferenceKind.MissingProperty, RenderValue(property.Value), "absent"), sink);
-                if (missing is not null)
-                {
-                    return missing;
-                }
-
-                continue;
-            }
-
-            var difference = CompareElement(property.Value, actualValue, childPath, options, ignored, subset, sink);
+            var difference = CompareProperty(property, actual, path, options, ignored, subset, sink);
             if (difference is not null)
             {
                 return difference;
             }
         }
 
-        // The reverse pass (flagging actual-only properties) applies to full equivalence only; a
-        // subset match permits the actual document to carry properties beyond the expected set.
-        if (!subset)
+        return null;
+    }
+
+    /// <summary>Compares one expected property with the actual object: skipped when its path is ignored, reported
+    /// when the actual object lacks it, compared recursively otherwise.</summary>
+    private static JsonDifference? CompareProperty(
+        JsonProperty property, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
+    {
+        var childPath = ChildPath(path, property.Name);
+        if (ignored.Contains(childPath))
         {
-            foreach (var property in actual.EnumerateObject())
+            return null;
+        }
+
+        return actual.TryGetProperty(property.Name, out var actualValue)
+            ? CompareElement(property.Value, actualValue, childPath, options, ignored, subset, sink)
+            : Report(new JsonDifference(childPath, JsonDifferenceKind.MissingProperty, RenderValue(property.Value), "absent"), sink);
+    }
+
+    private static JsonDifference? CompareUnexpectedProperties(
+        JsonElement expected, JsonElement actual, string path, HashSet<string> ignored, List<JsonDifference>? sink)
+    {
+        foreach (var property in actual.EnumerateObject())
+        {
+            var childPath = ChildPath(path, property.Name);
+            if (!ignored.Contains(childPath) && !expected.TryGetProperty(property.Name, out _))
             {
-                var childPath = ChildPath(path, property.Name);
-                if (!ignored.Contains(childPath) && !expected.TryGetProperty(property.Name, out _))
+                var unexpected = Report(new JsonDifference(childPath, JsonDifferenceKind.UnexpectedProperty, "absent", RenderValue(property.Value)), sink);
+                if (unexpected is not null)
                 {
-                    var unexpected = Report(new JsonDifference(childPath, JsonDifferenceKind.UnexpectedProperty, "absent", RenderValue(property.Value)), sink);
-                    if (unexpected is not null)
-                    {
-                        return unexpected;
-                    }
+                    return unexpected;
                 }
             }
         }
@@ -394,83 +420,57 @@ public static class JsonEquivalence
             (subset ? "at least " : string.Empty) + expectedCount.ToString(CultureInfo.InvariantCulture) + " element(s)",
             actualCount.ToString(CultureInfo.InvariantCulture) + " element(s)");
 
+    /// <summary>Compares two JSON numbers exactly, by value: <c>1</c>, <c>1.0</c>, <c>10e-1</c> and <c>1E+0</c> are
+    /// equal, and so are <c>-0</c> and <c>0</c>; no literal is rounded to a binary or decimal type first. Two integer
+    /// literals that both fit in a <see cref="long"/> compare as longs, with no allocation; every other pair compares
+    /// in normalized form.</summary>
     private static bool NumbersEqual(JsonElement a, JsonElement b)
-    {
-        if (a.TryGetDecimal(out var da) && b.TryGetDecimal(out var db))
-        {
-            return da == db;
-        }
-
-        // Beyond decimal range: compare the literals in a canonical (sign, significand, exponent) form.
-        // This keeps number-form independence (1e400 == 1E400 == 10e399) and, unlike a double compare,
-        // does not equate distinct values that round to the same binary64 (for example 1e29 and
-        // 1e29 + 1 both collapse to 1e29 as a double). Falls back to raw-text equality only if a literal
-        // fails to canonicalize (an exponent beyond int range); the document already parsed as valid JSON.
-        var rawA = a.GetRawText();
-        var rawB = b.GetRawText();
-        return TryCanonicalizeNumber(rawA, out var canonicalA)
-            && TryCanonicalizeNumber(rawB, out var canonicalB)
-            ? canonicalA.Equals(canonicalB)
-            : string.Equals(rawA, rawB, StringComparison.Ordinal);
-    }
+        => a.TryGetInt64(out var left) && b.TryGetInt64(out var right)
+            ? left == right
+            : NormalizedNumber.From(a.GetRawText()) == NormalizedNumber.From(b.GetRawText());
 
     /// <summary>
-    /// Parses a JSON number literal into a canonical <c>(sign, significand, exponent)</c> form: the
-    /// significand is a non-negative <see cref="BigInteger"/> with trailing zeros stripped and the
-    /// exponent adjusted, so two literals denoting the same value canonicalize identically regardless
-    /// of exponent case, scientific-form normalization, or insignificant zeros. Zero canonicalizes to
-    /// a positive sign with a zero significand and exponent.
+    /// A JSON number literal in normalized form: the sign, the significant digits with no leading or trailing zero, and
+    /// the exponent of the last of them. Two literals denote the same value exactly when their normalized forms are
+    /// equal; zero has one form (positive, no digits). The form is built from the literal's text with no arithmetic on
+    /// the significand and no power of ten: the significand costs time linear in its length, and only the exponent is
+    /// parsed as a number, so a hostile literal (a long run of zeros, a huge exponent) cannot hang the comparison.
     /// </summary>
-    private static bool TryCanonicalizeNumber(string literal, out (int Sign, BigInteger Significand, int Exponent) canonical)
+    /// <param name="Negative">Whether the value is below zero.</param>
+    /// <param name="Digits">The significant digits.</param>
+    /// <param name="Exponent">The power of ten of the last significant digit.</param>
+    private readonly record struct NormalizedNumber(bool Negative, string Digits, BigInteger Exponent)
     {
-        canonical = default;
-
-        var mantissa = literal;
-        var exponent = 0;
-        var eIndex = literal.IndexOfAny(['e', 'E']);
-        if (eIndex >= 0)
+        /// <summary>Normalizes <paramref name="literal"/>, a valid JSON number literal.</summary>
+        /// <param name="literal">The literal, as <see cref="JsonElement.GetRawText"/> returns it.</param>
+        /// <returns>The normalized form.</returns>
+        public static NormalizedNumber From(string literal)
         {
-            if (!int.TryParse(literal.AsSpan(eIndex + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out exponent))
-                return false;
-            mantissa = literal[..eIndex];
-        }
+            var text = literal.AsSpan();
+            var negative = text[0] is '-';
+            if (negative)
+            {
+                text = text[1..];
+            }
 
-        var sign = 1;
-        if (mantissa.StartsWith('-'))
-        {
-            sign = -1;
-            mantissa = mantissa[1..];
-        }
+            var exponentAt = text.IndexOfAny('e', 'E');
+            var exponent = exponentAt < 0
+                ? BigInteger.Zero
+                : BigInteger.Parse(text[(exponentAt + 1)..], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+            var mantissa = exponentAt < 0 ? text : text[..exponentAt];
+            var dot = mantissa.IndexOf('.');
+            var digits = dot < 0 ? mantissa.ToString() : string.Concat(mantissa[..dot], mantissa[(dot + 1)..]);
+            if (dot >= 0)
+            {
+                exponent -= mantissa.Length - dot - 1;
+            }
 
-        var dotIndex = mantissa.IndexOf('.', StringComparison.Ordinal);
-        if (dotIndex >= 0)
-        {
-            var fractionLength = mantissa.Length - dotIndex - 1;
-            exponent -= fractionLength;
-            mantissa = string.Concat(mantissa.AsSpan(0, dotIndex), mantissa.AsSpan(dotIndex + 1));
+            var significant = digits.AsSpan().TrimStart('0');
+            var trimmed = significant.TrimEnd('0');
+            return trimmed.IsEmpty
+                ? new NormalizedNumber(Negative: false, string.Empty, BigInteger.Zero)
+                : new NormalizedNumber(negative, trimmed.ToString(), exponent + (significant.Length - trimmed.Length));
         }
-
-        // The mantissa is now a non-empty digit string (JSON guarantees a leading integer digit), so
-        // Parse cannot throw. A zero can still reach here: NumbersEqual only canonicalizes when an
-        // operand is non-finite as a double (for example zero compared against 1e400), so a zero
-        // literal paired with an extreme-magnitude one is canonicalized. Guard it explicitly, both to
-        // give zero a single canonical form (positive sign, regardless of a "-0" literal) and to keep
-        // the trailing-zero loop terminating.
-        var significand = BigInteger.Parse(mantissa, NumberStyles.None, CultureInfo.InvariantCulture);
-        if (significand.IsZero)
-        {
-            canonical = (1, BigInteger.Zero, 0);
-            return true;
-        }
-
-        while (significand % 10 == 0)
-        {
-            significand /= 10;
-            exponent++;
-        }
-
-        canonical = (sign, significand, exponent);
-        return true;
     }
 
     private static bool IsBoolean(JsonValueKind kind) => kind is JsonValueKind.True or JsonValueKind.False;
@@ -481,15 +481,42 @@ public static class JsonEquivalence
     private static string ChildIndex(string path, int index)
         => string.Concat(path, "[", index.ToString(CultureInfo.InvariantCulture), "]");
 
+    /// <summary>Renders a value as a JSON literal for a difference: a string quoted and escaped, an object or array
+    /// written compactly on one line, each truncated when long.</summary>
     private static string RenderValue(JsonElement element) => element.ValueKind switch
     {
-        JsonValueKind.Object or JsonValueKind.Array => Truncate(element.GetRawText()),
-        JsonValueKind.String => "\"" + Truncate(element.GetString()!) + "\"",
+        JsonValueKind.Object or JsonValueKind.Array => Truncate(Compact(element.GetRawText())),
+        JsonValueKind.String => JsonFailureMessage.Quote(Truncate(element.GetString()!)),
         JsonValueKind.Number => element.GetRawText(),
         JsonValueKind.True => "true",
         JsonValueKind.False => "false",
         _ => "null", // Null (Undefined cannot occur for a parsed element)
     };
+
+    /// <summary>Drops the white space between the tokens of a container's raw JSON, so an indented document renders on
+    /// one line; strings, their escapes and their non-ASCII text stay exactly as written.</summary>
+    private static string Compact(string raw)
+    {
+        var sb = new StringBuilder(raw.Length);
+        var inString = false;
+        var escaped = false;
+        foreach (var c in raw)
+        {
+            if (inString)
+            {
+                sb.Append(c);
+                inString = escaped || c != '"';
+                escaped = !escaped && c == '\\';
+            }
+            else if (!char.IsWhiteSpace(c))
+            {
+                sb.Append(c);
+                inString = c == '"';
+            }
+        }
+
+        return sb.ToString();
+    }
 
     private static string Truncate(string value)
         => value.Length <= MaxRenderedLength ? value : value[..MaxRenderedLength] + "...";

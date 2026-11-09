@@ -26,8 +26,7 @@ internal sealed class JsonParseFailureTests
             await Assert.That(Malformed).HasJsonProperty("user");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("the asserted value to be parseable JSON");
-        await Assert.That(ex.Message).Contains("but parsing failed:");
+        await Assert.That(ex!.Message).Contains("but the value is not valid JSON: ");
     }
 
     [Test]
@@ -40,7 +39,7 @@ internal sealed class JsonParseFailureTests
             await Assert.That(Malformed).DoesNotHaveJsonProperty("user");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but parsing failed:");
+        await Assert.That(ex!.Message).Contains("but the value is not valid JSON: ");
     }
 
     [Test]
@@ -52,7 +51,7 @@ internal sealed class JsonParseFailureTests
             await Assert.That(Malformed).HasJsonValue("user", "alice");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but parsing failed:");
+        await Assert.That(ex!.Message).Contains("but the value is not valid JSON: ");
     }
 
     [Test]
@@ -64,7 +63,7 @@ internal sealed class JsonParseFailureTests
             await Assert.That(Malformed).HasJsonArrayLength("user", 1);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but parsing failed:");
+        await Assert.That(ex!.Message).Contains("but the value is not valid JSON: ");
     }
 
     [Test]
@@ -76,6 +75,6 @@ internal sealed class JsonParseFailureTests
             await Assert.That(Malformed).HasJsonValueKind("user", JsonValueKind.Object);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("but parsing failed:");
+        await Assert.That(ex!.Message).Contains("but the value is not valid JSON: ");
     }
 }

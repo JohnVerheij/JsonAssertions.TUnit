@@ -28,7 +28,7 @@ public static class JsonContainsAssertions
     /// <summary>Asserts that the JSON string contains <paramref name="expectedSubset"/> as a subset.</summary>
     /// <param name="actual">The actual JSON document text.</param>
     /// <param name="expectedSubset">The expected subset document text.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.ContainsJson)]
     public static AssertionResult ContainsJson(this string actual, string expectedSubset)
         => ContainsJson(actual, expectedSubset, configure: null);
 
@@ -39,7 +39,7 @@ public static class JsonContainsAssertions
     /// <param name="expectedSubset">The expected subset document text.</param>
     /// <param name="configure">A callback that sets comparison options. May be
     /// <see langword="null"/> for the defaults.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.ContainsJson)]
     public static AssertionResult ContainsJson(this string actual, string expectedSubset, Action<JsonEquivalenceOptions>? configure)
     {
         ArgumentNullException.ThrowIfNull(expectedSubset);
@@ -50,7 +50,7 @@ public static class JsonContainsAssertions
     /// <summary>Asserts that the JSON element contains <paramref name="expectedSubset"/> as a subset.</summary>
     /// <param name="actual">The actual JSON element.</param>
     /// <param name="expectedSubset">The expected subset document text.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.ContainsJson)]
     public static AssertionResult ContainsJson(this JsonElement actual, string expectedSubset)
         => ContainsJson(actual, expectedSubset, configure: null);
 
@@ -61,12 +61,12 @@ public static class JsonContainsAssertions
     /// <param name="expectedSubset">The expected subset document text.</param>
     /// <param name="configure">A callback that sets comparison options. May be
     /// <see langword="null"/> for the defaults.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.ContainsJson)]
     public static AssertionResult ContainsJson(this JsonElement actual, string expectedSubset, Action<JsonEquivalenceOptions>? configure)
     {
         ArgumentNullException.ThrowIfNull(expectedSubset);
         var options = BuildOptions(configure);
-        return ContainsAgainst(actual, expectedSubset, options);
+        return JsonElementSource.Assert(actual, root => ContainsAgainst(root, expectedSubset, options));
     }
 
     /// <summary>Builds the comparison options, applying the optional configure callback. Shared with
@@ -92,7 +92,7 @@ public static class JsonContainsAssertions
         JsonDocument expectedDocument;
         try
         {
-            expectedDocument = JsonDocument.Parse(expectedSubset);
+            expectedDocument = JsonText.Parse(expectedSubset);
         }
         catch (JsonException exception)
         {

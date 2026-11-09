@@ -60,7 +60,7 @@ internal sealed partial class JsonRenderersTests
     }
 
     [Test]
-    public async Task ReformatJson_LiteralNullInput_CanonicalisesToNullLiteral(CancellationToken ct)
+    public async Task ReformatJson_LiteralNullInput_CanonicalizesToNullLiteral(CancellationToken ct)
     {
         // Input is the JSON literal "null"; the renderer must short-circuit to the "null"
         // literal rather than serializing default(T).
@@ -70,6 +70,19 @@ internal sealed partial class JsonRenderersTests
         var canonical = renderer("null");
 
         await Assert.That(canonical).IsEqualTo("null");
+    }
+
+    /// <summary>A string that starts with a byte order mark, as <c>Encoding.UTF8.GetString</c> keeps it, is read without
+    /// it, as at every other entry point that takes JSON text.</summary>
+    [Test]
+    public async Task ReformatJson_LeadingByteOrderMark_IsSkipped(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var renderer = JsonRenderers.ReformatJson(RendererTestJsonContext.Default.RendererTestDto);
+
+        var canonical = renderer("\uFEFF{\"Name\":\"alice\",\"Id\":42}");
+
+        await Assert.That(canonical).IsEqualTo("""{"Id":42,"Name":"alice"}""");
     }
 
     /// <summary>A small record used as the renderer's deserialization target.</summary>

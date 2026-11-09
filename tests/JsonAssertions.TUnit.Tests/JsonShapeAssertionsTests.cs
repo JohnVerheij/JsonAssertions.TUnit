@@ -44,8 +44,7 @@ internal sealed class JsonShapeAssertionsTests
             await Assert.That(SampleJson).HasJsonArrayLength("items", 5);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have a JSON array of length 5 at path \"items\"");
-        await Assert.That(ex.Message).Contains("found: an array of length 3");
+        await Assert.That(ex!.Message).Contains("Expected to have a JSON array of length 5 at path 'items'\nbut found an array of length 3");
     }
 
     [Test]
@@ -57,7 +56,7 @@ internal sealed class JsonShapeAssertionsTests
             await Assert.That(SampleJson).HasJsonArrayLength("name", 1);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("found: a String");
+        await Assert.That(ex!.Message).Contains("but found a String");
     }
 
     [Test]
@@ -69,7 +68,7 @@ internal sealed class JsonShapeAssertionsTests
             await Assert.That(SampleJson).HasJsonArrayLength("missing", 1);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("resolved as far as: (root)");
+        await Assert.That(ex!.Message).Contains("but resolved as far as the root, which has no property 'missing'");
     }
 
     [Test]
@@ -88,8 +87,7 @@ internal sealed class JsonShapeAssertionsTests
             await Assert.That(SampleJson).HasNonEmptyJsonArray("empty");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have a non-empty JSON array at path \"empty\"");
-        await Assert.That(ex.Message).Contains("found: an array of length 0");
+        await Assert.That(ex!.Message).Contains("Expected to have a non-empty JSON array at path 'empty'\nbut found an empty array");
     }
 
     [Test]
@@ -108,7 +106,7 @@ internal sealed class JsonShapeAssertionsTests
             await Assert.That(SampleJson).HasEmptyJsonArray("items");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have an empty JSON array at path \"items\"");
+        await Assert.That(ex!.Message).Contains("Expected to have an empty JSON array at path 'items'\nbut found an array of length 3");
     }
 
     [Test]
@@ -136,8 +134,7 @@ internal sealed class JsonShapeAssertionsTests
             await Assert.That(SampleJson).HasJsonValueKind("name", JsonValueKind.Array);
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have a JSON value of kind Array at path \"name\"");
-        await Assert.That(ex.Message).Contains("found: a String");
+        await Assert.That(ex!.Message).Contains("Expected to have a JSON value of kind Array at path 'name'\nbut found a String");
     }
 
     [Test]
@@ -156,7 +153,7 @@ internal sealed class JsonShapeAssertionsTests
             await Assert.That("""{"name":""}""").HasNonEmptyJsonString("name");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have a non-empty JSON string at path \"name\"");
+        await Assert.That(ex!.Message).Contains("Expected to have a non-empty JSON string at path 'name'\nbut found \"\"");
     }
 
     [Test]
@@ -182,7 +179,6 @@ internal sealed class JsonShapeAssertionsTests
             await Assert.That(SampleJson).HasJsonBoolean("name");
         }).Throws<AssertionException>();
 
-        await Assert.That(ex!.Message).Contains("to have a JSON boolean at path \"name\"");
-        await Assert.That(ex.Message).Contains("found: a String");
+        await Assert.That(ex!.Message).Contains("Expected to have a JSON boolean at path 'name'\nbut found \"alice\"");
     }
 }

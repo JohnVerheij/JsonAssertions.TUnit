@@ -53,7 +53,7 @@ public static class JsonCanonicalizer
         var options = new JsonCanonicalizeOptions();
         configure?.Invoke(options);
 
-        using var document = JsonDocument.Parse(json);
+        using var document = JsonText.Parse(json);
         var root = document.RootElement;
 
         var scrubPaths = new HashSet<string>(StringComparer.Ordinal);

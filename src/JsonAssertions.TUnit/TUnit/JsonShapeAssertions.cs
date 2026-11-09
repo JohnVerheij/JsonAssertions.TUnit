@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using JsonAssertions;
 using TUnit.Assertions.Attributes;
@@ -27,7 +26,7 @@ public static class JsonShapeAssertions
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.roles</c>.</param>
     /// <param name="expectedLength">The expected array length.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonArrayLength)]
     public static AssertionResult HasJsonArrayLength(this string json, string path, int expectedLength)
         => JsonStringSource.Assert(json, root => HasJsonArrayLength(root, path, expectedLength));
 
@@ -36,21 +35,23 @@ public static class JsonShapeAssertions
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.roles</c>.</param>
     /// <param name="expectedLength">The expected array length.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonArrayLength)]
     public static AssertionResult HasJsonArrayLength(this JsonElement element, string path, int expectedLength)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonShape.IsArrayOfLength(resolution.Element, expectedLength)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(
-                path, resolution, "a JSON array of length " + expectedLength.ToString(CultureInfo.InvariantCulture)));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonShape.IsArrayOfLength(resolution.Element, expectedLength)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundShape(resolution));
+        });
     }
 
     /// <summary>Asserts the value at the dot-separated <paramref name="path"/> is a JSON array
     /// with at least one element.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.roles</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasNonEmptyJsonArray)]
     public static AssertionResult HasNonEmptyJsonArray(this string json, string path)
         => JsonStringSource.Assert(json, root => HasNonEmptyJsonArray(root, path));
 
@@ -58,20 +59,23 @@ public static class JsonShapeAssertions
     /// with at least one element.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.roles</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasNonEmptyJsonArray)]
     public static AssertionResult HasNonEmptyJsonArray(this JsonElement element, string path)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonShape.IsNonEmptyArray(resolution.Element)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(path, resolution, "a non-empty JSON array"));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonShape.IsNonEmptyArray(resolution.Element)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundShape(resolution));
+        });
     }
 
     /// <summary>Asserts the value at the dot-separated <paramref name="path"/> is a JSON array
     /// with no elements.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.roles</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasEmptyJsonArray)]
     public static AssertionResult HasEmptyJsonArray(this string json, string path)
         => JsonStringSource.Assert(json, root => HasEmptyJsonArray(root, path));
 
@@ -79,13 +83,16 @@ public static class JsonShapeAssertions
     /// with no elements.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.roles</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasEmptyJsonArray)]
     public static AssertionResult HasEmptyJsonArray(this JsonElement element, string path)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonShape.IsEmptyArray(resolution.Element)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(path, resolution, "an empty JSON array"));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonShape.IsEmptyArray(resolution.Element)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundShape(resolution));
+        });
     }
 
     /// <summary>Asserts the value at the dot-separated <paramref name="path"/> is of the given
@@ -93,7 +100,7 @@ public static class JsonShapeAssertions
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.meta</c>.</param>
     /// <param name="expectedKind">The expected JSON value kind.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueKind)]
     public static AssertionResult HasJsonValueKind(this string json, string path, JsonValueKind expectedKind)
         => JsonStringSource.Assert(json, root => HasJsonValueKind(root, path, expectedKind));
 
@@ -102,21 +109,23 @@ public static class JsonShapeAssertions
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.meta</c>.</param>
     /// <param name="expectedKind">The expected JSON value kind.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueKind)]
     public static AssertionResult HasJsonValueKind(this JsonElement element, string path, JsonValueKind expectedKind)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonShape.IsKind(resolution.Element, expectedKind)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(
-                path, resolution, "a JSON value of kind " + expectedKind));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonShape.IsKind(resolution.Element, expectedKind)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundShape(resolution));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a non-empty JSON string.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>user.name</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasNonEmptyJsonString)]
     public static AssertionResult HasNonEmptyJsonString(this string json, string path)
         => JsonStringSource.Assert(json, root => HasNonEmptyJsonString(root, path));
 
@@ -124,13 +133,16 @@ public static class JsonShapeAssertions
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>user.name</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasNonEmptyJsonString)]
     public static AssertionResult HasNonEmptyJsonString(this JsonElement element, string path)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonShape.IsNonEmptyString(resolution.Element)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(path, resolution, "a non-empty JSON string"));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonShape.IsNonEmptyString(resolution.Element)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.Found(resolution));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a JSON boolean (either
@@ -141,7 +153,7 @@ public static class JsonShapeAssertions
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>user.active</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonBoolean)]
     public static AssertionResult HasJsonBoolean(this string json, string path)
         => JsonStringSource.Assert(json, root => HasJsonBoolean(root, path));
 
@@ -150,12 +162,15 @@ public static class JsonShapeAssertions
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>user.active</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonBoolean)]
     public static AssertionResult HasJsonBoolean(this JsonElement element, string path)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonShape.IsBoolean(resolution.Element)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ShapeMismatch(path, resolution, "a JSON boolean"));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonShape.IsBoolean(resolution.Element)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.Found(resolution));
+        });
     }
 }

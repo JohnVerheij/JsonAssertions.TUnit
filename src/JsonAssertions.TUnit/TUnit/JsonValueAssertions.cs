@@ -17,7 +17,7 @@ namespace JsonAssertions.TUnit;
 /// are accepted as the asserted value; the expected value may be a <see cref="string"/>,
 /// a <see cref="bool"/>, or a number. The integer overloads (<see cref="int"/> / <see cref="uint"/>
 /// / <see cref="long"/> / <see cref="ulong"/>) each match the value whether the JSON encodes it as a
-/// number or as a numeric string, because the encoding depends on the serializer (System.Text.Json
+/// number or as a JSON integer literal in a string, because the encoding depends on the serializer (System.Text.Json
 /// writes a number; Protobuf's <c>JsonFormatter</c> can emit a string, and serializes 64-bit ints as
 /// strings to avoid 53-bit precision loss); the <see cref="double"/> overload matches a JSON number.
 /// </summary>
@@ -35,12 +35,16 @@ namespace JsonAssertions.TUnit;
     Justification = "The one-of overloads take T[] so callers can use a C# 12 collection expression literal (HasJsonValueOneOf(\"status\", [\"Healthy\", \"Degraded\"])); a ReadOnlySpan<T> overload cannot be expressed under TUnit's [GenerateAssertion] source generator (ref struct parameters are unsupported), and assertion call sites do not need the allocation profile a Span overload would provide.")]
 public static class JsonValueAssertions
 {
+    private const string NonFiniteExpectation =
+        "JSON has no NaN or infinity, so no JSON number can match a non-finite value. Use a finite value; for a "
+        + "serializer that writes \"NaN\" or \"Infinity\" as a JSON string, use the string overload.";
+
     /// <summary>Asserts the JSON string has the string value <paramref name="expected"/> at
     /// the dot-separated <paramref name="path"/>.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.name</c>.</param>
     /// <param name="expected">The expected string value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonString)]
     public static AssertionResult HasJsonValue(this string json, string path, string expected)
         => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
@@ -49,13 +53,16 @@ public static class JsonValueAssertions
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.name</c>.</param>
     /// <param name="expected">The expected string value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonString)]
     public static AssertionResult HasJsonValue(this JsonElement element, string path, string expected)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, "\"" + expected + "\""));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.Found(resolution));
+        });
     }
 
     /// <summary>Asserts the JSON string has the boolean value <paramref name="expected"/> at
@@ -63,7 +70,7 @@ public static class JsonValueAssertions
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.active</c>.</param>
     /// <param name="expected">The expected boolean value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonBooleanValue)]
     public static AssertionResult HasJsonValue(this string json, string path, bool expected)
         => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
@@ -72,17 +79,19 @@ public static class JsonValueAssertions
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.active</c>.</param>
     /// <param name="expected">The expected boolean value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonBooleanValue)]
     public static AssertionResult HasJsonValue(this JsonElement element, string path, bool expected)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        if (resolution.Found && JsonValueComparison.Matches(resolution.Element, expected))
+        return JsonElementSource.Assert(element, root =>
         {
-            return AssertionResult.Passed;
-        }
+            var resolution = JsonPath.Resolve(root, path);
+            if (resolution.Found && JsonValueComparison.Matches(resolution.Element, expected))
+            {
+                return AssertionResult.Passed;
+            }
 
-        var expectedDescription = expected ? "true" : "false";
-        return AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, expectedDescription));
+            return AssertionResult.Failed(JsonFailureMessage.Found(resolution, expected ? "expected true" : "expected false"));
+        });
     }
 
     /// <summary>Asserts the JSON string has the numeric value <paramref name="expected"/> at
@@ -90,137 +99,156 @@ public static class JsonValueAssertions
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.age</c>.</param>
     /// <param name="expected">The expected numeric value.</param>
-    [GenerateAssertion]
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="expected"/> is NaN or an infinity, which JSON
+    /// cannot hold.</exception>
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonNumber)]
     public static AssertionResult HasJsonValue(this string json, string path, double expected)
-        => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
+    {
+        RequireFinite(expected);
+        return JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
+    }
 
     /// <summary>Asserts the JSON element has the numeric value <paramref name="expected"/> at
     /// the dot-separated <paramref name="path"/>.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.age</c>.</param>
     /// <param name="expected">The expected numeric value.</param>
-    [GenerateAssertion]
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="expected"/> is NaN or an infinity, which JSON
+    /// cannot hold.</exception>
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonNumber)]
     public static AssertionResult HasJsonValue(this JsonElement element, string path, double expected)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(
-                path, resolution, expected.ToString(CultureInfo.InvariantCulture)));
+        RequireFinite(expected);
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.Found(
+                    resolution, "expected " + expected.ToString(CultureInfo.InvariantCulture)));
+        });
     }
 
     /// <summary>Asserts the JSON string has the 32-bit integer value <paramref name="expected"/>
     /// at the dot-separated <paramref name="path"/>, matching whether the JSON encodes it as a
-    /// number or as a numeric string. System.Text.Json writes <c>int32</c> as a JSON number while
+    /// number or as a JSON integer literal in a string. System.Text.Json writes <c>int32</c> as a JSON number while
     /// Protobuf's <c>JsonFormatter</c> can emit a JSON string; both are matched.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.age</c>.</param>
     /// <param name="expected">The expected 32-bit integer value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonInteger)]
     public static AssertionResult HasJsonValue(this string json, string path, int expected)
         => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
     /// <summary>Asserts the JSON element has the 32-bit integer value <paramref name="expected"/>
-    /// at the dot-separated <paramref name="path"/>, matching a JSON number or a numeric JSON
+    /// at the dot-separated <paramref name="path"/>, matching a JSON number or a JSON integer literal in a
     /// string and comparing exactly.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.age</c>.</param>
     /// <param name="expected">The expected 32-bit integer value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonInteger)]
     public static AssertionResult HasJsonValue(this JsonElement element, string path, int expected)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(
-                path, resolution, expected.ToString(CultureInfo.InvariantCulture)));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundInteger(resolution));
+        });
     }
 
     /// <summary>Asserts the JSON string has the unsigned 32-bit integer value
     /// <paramref name="expected"/> at the dot-separated <paramref name="path"/>, matching whether the
-    /// JSON encodes it as a number or as a numeric string. System.Text.Json writes <c>uint32</c> as a
+    /// JSON encodes it as a number or as a JSON integer literal in a string. System.Text.Json writes <c>uint32</c> as a
     /// JSON number while Protobuf's <c>JsonFormatter</c> can emit a JSON string; both are
     /// matched.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.age</c>.</param>
     /// <param name="expected">The expected unsigned 32-bit integer value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonInteger)]
     public static AssertionResult HasJsonValue(this string json, string path, uint expected)
         => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
     /// <summary>Asserts the JSON element has the unsigned 32-bit integer value
     /// <paramref name="expected"/> at the dot-separated <paramref name="path"/>, matching a JSON
-    /// number or a numeric JSON string and comparing exactly.</summary>
+    /// number or a JSON integer literal in a string and comparing exactly.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>user.age</c>.</param>
     /// <param name="expected">The expected unsigned 32-bit integer value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonInteger)]
     public static AssertionResult HasJsonValue(this JsonElement element, string path, uint expected)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(
-                path, resolution, expected.ToString(CultureInfo.InvariantCulture)));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundInteger(resolution));
+        });
     }
 
     /// <summary>Asserts the JSON string has the 64-bit integer value <paramref name="expected"/>
     /// at the dot-separated <paramref name="path"/>, matching whether the JSON encodes it as a
-    /// number or as a numeric string (parsed with <see cref="CultureInfo.InvariantCulture"/>).
+    /// number or as a JSON integer literal in a string (parsed with <see cref="CultureInfo.InvariantCulture"/>).
     /// Protobuf's <c>JsonFormatter</c> serializes <c>int64</c> as a JSON string to avoid the 53-bit
     /// precision loss a JSON number would incur, while System.Text.Json writes it as a JSON number;
     /// both are matched.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>guid.high</c>.</param>
     /// <param name="expected">The expected 64-bit integer value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonInteger)]
     public static AssertionResult HasJsonValue(this string json, string path, long expected)
         => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
     /// <summary>Asserts the JSON element has the 64-bit integer value <paramref name="expected"/>
-    /// at the dot-separated <paramref name="path"/>, matching a JSON number or a numeric JSON string
+    /// at the dot-separated <paramref name="path"/>, matching a JSON number or a JSON integer literal in a string
     /// (parsed with <see cref="CultureInfo.InvariantCulture"/>) and comparing exactly.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>guid.high</c>.</param>
     /// <param name="expected">The expected 64-bit integer value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonInteger)]
     public static AssertionResult HasJsonValue(this JsonElement element, string path, long expected)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(
-                path, resolution, expected.ToString(CultureInfo.InvariantCulture)));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundInteger(resolution));
+        });
     }
 
     /// <summary>Asserts the JSON string has the unsigned 64-bit integer value
     /// <paramref name="expected"/> at the dot-separated <paramref name="path"/>, matching whether the
-    /// JSON encodes it as a number or as a numeric string (parsed with
+    /// JSON encodes it as a number or as a JSON integer literal in a string (parsed with
     /// <see cref="CultureInfo.InvariantCulture"/>). Protobuf's <c>JsonFormatter</c> serializes
     /// <c>uint64</c> as a JSON string for the same precision reason as <c>int64</c>, while
     /// System.Text.Json writes it as a JSON number; both are matched.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A dot-separated property path, for example <c>guid.low</c>.</param>
     /// <param name="expected">The expected unsigned 64-bit integer value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonInteger)]
     public static AssertionResult HasJsonValue(this string json, string path, ulong expected)
         => JsonStringSource.Assert(json, root => HasJsonValue(root, path, expected));
 
     /// <summary>Asserts the JSON element has the unsigned 64-bit integer value
     /// <paramref name="expected"/> at the dot-separated <paramref name="path"/>, matching a JSON
-    /// number or a numeric JSON string (parsed with <see cref="CultureInfo.InvariantCulture"/>) and
+    /// number or a JSON integer literal in a string (parsed with <see cref="CultureInfo.InvariantCulture"/>) and
     /// comparing exactly.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A dot-separated property path, for example <c>guid.low</c>.</param>
     /// <param name="expected">The expected unsigned 64-bit integer value.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonInteger)]
     public static AssertionResult HasJsonValue(this JsonElement element, string path, ulong expected)
     {
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(
-                path, resolution, expected.ToString(CultureInfo.InvariantCulture)));
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.Matches(resolution.Element, expected)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundInteger(resolution));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> satisfies the
@@ -236,7 +264,7 @@ public static class JsonValueAssertions
     /// element of an array (for example <c>[*].on</c>).</param>
     /// <param name="predicate">A predicate that returns <see langword="true"/> for matching
     /// elements; receives each element resolved at <paramref name="path"/>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueMatching)]
     public static AssertionResult HasJsonValueMatching(this string json, string path, Func<JsonElement, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
@@ -253,32 +281,40 @@ public static class JsonValueAssertions
     /// element of an array.</param>
     /// <param name="predicate">A predicate that returns <see langword="true"/> for matching
     /// elements.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueMatching)]
     public static AssertionResult HasJsonValueMatching(this JsonElement element, string path, Func<JsonElement, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
 
-        if (JsonPath.ContainsWildcard(path))
+        return JsonElementSource.Assert(element, root =>
         {
-            // A `[*]` path requires the predicate to hold on every expanded element; report the
-            // first that is missing or fails the predicate. An empty array passes vacuously.
-            foreach (var expanded in JsonPath.ResolveAll(element, path))
+            if (JsonPath.ContainsWildcard(path))
             {
-                if (!expanded.Found || !predicate(expanded.Element))
+                // A `[*]` path requires the predicate to hold on every expanded element; report the
+                // first that is missing or fails the predicate. An empty array passes vacuously.
+                foreach (var expanded in JsonPath.ResolveAll(root, path))
                 {
-                    // Report the concrete expanded path (e.g. "[1].on"), not the wildcard, so the
-                    // failure names which element failed, consistent with HasJsonProperty.
-                    return AssertionResult.Failed(JsonFailureMessage.ValueMismatch(expanded.ResolvedPrefix, expanded, "a value matching the predicate"));
+                    // Name the concrete element (e.g. "[1].on"), not the wildcard.
+                    if (!expanded.Found)
+                    {
+                        return AssertionResult.Failed(
+                            "'" + JsonFailureMessage.FailedLocation(expanded) + "' did not resolve: " + JsonFailureMessage.DescribeFailure(expanded));
+                    }
+
+                    if (!predicate(expanded.Element))
+                    {
+                        return AssertionResult.Failed(JsonFailureMessage.Found(expanded) + " at '" + expanded.ResolvedPrefix + "'");
+                    }
                 }
+
+                return AssertionResult.Passed;
             }
 
-            return AssertionResult.Passed;
-        }
-
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && predicate(resolution.Element)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, "a value matching the predicate"));
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && predicate(resolution.Element)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.Found(resolution));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a JSON string equal to any of
@@ -287,7 +323,7 @@ public static class JsonValueAssertions
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>health.status</c>.</param>
     /// <param name="candidates">The acceptable string values; ordinal comparison.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this string json, string path, string[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -300,14 +336,18 @@ public static class JsonValueAssertions
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>health.status</c>.</param>
     /// <param name="candidates">The acceptable string values; ordinal comparison.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this JsonElement element, string path, string[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, FormatOneOf(candidates)));
+
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.Found(resolution, "candidates: " + FormatCandidates(candidates)));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a JSON number equal to any of
@@ -317,10 +357,13 @@ public static class JsonValueAssertions
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>response.code</c>.</param>
     /// <param name="candidates">The acceptable numeric values.</param>
-    [GenerateAssertion]
+    /// <exception cref="ArgumentOutOfRangeException">A candidate is NaN or an infinity, which JSON cannot
+    /// hold.</exception>
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this string json, string path, double[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
+        RequireFinite(candidates);
         return JsonStringSource.Assert(json, root => HasJsonValueOneOf(root, path, candidates));
     }
 
@@ -330,24 +373,31 @@ public static class JsonValueAssertions
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>response.code</c>.</param>
     /// <param name="candidates">The acceptable numeric values.</param>
-    [GenerateAssertion]
+    /// <exception cref="ArgumentOutOfRangeException">A candidate is NaN or an infinity, which JSON cannot
+    /// hold.</exception>
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this JsonElement element, string path, double[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, FormatOneOf(candidates)));
+        RequireFinite(candidates);
+
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.Found(resolution, "candidates: " + FormatCandidates(candidates)));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a 32-bit integer equal to any of
-    /// <paramref name="candidates"/>, encoded as either a JSON number or a numeric JSON string, for
+    /// <paramref name="candidates"/>, encoded as either a JSON number or a JSON integer literal in a string, for
     /// System.Text.Json or Protobuf-style <c>int32</c> values.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>response.code</c>.</param>
     /// <param name="candidates">The acceptable 32-bit integer values.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this string json, string path, int[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -355,30 +405,34 @@ public static class JsonValueAssertions
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a 32-bit integer equal to any of
-    /// <paramref name="candidates"/>, encoded as either a JSON number or a numeric JSON
+    /// <paramref name="candidates"/>, encoded as either a JSON number or a JSON integer literal in a
     /// string.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>response.code</c>.</param>
     /// <param name="candidates">The acceptable 32-bit integer values.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this JsonElement element, string path, int[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, FormatOneOf(candidates)));
+
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundInteger(resolution, "candidates: " + FormatCandidates(candidates)));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is an unsigned 32-bit integer equal to
-    /// any of <paramref name="candidates"/>, encoded as either a JSON number or a numeric JSON
+    /// any of <paramref name="candidates"/>, encoded as either a JSON number or a JSON integer literal in a
     /// string, for System.Text.Json or Protobuf-style <c>uint32</c> values.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>response.code</c>.</param>
     /// <param name="candidates">The acceptable unsigned 32-bit integer values.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this string json, string path, uint[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -386,31 +440,35 @@ public static class JsonValueAssertions
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is an unsigned 32-bit integer equal to
-    /// any of <paramref name="candidates"/>, encoded as either a JSON number or a numeric JSON
+    /// any of <paramref name="candidates"/>, encoded as either a JSON number or a JSON integer literal in a
     /// string.</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>response.code</c>.</param>
     /// <param name="candidates">The acceptable unsigned 32-bit integer values.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this JsonElement element, string path, uint[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, FormatOneOf(candidates)));
+
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundInteger(resolution, "candidates: " + FormatCandidates(candidates)));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a 64-bit integer equal to any of
-    /// <paramref name="candidates"/>, encoded as either a JSON number or a numeric JSON string
+    /// <paramref name="candidates"/>, encoded as either a JSON number or a JSON integer literal in a string
     /// (parsed with <see cref="CultureInfo.InvariantCulture"/>), for System.Text.Json or
     /// Protobuf-style <c>int64</c> values.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>message.sequence</c>.</param>
     /// <param name="candidates">The acceptable 64-bit integer values.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this string json, string path, long[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -418,31 +476,35 @@ public static class JsonValueAssertions
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a 64-bit integer equal to any of
-    /// <paramref name="candidates"/>, encoded as either a JSON number or a numeric JSON string
+    /// <paramref name="candidates"/>, encoded as either a JSON number or a JSON integer literal in a string
     /// (parsed with <see cref="CultureInfo.InvariantCulture"/>).</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>message.sequence</c>.</param>
     /// <param name="candidates">The acceptable 64-bit integer values.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this JsonElement element, string path, long[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, FormatOneOf(candidates)));
+
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundInteger(resolution, "candidates: " + FormatCandidates(candidates)));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is an unsigned 64-bit integer equal to
-    /// any of <paramref name="candidates"/>, encoded as either a JSON number or a numeric JSON string
+    /// any of <paramref name="candidates"/>, encoded as either a JSON number or a JSON integer literal in a string
     /// (parsed with <see cref="CultureInfo.InvariantCulture"/>), for System.Text.Json or
     /// Protobuf-style <c>uint64</c> values.</summary>
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>message.sequence</c>.</param>
     /// <param name="candidates">The acceptable unsigned 64-bit integer values.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this string json, string path, ulong[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -450,20 +512,24 @@ public static class JsonValueAssertions
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is an unsigned 64-bit integer equal to
-    /// any of <paramref name="candidates"/>, encoded as either a JSON number or a numeric JSON string
+    /// any of <paramref name="candidates"/>, encoded as either a JSON number or a JSON integer literal in a string
     /// (parsed with <see cref="CultureInfo.InvariantCulture"/>).</summary>
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>message.sequence</c>.</param>
     /// <param name="candidates">The acceptable unsigned 64-bit integer values.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueOneOf)]
     public static AssertionResult HasJsonValueOneOf(this JsonElement element, string path, ulong[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
-        var resolution = JsonPath.Resolve(element, path);
-        return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, FormatOneOf(candidates)));
+
+        return JsonElementSource.Assert(element, root =>
+        {
+            var resolution = JsonPath.Resolve(root, path);
+            return resolution.Found && JsonValueComparison.MatchesAny(resolution.Element, candidates)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.FoundInteger(resolution, "candidates: " + FormatCandidates(candidates)));
+        });
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> is a JSON string whose text
@@ -475,7 +541,7 @@ public static class JsonValueAssertions
     /// <param name="json">The JSON document text.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>order.id</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueParsableAs)]
     public static AssertionResult HasJsonValueParsableAs<T>(this string json, string path)
         where T : IParsable<T>
         => JsonStringSource.Assert(json, root => HasJsonValueParsableAs<T>(root, path));
@@ -486,39 +552,61 @@ public static class JsonValueAssertions
     /// <param name="element">The JSON element to navigate from.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>order.id</c>.</param>
-    [GenerateAssertion]
+    [GenerateAssertion(ExpectationMessage = Expectations.HasJsonValueParsableAs)]
     public static AssertionResult HasJsonValueParsableAs<T>(this JsonElement element, string path)
         where T : IParsable<T>
     {
-        var resolution = JsonPath.Resolve(element, path);
-        var description = "a JSON string parseable as " + typeof(T).Name;
-        if (!resolution.Found || resolution.Element.ValueKind is not JsonValueKind.String)
+        return JsonElementSource.Assert(element, root =>
         {
-            return AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, description));
-        }
+            var resolution = JsonPath.Resolve(root, path);
+            if (!resolution.Found || resolution.Element.ValueKind is not JsonValueKind.String)
+            {
+                return AssertionResult.Failed(JsonFailureMessage.Found(resolution));
+            }
 
-        var raw = resolution.Element.GetString();
-        return raw is not null && T.TryParse(raw, CultureInfo.InvariantCulture, out _)
-            ? AssertionResult.Passed
-            : AssertionResult.Failed(JsonFailureMessage.ValueMismatch(path, resolution, description));
+            // The generator drops the type argument from the call line, so the failure names the type.
+            return T.TryParse(resolution.Element.GetString(), CultureInfo.InvariantCulture, out _)
+                ? AssertionResult.Passed
+                : AssertionResult.Failed(JsonFailureMessage.ValueNotParsed(resolution.Element, typeof(T).Name));
+        });
     }
 
-    /// <summary>Formats a one-of candidate list for failure messages: <c>{ "a", "b" }</c>
-    /// for strings and <c>{ 1, 2 }</c> for numerics. Strings are JSON-escaped so a candidate
+    /// <summary>Throws when <paramref name="expected"/> is NaN or an infinity, which no JSON number can be.</summary>
+    /// <param name="expected">The expected value of a <see cref="double"/> overload.</param>
+    internal static void RequireFinite(double expected)
+    {
+        if (!double.IsFinite(expected))
+        {
+            throw new ArgumentOutOfRangeException(nameof(expected), expected, NonFiniteExpectation);
+        }
+    }
+
+    /// <summary>Throws when any of <paramref name="candidates"/> is NaN or an infinity.</summary>
+    /// <param name="candidates">The candidates of a <see cref="double"/> one-of overload.</param>
+    internal static void RequireFinite(double[] candidates)
+    {
+        if (!Array.TrueForAll(candidates, double.IsFinite))
+        {
+            throw new ArgumentOutOfRangeException(nameof(candidates), NonFiniteExpectation);
+        }
+    }
+
+    /// <summary>Formats a one-of candidate list for failure messages as JSON literals: <c>"a", "b"</c>
+    /// for strings and <c>1, 2</c> for numerics. Strings are JSON-escaped so a candidate
     /// containing a quote, backslash, or control character renders unambiguously.</summary>
-    private static string FormatOneOf(string[] candidates)
+    private static string FormatCandidates(string[] candidates)
     {
         var parts = new string[candidates.Length];
         for (var i = 0; i < candidates.Length; i++)
         {
-            parts[i] = "\"" + EscapeForFailureMessage(candidates[i]) + "\"";
+            parts[i] = JsonFailureMessage.Quote(candidates[i]);
         }
 
-        return "one of { " + string.Join(", ", parts) + " }";
+        return string.Join(", ", parts);
     }
 
     /// <summary>Formats a one-of candidate list of numerics.</summary>
-    private static string FormatOneOf(double[] candidates)
+    private static string FormatCandidates(double[] candidates)
     {
         var parts = new string[candidates.Length];
         for (var i = 0; i < candidates.Length; i++)
@@ -526,13 +614,13 @@ public static class JsonValueAssertions
             parts[i] = candidates[i].ToString(CultureInfo.InvariantCulture);
         }
 
-        return "one of { " + string.Join(", ", parts) + " }";
+        return string.Join(", ", parts);
     }
 
     /// <summary>Formats a one-of candidate list of 32-bit integers. The candidates are unquoted:
-    /// they denote the integer value, matched whether the JSON encodes it as a number or a numeric
-    /// string.</summary>
-    private static string FormatOneOf(int[] candidates)
+    /// they denote the integer value, matched whether the JSON encodes it as a number or as a JSON
+    /// integer literal in a string.</summary>
+    private static string FormatCandidates(int[] candidates)
     {
         var parts = new string[candidates.Length];
         for (var i = 0; i < candidates.Length; i++)
@@ -540,13 +628,13 @@ public static class JsonValueAssertions
             parts[i] = candidates[i].ToString(CultureInfo.InvariantCulture);
         }
 
-        return "one of { " + string.Join(", ", parts) + " }";
+        return string.Join(", ", parts);
     }
 
     /// <summary>Formats a one-of candidate list of unsigned 32-bit integers. The candidates are
     /// unquoted: they denote the integer value, matched whether the JSON encodes it as a number or a
-    /// numeric string.</summary>
-    private static string FormatOneOf(uint[] candidates)
+    /// JSON integer literal in a string.</summary>
+    private static string FormatCandidates(uint[] candidates)
     {
         var parts = new string[candidates.Length];
         for (var i = 0; i < candidates.Length; i++)
@@ -554,13 +642,13 @@ public static class JsonValueAssertions
             parts[i] = candidates[i].ToString(CultureInfo.InvariantCulture);
         }
 
-        return "one of { " + string.Join(", ", parts) + " }";
+        return string.Join(", ", parts);
     }
 
     /// <summary>Formats a one-of candidate list of 64-bit integers. The candidates are unquoted:
-    /// they denote the integer value, matched whether the JSON encodes it as a number or a numeric
-    /// string.</summary>
-    private static string FormatOneOf(long[] candidates)
+    /// they denote the integer value, matched whether the JSON encodes it as a number or as a JSON
+    /// integer literal in a string.</summary>
+    private static string FormatCandidates(long[] candidates)
     {
         var parts = new string[candidates.Length];
         for (var i = 0; i < candidates.Length; i++)
@@ -568,13 +656,13 @@ public static class JsonValueAssertions
             parts[i] = candidates[i].ToString(CultureInfo.InvariantCulture);
         }
 
-        return "one of { " + string.Join(", ", parts) + " }";
+        return string.Join(", ", parts);
     }
 
     /// <summary>Formats a one-of candidate list of unsigned 64-bit integers. The candidates are
     /// unquoted: they denote the integer value, matched whether the JSON encodes it as a number or a
-    /// numeric string.</summary>
-    private static string FormatOneOf(ulong[] candidates)
+    /// JSON integer literal in a string.</summary>
+    private static string FormatCandidates(ulong[] candidates)
     {
         var parts = new string[candidates.Length];
         for (var i = 0; i < candidates.Length; i++)
@@ -582,59 +670,6 @@ public static class JsonValueAssertions
             parts[i] = candidates[i].ToString(CultureInfo.InvariantCulture);
         }
 
-        return "one of { " + string.Join(", ", parts) + " }";
-    }
-
-    /// <summary>Escapes JSON-style structural characters (<c>"</c>, <c>\</c>) and ASCII
-    /// control characters in <paramref name="value"/> so a candidate containing them renders
-    /// unambiguously inside the quoted form of a failure message. AOT-safe (no reflection,
-    /// no <see cref="JsonSerializer"/> dependency).</summary>
-    private static string EscapeForFailureMessage(string value)
-    {
-        var sb = new StringBuilder(value.Length);
-        foreach (var ch in value)
-        {
-            switch (ch)
-            {
-                case '\\':
-                    sb.Append("\\\\");
-                    break;
-                case '"':
-                    sb.Append("\\\"");
-                    break;
-                case '\b':
-                    sb.Append("\\b");
-                    break;
-                case '\f':
-                    sb.Append("\\f");
-                    break;
-                case '\n':
-                    sb.Append("\\n");
-                    break;
-                case '\r':
-                    sb.Append("\\r");
-                    break;
-                case '\t':
-                    sb.Append("\\t");
-                    break;
-                default:
-                    if (ch < ' ')
-                    {
-                        // char-to-int via the implicit char->ushort->int widening avoids the
-                        // explicit-cast lint while preserving the numeric value for the
-                        // \u%04x escape format used by JSON.
-                        var codePoint = Convert.ToInt32(ch);
-                        sb.Append("\\u").Append(codePoint.ToString("x4", CultureInfo.InvariantCulture));
-                    }
-                    else
-                    {
-                        sb.Append(ch);
-                    }
-
-                    break;
-            }
-        }
-
-        return sb.ToString();
+        return string.Join(", ", parts);
     }
 }

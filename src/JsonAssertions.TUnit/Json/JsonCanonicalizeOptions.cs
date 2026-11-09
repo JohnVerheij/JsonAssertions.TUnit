@@ -16,7 +16,7 @@ public sealed class JsonCanonicalizeOptions
     /// <summary>The JSON paths registered for scrubbing, in registration order. Each is resolved
     /// (wildcards expanded) against the document; every value it targets is replaced with
     /// <see cref="ScrubToken"/>. Returned as a read-only view; register paths through
-    /// <see cref="ScrubPath"/> so the non-empty validation is enforced.</summary>
+    /// <see cref="ScrubPath"/> so the path is validated.</summary>
     public IReadOnlyList<string> ScrubPaths => _scrubPaths.AsReadOnly();
 
     /// <summary>The token a scrubbed value is replaced with. Defaults to <c>"&lt;scrubbed&gt;"</c>.</summary>
@@ -26,12 +26,13 @@ public sealed class JsonCanonicalizeOptions
     /// canonical output. The path uses the same grammar as the assertion paths, including the
     /// <c>[*]</c> wildcard (so <c>[*].session.connectionId</c> scrubs that field on every array
     /// element). A path that does not resolve is a no-op.</summary>
-    /// <param name="path">The JSON path to scrub. Must be non-empty.</param>
+    /// <param name="path">The JSON path to scrub.</param>
     /// <returns>This instance, for chaining.</returns>
-    /// <exception cref="ArgumentException"><paramref name="path"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is null, empty, whitespace, or malformed (see
+    /// <see cref="JsonPath.Resolve"/>); it is checked here, when it is registered.</exception>
     public JsonCanonicalizeOptions ScrubPath(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        JsonPath.Validate(path);
         _scrubPaths.Add(path);
         return this;
     }
