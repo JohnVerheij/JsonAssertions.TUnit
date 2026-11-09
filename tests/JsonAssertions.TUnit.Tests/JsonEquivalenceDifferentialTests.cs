@@ -43,13 +43,15 @@ internal sealed class JsonEquivalenceDifferentialTests
         var actual = RenderBaseline();
         var baseline = ReadBaseline();
         var mismatches = Mismatches(actual, baseline).ToList();
+        var listing = Path.Combine(
+            Path.GetTempPath(), "JsonEquivalenceDifferential.actual." + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture) + ".txt");
         if (mismatches.Count > 0)
         {
-            await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "JsonEquivalenceDifferential.actual.txt"), actual, ct);
+            await File.WriteAllTextAsync(listing, actual, ct);
         }
 
         await Assert.That(mismatches).IsEmpty()
-            .Because("a refactor of the equivalence engine must not change one result; the full actual listing is in %TEMP%/JsonEquivalenceDifferential.actual.txt");
+            .Because("a refactor of the equivalence engine must not change one result; the full actual listing is in " + listing);
     }
 
     [Test]

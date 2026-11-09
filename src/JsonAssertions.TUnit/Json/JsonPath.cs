@@ -198,7 +198,7 @@ public static class JsonPath
             return IndexNotFound(current, segmentText, prefix);
         }
 
-        current = GetArrayElement(current, index);
+        current = current[index];
         prefix.Append(segmentText);
         return null;
     }
@@ -214,13 +214,6 @@ public static class JsonPath
     }
 
     private static string IndexText(int index) => string.Concat("[", index.ToString(CultureInfo.InvariantCulture), "]");
-
-    /// <summary>Returns the array element at <paramref name="index"/> from
-    /// <paramref name="array"/>. <see cref="JsonElement"/> has no random-access indexer, so
-    /// this delegates to <see cref="Enumerable.ElementAt{TSource}(System.Collections.Generic.IEnumerable{TSource}, int)"/>;
-    /// callers must have already checked bounds.</summary>
-    private static JsonElement GetArrayElement(JsonElement array, int index)
-        => array.EnumerateArray().ElementAt(index);
 
     /// <summary>Recursively walks <paramref name="segments"/> from <paramref name="index"/>,
     /// branching at each wildcard, accumulating one resolution per concrete leaf path.</summary>
@@ -279,7 +272,7 @@ public static class JsonPath
 
         var saved = prefix.Length;
         prefix.Append(segmentText);
-        Expand(GetArrayElement(current, arrayIndex), segments, index + 1, prefix, results);
+        Expand(current[arrayIndex], segments, index + 1, prefix, results);
         prefix.Length = saved;
     }
 

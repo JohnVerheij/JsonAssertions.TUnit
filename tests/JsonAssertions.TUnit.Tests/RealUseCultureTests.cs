@@ -73,6 +73,7 @@ internal sealed class RealUseCultureTests
             CultureInfo.CurrentCulture = original;
         }
 
+        await Assert.That(messages[0]).IsNotEqualTo("(passed)");
         await Assert.That(messages[1]).IsEqualTo(messages[0]);
         await Assert.That(messages[2]).IsEqualTo(messages[0]);
     }

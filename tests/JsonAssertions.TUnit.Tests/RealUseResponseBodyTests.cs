@@ -103,6 +103,7 @@ internal sealed class RealUseResponseBodyTests
     [Test]
     [Arguments("application/json; charset=utf-16", true)]
     [Arguments("application/json; charset=utf-16", false)]
+    [Arguments("application/json", true)]
     public async Task Utf16Body_IsDecodedFromItsCharsetOrByteOrderMark(string contentType, bool withByteOrderMark, CancellationToken ct)
     {
         byte[] bytes = withByteOrderMark
@@ -132,7 +133,9 @@ internal sealed class RealUseResponseBodyTests
         await Assert.That(response).MatchesProblemDetails(400, cancellationToken: ct);
     }
 
-    /// <summary>A body of about 3 MB: every path, value and subset assertion stays well under a second.</summary>
+    /// <summary>A body of about 3 MB: the path, subset and equivalence assertions finish within 10 seconds together.
+    /// The bound is far above the time they take, so a slow machine does not fail the test, while a quadratic
+    /// regression still does.</summary>
     [Test]
     public async Task LargeBody_IsAssertedQuickly(CancellationToken ct)
     {

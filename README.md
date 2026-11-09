@@ -410,7 +410,7 @@ but the second serialization differed:
 at Assert.That(new PinDrifter(7)).RoundtripsCleanlyVia(PinDrifterContext.Default.PinDrifter)
 ```
 
-Failure-message text is not part of the stable public surface; pin behavior against the `JsonPath` / `JsonValueComparison` / `JsonShape` primitives, not against full message-text equality. 0.7.0 rewrote every failure text to the rule above, so a test that pinned a 0.6 message needs its pin updated.
+What to pin instead of the message text: see [Stability intent (pre-1.0)](#stability-intent-pre-10). 0.7.0 rewrote every failure text to the rule above, so a test that pinned a 0.6 message needs its pin updated.
 
 ## Cookbook: common patterns
 

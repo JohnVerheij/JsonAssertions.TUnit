@@ -342,8 +342,8 @@ public static class HttpResponseMessageAssertions
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> in the response body is a 32-bit integer
-    /// equal to any of <paramref name="candidates"/>, encoded as either a JSON number or a numeric
-    /// JSON string, for System.Text.Json or Protobuf-style <c>int32</c> values.</summary>
+    /// equal to any of <paramref name="candidates"/>, encoded as either a JSON number or a JSON
+    /// integer literal in a string, for System.Text.Json or Protobuf-style <c>int32</c> values.</summary>
     /// <param name="response">The HTTP response whose body is the JSON document.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket
     /// indices, for example <c>response.code</c>.</param>
@@ -377,8 +377,8 @@ public static class HttpResponseMessageAssertions
     }
 
     /// <summary>Asserts the value at <paramref name="path"/> in the response body is a 64-bit integer
-    /// equal to any of <paramref name="candidates"/>, encoded as either a JSON number or a numeric
-    /// JSON string (parsed with <see cref="System.Globalization.CultureInfo.InvariantCulture"/>), for
+    /// equal to any of <paramref name="candidates"/>, encoded as either a JSON number or a JSON
+    /// integer literal in a string (parsed with <see cref="System.Globalization.CultureInfo.InvariantCulture"/>), for
     /// System.Text.Json or Protobuf-style <c>int64</c> values.</summary>
     /// <param name="response">The HTTP response whose body is the JSON document.</param>
     /// <param name="path">A path of dot-separated property names and zero-based bracket

@@ -35,6 +35,8 @@ public static class JsonExtraction
     /// <param name="path">A path of dot-separated property names and zero-based bracket indices.</param>
     /// <returns>The parsed value.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed, or has a <c>[*]</c> wildcard (use
+    /// <see cref="GetJsonValues{T}(JsonElement, string)"/> for every value).</exception>
     /// <exception cref="JsonExtractionException">The path does not resolve, or the value does not
     /// parse as <typeparamref name="T"/>.</exception>
     public static T GetJsonValue<T>(this JsonElement element, string path)
@@ -59,6 +61,8 @@ public static class JsonExtraction
     /// <param name="path">A path of dot-separated property names and zero-based bracket indices.</param>
     /// <returns>The parsed value.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard;
+    /// checked after the text is parsed.</exception>
     /// <exception cref="JsonExtractionException">The text is not valid JSON, the path does not resolve,
     /// or the value does not parse as <typeparamref name="T"/>.</exception>
     public static T GetJsonValue<T>(this string json, string path)
@@ -164,6 +168,7 @@ public static class JsonExtraction
     /// <param name="path">A path of dot-separated property names and zero-based bracket indices.</param>
     /// <returns>The string value.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard.</exception>
     /// <exception cref="JsonExtractionException">The path does not resolve, or the value is not a JSON string.</exception>
     public static string GetJsonString(this JsonElement element, string path)
     {
@@ -185,6 +190,8 @@ public static class JsonExtraction
     /// <param name="path">A path of dot-separated property names and zero-based bracket indices.</param>
     /// <returns>The string value.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard;
+    /// checked after the text is parsed.</exception>
     /// <exception cref="JsonExtractionException">The text is not valid JSON, the path does not resolve,
     /// or the value is not a JSON string.</exception>
     public static string GetJsonString(this string json, string path)
@@ -200,6 +207,7 @@ public static class JsonExtraction
     /// <param name="path">A path of dot-separated property names and zero-based bracket indices.</param>
     /// <returns>A detached (<see cref="JsonElement.Clone"/>d) copy of the element at the path.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard.</exception>
     /// <exception cref="JsonExtractionException">The path does not resolve.</exception>
     public static JsonElement GetJsonElement(this JsonElement element, string path)
     {
@@ -213,6 +221,8 @@ public static class JsonExtraction
     /// <param name="path">A path of dot-separated property names and zero-based bracket indices.</param>
     /// <returns>A detached copy of the element at the path.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard;
+    /// checked after the text is parsed.</exception>
     /// <exception cref="JsonExtractionException">The text is not valid JSON, or the path does not resolve.</exception>
     public static JsonElement GetJsonElement(this string json, string path)
     {
@@ -230,6 +240,8 @@ public static class JsonExtraction
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     /// <returns>The parsed value.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard;
+    /// checked after the body is read.</exception>
     /// <exception cref="JsonExtractionException">The body is empty or not valid JSON, the path does not
     /// resolve, or the value does not parse as <typeparamref name="T"/>.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> is canceled, also when the
@@ -251,6 +263,8 @@ public static class JsonExtraction
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     /// <returns>The string value.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard;
+    /// checked after the body is read.</exception>
     /// <exception cref="JsonExtractionException">The body is empty or not valid JSON, the path does not
     /// resolve, or the value is not a JSON string.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> is canceled, also when the
@@ -271,6 +285,8 @@ public static class JsonExtraction
     /// <param name="cancellationToken">Flows to the response-body read.</param>
     /// <returns>A detached copy of the element at the path.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard;
+    /// checked after the body is read.</exception>
     /// <exception cref="JsonExtractionException">The body is empty or not valid JSON, or the path does not
     /// resolve.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> is canceled, also when the
