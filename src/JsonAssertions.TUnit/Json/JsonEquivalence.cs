@@ -421,9 +421,13 @@ public static class JsonEquivalence
             actualCount.ToString(CultureInfo.InvariantCulture) + " element(s)");
 
     /// <summary>Compares two JSON numbers exactly, by value: <c>1</c>, <c>1.0</c>, <c>10e-1</c> and <c>1E+0</c> are
-    /// equal, and so are <c>-0</c> and <c>0</c>; no literal is rounded to a binary or decimal type first.</summary>
+    /// equal, and so are <c>-0</c> and <c>0</c>; no literal is rounded to a binary or decimal type first. Two integer
+    /// literals that both fit in a <see cref="long"/> compare as longs, with no allocation; every other pair compares
+    /// in normalized form.</summary>
     private static bool NumbersEqual(JsonElement a, JsonElement b)
-        => NormalizedNumber.From(a.GetRawText()) == NormalizedNumber.From(b.GetRawText());
+        => a.TryGetInt64(out var left) && b.TryGetInt64(out var right)
+            ? left == right
+            : NormalizedNumber.From(a.GetRawText()) == NormalizedNumber.From(b.GetRawText());
 
     /// <summary>
     /// A JSON number literal in normalized form: the sign, the significant digits with no leading or trailing zero, and
