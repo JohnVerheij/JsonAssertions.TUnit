@@ -113,7 +113,7 @@ TUnit ships JSON assertions of its own. They assert the node in hand or the resp
 dotnet add package JsonAssertions.TUnit
 ```
 
-**Requirements:** TUnit 1.81.16 or later, .NET 10. `System.Text.Json` is in-box on .NET 10, so the package carries no runtime dependency beyond TUnit. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
+**Requirements:** TUnit 1.83.0 or later, .NET 10. `System.Text.Json` is in-box on .NET 10, so the package carries no runtime dependency beyond TUnit. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
 
 ## Package layout
 
