@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`TUnit.Assertions`** and **`TUnit.Core`** minimum versions raised from 1.81.10 to 1.85.0: 1.83.0 is the first TUnit with a `net11.0` asset, and 1.85.0 keeps TUnit's OpenTelemetry and ASP.NET Core packages on OpenTelemetry 1.20.x for `net10.0`, so a project with one version for all its TUnit packages gets no .NET 11 packages there.
 - **Target framework policy.** The family now targets every .NET version in Microsoft support instead of the current LTS plus the current STS; `CONVENTIONS.md` describes the policy.
 - **README samples.** The samples that a reader could not paste into a test project now show the `using` directives they need: the consumer-authored typed assertion (`System.Text.Json`, `JsonAssertions`, `TUnit.Assertions.Attributes`, `TUnit.Assertions.Core`), the `HasJsonResponse<T>` sample (`System.Net`), the `PostAsJsonAsync` samples (`System.Net.Http.Json`) and the `JsonDocument` samples (`System.Text.Json`).
 - **`JsonPath.Resolve`**, **`Exists`** and **`ResolveAll`**, and the `JsonElement` overloads of **`JsonEquivalence.Compare`** and **`ContainsAll`**, now throw `ArgumentException` for a `default(JsonElement)`, which holds no JSON value. Before, `Resolve(default, "$")` was found, and two default elements compared as equivalent. The assertions already failed on a default element and are unchanged. Migration: assign the element before calling.
