@@ -307,22 +307,22 @@ sits directly below that scope statement, never above it.
 
 ## TFM policy
 
-Family packages always target the **current LTS** of .NET. While a non-LTS (STS) release is in
-support, packages multi-target the current LTS *plus* the current STS. When the next LTS ships,
-both the previous LTS and the previous STS are dropped on the same release; the new LTS becomes
-the single target until its STS sibling appears the following November.
+Family packages target **every .NET version that is in Microsoft support**, and nothing that is
+end-of-life. A target framework is added when its release is out and the package's dependencies
+support it; it is dropped on its end-of-life date, in the package's next release.
 
 | Window (approximate dates) | Target frameworks |
 |---|---|
-| Now, .NET 10 LTS only (Nov 2025 to Nov 2026) | `net10.0` |
-| .NET 11 STS in support (Nov 2026 to Nov 2027) | `net10.0;net11.0` |
-| .NET 12 LTS ships, drop 10 + 11 (Nov 2027 to Nov 2028) | `net12.0` |
-| .NET 13 STS in support (Nov 2028 to Nov 2029) | `net12.0;net13.0` |
+| .NET 10 and .NET 11 in support (Nov 2026 to Nov 2027) | `net10.0;net11.0` |
+| .NET 12 ships (Nov 2027 to Nov 2028) | `net10.0;net11.0;net12.0` |
+| .NET 10 and .NET 11 end, .NET 13 ships (Nov 2028 on) | `net12.0;net13.0` |
 | ... | ... |
 
-The TFM rotation lands at major-version boundaries (`2.0`, `3.0`, ...). Consumers who need an
-older TFM pin to an older package version. Wide multi-targeting (e.g. `net8;net9;net10`) is not
-used; the goal is "current LTS, plus current STS while it exists" with no long historical tails.
+Adding a target framework is additive: it makes the release a minor version before 1.0, never a
+patch. Each target framework gets the dependency versions of its own .NET release (the
+`Microsoft.Extensions.*` packages, for example), through per-framework `ItemGroup`s in
+`Directory.Packages.props`. Consumers who need an older TFM pin an older package version. Wide
+multi-targeting of end-of-life frameworks (e.g. `net8;net9`) is not used.
 
 ## Verify is not promoted
 

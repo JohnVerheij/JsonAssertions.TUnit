@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <RootNamespace>JsonAssertions.TUnit</RootNamespace>
     <AssemblyName>JsonAssertions.TUnit</AssemblyName>
     <IsPublishable>false</IsPublishable>
@@ -58,7 +58,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Alphabetical per dpfa Proj0015. System.Text.Json is in-box on net10.0 (part of the
+    <!-- Alphabetical per dpfa Proj0015. System.Text.Json is in-box on net10.0 and net11.0 (part of the
          shared framework), so the package carries no runtime dependency beyond TUnit. -->
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" />

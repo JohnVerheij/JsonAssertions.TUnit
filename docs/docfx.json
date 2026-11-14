@@ -21,7 +21,7 @@
     "content": [
       {
         "files": ["**/*.{md,yml}"],
-        "exclude": ["_site/**", "obj/**"]
+        "exclude": ["_site/**", "obj/**", "filterConfig.yml"]
       }
     ],
     "resource": [

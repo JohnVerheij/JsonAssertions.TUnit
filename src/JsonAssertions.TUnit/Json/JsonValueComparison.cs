@@ -267,7 +267,7 @@ public static class JsonValueComparison
     /// are not part of it.</summary>
     internal static bool IsJsonIntegerLiteral(string text)
     {
-        var digits = text.AsSpan(text.StartsWith('-') ? 1 : 0);
+        var digits = text.AsSpan(text.AsSpan().StartsWith('-') ? 1 : 0);
         return digits switch
         {
             [] => false,

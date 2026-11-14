@@ -252,7 +252,7 @@ public static class JsonFailureMessage
         }
 
         string reason;
-        if (segment.StartsWith('['))
+        if (segment.AsSpan().StartsWith('['))
         {
             reason = resolution.ContainerKind is JsonValueKind.Array
                 ? "has " + CountOf(resolution.ContainerLength, "element") + ", so no index " + segment
@@ -275,7 +275,7 @@ public static class JsonFailureMessage
     internal static string FailedLocation(JsonPathResolution resolution)
     {
         var segment = resolution.FailedSegment!;
-        return resolution.ResolvedPrefix.Length is 0 || segment.StartsWith('[')
+        return resolution.ResolvedPrefix.Length is 0 || segment.AsSpan().StartsWith('[')
             ? resolution.ResolvedPrefix + segment
             : resolution.ResolvedPrefix + "." + segment;
     }

@@ -83,6 +83,8 @@ Asserting against a JSON response body or document in tests typically devolves i
 
 - A hand-rolled `TryGetProperty(...).IsTrue()` chain with no failure context:
   ```csharp
+  using System.Text.Json;
+
   using var doc = JsonDocument.Parse(body);
   await Assert.That(doc.RootElement.TryGetProperty("user", out var user) && user.TryGetProperty("name", out var name) && name.GetString() == "alice")
       .IsTrue().Because("user.name should equal alice");
@@ -113,7 +115,7 @@ TUnit ships JSON assertions of its own. They assert the node in hand or the resp
 dotnet add package JsonAssertions.TUnit
 ```
 
-**Requirements:** TUnit 1.83.0 or later, .NET 10. `System.Text.Json` is in-box on .NET 10, so the package carries no runtime dependency beyond TUnit. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
+**Requirements:** TUnit 1.83.0 or later, .NET 10 or .NET 11. `System.Text.Json` is in-box on both, so the package carries no runtime dependency beyond TUnit. The package is AOT-compatible, trimmable, and uses no runtime reflection in the assertion path.
 
 ## Package layout
 
@@ -121,7 +123,7 @@ This repo ships **one** NuGet package with types in two namespaces - the same co
 
 | Package | Purpose | Depends on |
 |---|---|---|
-| [`JsonAssertions.TUnit`](https://www.nuget.org/packages/JsonAssertions.TUnit/) | `JsonAssertions` framework-agnostic core (for example `JsonPath`, `JsonValueComparison`, `JsonShape`, `JsonRenderers`, `JsonFailureMessage`, `JsonEquivalence`, `JsonCanonicalizer`) plus `JsonAssertions.TUnit` TUnit adapter (`[GenerateAssertion]` entry points + hand-written extensions over `Assert.That(...)`) | `System.Text.Json` (in-box on net10.0) + `TUnit.Assertions` + `TUnit.Core` |
+| [`JsonAssertions.TUnit`](https://www.nuget.org/packages/JsonAssertions.TUnit/) | `JsonAssertions` framework-agnostic core (for example `JsonPath`, `JsonValueComparison`, `JsonShape`, `JsonRenderers`, `JsonFailureMessage`, `JsonEquivalence`, `JsonCanonicalizer`) plus `JsonAssertions.TUnit` TUnit adapter (`[GenerateAssertion]` entry points + hand-written extensions over `Assert.That(...)`) | `System.Text.Json` (in-box on net10.0 and net11.0) + `TUnit.Assertions` + `TUnit.Core` |
 
 A future package split (a bare-identifier `JsonAssertions` core package plus this adapter) would fall along the namespace seam if the standalone identifier becomes available; shipping the seam now keeps the option open without committing to it. Adapters for other test frameworks (NUnit, xUnit, MSTest) are not planned; the family targets TUnit.
 
@@ -185,6 +187,8 @@ The fluent entry points auto-import via `TUnit.Assertions.Extensions`; no extra 
 The same entry points are available on a `JsonElement`, and directly on an `HttpResponseMessage` whose body is read as the JSON document. The `HttpResponseMessage` overloads are asynchronous and take an optional `CancellationToken` that flows to the body read:
 
 ```csharp
+using System.Text.Json;
+
 using var document = JsonDocument.Parse(json);
 await Assert.That(document.RootElement).HasJsonValue("user.name", "alice");
 
@@ -419,6 +423,8 @@ What to pin instead of the message text: see [Stability intent (pre-1.0)](#stabi
 Acceptance and end-to-end flows often read a value from one response to build the next request, or read a count to cross-check an array length. Instead of a hand-rolled `JsonDocument.Parse(...).RootElement.GetProperty("orderId").GetInt32()` (which throws a bare `KeyNotFoundException` / `InvalidOperationException` with no path context), extract it with a typed getter:
 
 ```csharp
+using System.Net.Http.Json;
+
 // parse the body once, then read what the test needs
 var order = await response.GetJsonElementAsync("order", ct);
 var orderId = order.GetJsonValue<int>("orderId");         // drives the next request
@@ -508,6 +514,8 @@ This replaces a hand-written loop over `EnumerateArray()` that searches for each
 `HasJsonResponse<T>` collapses the "check status + read body + deserialize + structural compare" pattern into a single fluent call. The deserialization is AOT-clean (uses the source-generated `JsonTypeInfo<T>`); the failure message includes the body (truncated at 256 chars) for an unexpected status (for example a non-200 response, when the body is non-empty) and for an undeserializable body, so those cases surface their actual content. A body that deserializes to a different value reports that value; the expectation line shows the expected one.
 
 ```csharp
+using System.Net;
+
 [Test]
 public async Task GetOrder_ReturnsExpectedOrder(CancellationToken ct)
 {
@@ -526,6 +534,8 @@ public async Task GetOrder_ReturnsExpectedOrder(CancellationToken ct)
 `MatchesProblemDetails` asserts the response is a valid RFC 7807 ProblemDetails (Content-Type `application/problem+json` - case-insensitive per RFC 9110, deserializable shape) and that each specified field matches. Unspecified fields skip (pass `null`). No ASP.NET Core dependency (such as `Microsoft.AspNetCore.Mvc.Abstractions`) is required at runtime - the assertion uses an internal mirror type, so the package takes no ASP.NET Core reference.
 
 ```csharp
+using System.Net.Http.Json;
+
 [Test]
 public async Task PostOrder_OnValidationFailure_ReturnsProblemDetails(CancellationToken ct)
 {
@@ -589,7 +599,7 @@ Two cases throw `NotSupportedException`, so the test errors instead of failing. 
 
 `JsonRenderers.ReformatJson<T>` returns a `Func<string, string>` that canonicalizes a JSON string via the consumer's `JsonSerializerContext` (deserialize then re-serialize through the supplied `JsonTypeInfo<T>`). Composes with [`SnapshotAssertions.TUnit`](https://www.nuget.org/packages/SnapshotAssertions.TUnit/)'s `MatchesSnapshot(Func<>)` overload at the consumer's call site, without coupling the packages (the family's [Cross-package references rule](CONVENTIONS.md) keeps production-side `PackageReference`s separate; composition happens at the test's call site via standard delegates):
 
-```csharp
+```csharp no-compile
 [Test]
 public async Task PostOrder_ResponseBodyMatchesSnapshot(CancellationToken ct)
 {
@@ -609,6 +619,11 @@ The two-step composition (async body-read in the test, sync canonicalize + snaps
 For domain-specific assertions that this package doesn't ship, the `JsonAssertions.JsonFailureMessage` factory methods (`ParseFailure`, `PropertyNotFound`, `PropertyShouldNotExist`, `ValueMismatch`, `ShapeMismatch`) produce failure messages that match the package's diagnostic style. Each returns the text after `but`, so state the expectation in `ExpectationMessage`, in single quotes (TUnit's generator pastes it into an interpolated string, which cannot hold a double quote). Compose them with TUnit's `[GenerateAssertion]` to ship a typed assertion alongside your own DTO conventions:
 
 ```csharp
+using System.Text.Json;
+using JsonAssertions;
+using TUnit.Assertions.Attributes;
+using TUnit.Assertions.Core;
+
 public static class OrderAssertions
 {
     [GenerateAssertion(ExpectationMessage = "to have order status '{expectedStatus}'")]

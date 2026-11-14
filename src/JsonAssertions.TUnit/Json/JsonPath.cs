@@ -376,7 +376,8 @@ public static class JsonPath
     {
         var text = path.Value;
         var open = i;
-        var close = text.IndexOf(']', i + 1);
+        var closeOffset = text.AsSpan(i + 1).IndexOf(']');
+        var close = closeOffset < 0 ? closeOffset : i + 1 + closeOffset;
         if (close < 0)
         {
             throw path.Malformed("has an unclosed '[' at character " + Character(open) + ".");

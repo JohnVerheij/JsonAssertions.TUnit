@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **.NET 11 target.** The package now targets `net10.0` and `net11.0`; the public API is identical on both, and each target depends on the same TUnit packages. `System.Text.Json` is the in-box library of the runtime in use.
+
+### Changed
+
+- **Target framework policy.** The family now targets every .NET version in Microsoft support instead of the current LTS plus the current STS; `CONVENTIONS.md` describes the policy.
+- **README samples.** The samples that a reader could not paste into a test project now show the `using` directives they need: the consumer-authored typed assertion (`System.Text.Json`, `JsonAssertions`, `TUnit.Assertions.Attributes`, `TUnit.Assertions.Core`), the `HasJsonResponse<T>` sample (`System.Net`), the `PostAsJsonAsync` samples (`System.Net.Http.Json`) and the `JsonDocument` samples (`System.Text.Json`).
+
 ## [0.7.0] - 2026-11-09: several paths at once, every value of a list, one failure-message rule, stricter paths and numbers
 
 Minor release. Adds `HasJsonProperties` and `GetJsonValues<T>`, rewrites every failure message to one rule, and makes paths, numbers, ProblemDetails, default elements and cancellation strict, each loudly (a check that passed by accident now fails or throws). Requires TUnit 1.81.10: raise TUnit and this package together.
