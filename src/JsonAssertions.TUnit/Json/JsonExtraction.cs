@@ -37,8 +37,9 @@ public static class JsonExtraction
     /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException"><paramref name="path"/> is malformed, or has a <c>[*]</c> wildcard (use
     /// <see cref="GetJsonValues{T}(JsonElement, string)"/> for every value).</exception>
-    /// <exception cref="JsonExtractionException">The path does not resolve, or the value does not
-    /// parse as <typeparamref name="T"/>.</exception>
+    /// <exception cref="JsonExtractionException">The path does not resolve, the value does not
+    /// parse as <typeparamref name="T"/>, or <paramref name="element"/> is <see langword="default"/> (it holds no
+    /// JSON value).</exception>
     public static T GetJsonValue<T>(this JsonElement element, string path)
         where T : IParsable<T>
     {
@@ -109,7 +110,7 @@ public static class JsonExtraction
             }
             else
             {
-                failures.Add("'" + resolution.ResolvedPrefix + "': " + JsonFailureMessage.ValueNotParsed(resolution.Element, typeof(T).Name));
+                failures.Add("'" + JsonFailureMessage.Name(resolution.ResolvedPrefix) + "': " + JsonFailureMessage.ValueNotParsed(resolution.Element, typeof(T).Name));
             }
         }
 
@@ -169,7 +170,8 @@ public static class JsonExtraction
     /// <returns>The string value.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard.</exception>
-    /// <exception cref="JsonExtractionException">The path does not resolve, or the value is not a JSON string.</exception>
+    /// <exception cref="JsonExtractionException">The path does not resolve, the value is not a JSON string, or
+    /// <paramref name="element"/> is <see langword="default"/> (it holds no JSON value).</exception>
     public static string GetJsonString(this JsonElement element, string path)
     {
         ArgumentNullException.ThrowIfNull(path);
@@ -208,7 +210,8 @@ public static class JsonExtraction
     /// <returns>A detached (<see cref="JsonElement.Clone"/>d) copy of the element at the path.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException"><paramref name="path"/> is malformed or has a <c>[*]</c> wildcard.</exception>
-    /// <exception cref="JsonExtractionException">The path does not resolve.</exception>
+    /// <exception cref="JsonExtractionException">The path does not resolve, or <paramref name="element"/> is
+    /// <see langword="default"/> (it holds no JSON value).</exception>
     public static JsonElement GetJsonElement(this JsonElement element, string path)
     {
         ArgumentNullException.ThrowIfNull(path);

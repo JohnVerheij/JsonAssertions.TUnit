@@ -79,27 +79,17 @@ internal sealed class JsonFailureMessageRenderingTests
         await Assert.That(ex!.Message).Contains("but found an Array");
     }
 
-    /// <summary>The assertions refuse a default element before resolving, so a default element's resolution reaches
-    /// the factories only through the public API: the fallback arm of the kind description.</summary>
+    /// <summary>A path through a JSON null names the null kind: the last arm of the kind description. A default element
+    /// never gets this far, because <see cref="JsonPath.Resolve"/> refuses it.</summary>
     [Test]
-    public async Task PropertyNotFound_ForADefaultElementResolution_NamesUndefinedKind(CancellationToken ct)
+    public async Task PropertyNotFound_PathThroughNull_NamesNullKind(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+        using var document = JsonDocument.Parse("""{"a":null}""");
 
-        var message = JsonFailureMessage.PropertyNotFound("anything", JsonPath.Resolve(default, "anything"));
+        var message = JsonFailureMessage.PropertyNotFound("a.b", JsonPath.Resolve(document.RootElement, "a.b"));
 
-        await Assert.That(message).Contains("an undefined value");
-    }
-
-    /// <summary>The fallback arm of the found-element rendering, reached the same way.</summary>
-    [Test]
-    public async Task ValueMismatch_ForADefaultElementFoundAtTheRoot_RendersUndefined(CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        var message = JsonFailureMessage.ValueMismatch("$", JsonPath.Resolve(default, "$"), "1");
-
-        await Assert.That(message).IsEqualTo("found an undefined value");
+        await Assert.That(message).IsEqualTo("resolved as far as 'a', which is a Null, not an object");
     }
 
     [Test]

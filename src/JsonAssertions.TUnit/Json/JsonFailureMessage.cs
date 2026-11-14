@@ -68,7 +68,7 @@ public static class JsonFailureMessage
     public static string ParseFailure(JsonException exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
-        return "the value is not valid JSON: " + exception.Message;
+        return "the value is not valid JSON: " + Excerpt(exception.Message);
     }
 
     /// <summary>Renders the failure when the <em>expected</em> JSON supplied to an equivalence
@@ -78,7 +78,7 @@ public static class JsonFailureMessage
     public static string ExpectedParseFailure(JsonException exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
-        return "the expected document is not valid JSON: " + exception.Message;
+        return "the expected document is not valid JSON: " + Excerpt(exception.Message);
     }
 
     /// <summary>Renders the failure for a structural-equivalence assertion: the path where the two
@@ -241,7 +241,7 @@ public static class JsonFailureMessage
     /// <returns>The description.</returns>
     internal static string DescribeFailure(JsonPathResolution resolution)
     {
-        var location = resolution.ResolvedPrefix.Length is 0 ? "the root" : "'" + resolution.ResolvedPrefix + "'";
+        var location = resolution.ResolvedPrefix.Length is 0 ? "the root" : "'" + Name(resolution.ResolvedPrefix) + "'";
         // The public factories refuse a default resolution, and a failed resolution from JsonPath always carries its
         // failed segment, so FailedSegment is set here.
         var segment = resolution.FailedSegment!;
@@ -261,7 +261,7 @@ public static class JsonFailureMessage
         else
         {
             reason = resolution.ContainerKind is JsonValueKind.Object
-                ? "has no property '" + segment + "'"
+                ? "has no property '" + Name(segment) + "'"
                 : "is " + kind + ", not an object";
         }
 
@@ -275,9 +275,9 @@ public static class JsonFailureMessage
     internal static string FailedLocation(JsonPathResolution resolution)
     {
         var segment = resolution.FailedSegment!;
-        return resolution.ResolvedPrefix.Length is 0 || segment.AsSpan().StartsWith('[')
+        return Name(resolution.ResolvedPrefix.Length is 0 || segment.AsSpan().StartsWith('[')
             ? resolution.ResolvedPrefix + segment
-            : resolution.ResolvedPrefix + "." + segment;
+            : resolution.ResolvedPrefix + "." + segment);
     }
 
     /// <summary>Renders the failure of an assertion over several paths: every path that did not resolve, in the given
@@ -297,7 +297,7 @@ public static class JsonFailureMessage
             .Append(" did not resolve:");
         foreach (var (path, failure, failed, total) in failures)
         {
-            sb.Append("\n  '").Append(path).Append("': ").Append(DescribeFailure(failure));
+            sb.Append("\n  '").Append(Name(path)).Append("': ").Append(DescribeFailure(failure));
             if (total > 1)
             {
                 sb.Append(" (").Append(failed.ToString(CultureInfo.InvariantCulture)).Append(" of ")
@@ -319,7 +319,7 @@ public static class JsonFailureMessage
     {
         var sb = new StringBuilder();
         sb.Append("Could not read ").Append(failures.Count.ToString(CultureInfo.InvariantCulture)).Append(" of ")
-            .Append(CountOf(total, "value")).Append(" at '").Append(path).Append("':");
+            .Append(CountOf(total, "value")).Append(" at '").Append(Name(path)).Append("':");
         foreach (var failure in failures)
         {
             sb.Append("\n  ").Append(failure);
@@ -334,7 +334,7 @@ public static class JsonFailureMessage
     /// <param name="resolution">Its failed resolution.</param>
     /// <returns>The message, such as <c>No JSON property at path 'user.nick': resolved as far as 'user', …</c>.</returns>
     internal static string ExtractionNotFound(string path, JsonPathResolution resolution)
-        => "No JSON property at path '" + path + "': " + DescribeFailure(resolution);
+        => "No JSON property at path '" + Name(path) + "': " + DescribeFailure(resolution);
 
     /// <summary>The message of an extraction whose value is not what the method reads.
     /// <em>Internal: bound to the extraction methods.</em></summary>
@@ -343,7 +343,7 @@ public static class JsonFailureMessage
     /// <param name="problem">Why it cannot be read, such as <c>which does not parse as Int32</c>.</param>
     /// <returns>The message, such as <c>The value at 'user.name' is "alice", which does not parse as Int32</c>.</returns>
     internal static string ExtractionUnreadable(string path, JsonElement element, string problem)
-        => "The value at '" + path + "' is " + RenderElement(element) + ", " + problem;
+        => "The value at '" + Name(path) + "' is " + RenderElement(element) + ", " + problem;
 
     /// <summary>Capitalizes a failure text for use as an exception message, which has no expectation before it.</summary>
     /// <param name="text">The failure text.</param>
@@ -368,7 +368,7 @@ public static class JsonFailureMessage
     /// <param name="exception">The deserialization failure.</param>
     /// <returns>The rendered failure.</returns>
     internal static string ResponseDeserializationFailed(string typeName, string body, JsonException exception)
-        => "the body did not deserialize as " + typeName + ": " + exception.Message + BodySuffix(body);
+        => "the body did not deserialize as " + typeName + ": " + Excerpt(exception.Message) + BodySuffix(body);
 
     /// <summary>Renders the failure for an HTTP-response-body value mismatch: the status matched and the body
     /// deserialized, to a value not equal to the expected one under <see cref="object.Equals(object, object)"/>.
@@ -394,7 +394,7 @@ public static class JsonFailureMessage
     /// <param name="exception">The deserialization failure.</param>
     /// <returns>The rendered failure.</returns>
     internal static string RoundtripDeserializationFailed(string json, JsonException exception)
-        => "the first serialization did not deserialize: " + exception.Message + "\n  first:  " + json;
+        => "the first serialization did not deserialize: " + Excerpt(exception.Message) + "\n  first:  " + json;
 
     /// <summary>Renders the failure for a round trip whose first serialization deserialized to
     /// <see langword="null"/>, so there is no second serialization.
@@ -432,7 +432,7 @@ public static class JsonFailureMessage
     /// <param name="exception">The deserialization failure.</param>
     /// <returns>The rendered failure.</returns>
     internal static string ProblemDetailsParseFailed(string body, JsonException exception)
-        => "the body did not deserialize as ProblemDetails: " + exception.Message + BodySuffix(body);
+        => "the body did not deserialize as ProblemDetails: " + Excerpt(exception.Message) + BodySuffix(body);
 
     /// <summary>Renders the failure of a ProblemDetails assertion: every entry that differed, each as what was found
     /// and, in parentheses, what was expected, for example <c>status: 400 (expected 422)</c>. An entry found absent
@@ -451,7 +451,7 @@ public static class JsonFailureMessage
             .Append(mismatches.Count is 1 ? singular : plural).Append(" differed:");
         foreach (var (field, expected, actual) in mismatches)
         {
-            sb.Append("\n  ").Append(field).Append(": ").Append(actual ?? "absent");
+            sb.Append("\n  ").Append(Name(field)).Append(": ").Append(actual ?? "absent");
             if (expected is not null)
             {
                 sb.Append(" (expected ").Append(expected).Append(')');
@@ -503,17 +503,73 @@ public static class JsonFailureMessage
         return sb.Append('"').ToString();
     }
 
+    /// <summary>Renders a property name or path that sits inside single quotes: the backslash, CR and LF are escaped
+    /// (<c>\\</c>, <c>\r</c>, <c>\n</c>), so a name that holds a line break cannot break the line structure of a
+    /// message, and a name that holds a backslash and an <c>n</c> stays distinct from one that holds a line feed.</summary>
+    /// <param name="name">The name or path.</param>
+    /// <returns>The name, escaped.</returns>
+    internal static string Name(string name) => EscapeLineBreaks(name, escapeBackslash: true);
+
+    /// <summary>Renders raw text that a message quotes as found (an exception message, a response body, a deserialized
+    /// value) on one line: CR and LF are escaped (<c>\r</c>, <c>\n</c>) and every other character, backslashes of JSON
+    /// text included, stays as written.</summary>
+    /// <param name="text">The text.</param>
+    /// <returns>The text on one line.</returns>
+    internal static string Excerpt(string text) => EscapeLineBreaks(text, escapeBackslash: false);
+
+    /// <summary>Caps <paramref name="value"/> at <paramref name="maxLength"/> characters and appends <c>...</c> when
+    /// it was longer, never cutting a surrogate pair in two (a lone surrogate is not valid text).</summary>
+    /// <param name="value">The text.</param>
+    /// <param name="maxLength">The most characters to keep.</param>
+    /// <returns>The text, or its capped start followed by <c>...</c>.</returns>
+    internal static string Cap(string value, int maxLength)
+    {
+        if (value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        // A high surrogate as the last kept character is the first half of a pair that the cut would split.
+        var keep = char.IsHighSurrogate(value[maxLength - 1]) ? maxLength - 1 : maxLength;
+        return value[..keep] + "...";
+    }
+
+    /// <summary>Escapes CR and LF, and the backslash when <paramref name="escapeBackslash"/> is set.</summary>
+    private static string EscapeLineBreaks(string text, bool escapeBackslash)
+    {
+        var needsEscape = text.AsSpan().IndexOfAny('\r', '\n') >= 0
+            || (escapeBackslash && text.Contains('\\', StringComparison.Ordinal));
+        if (!needsEscape)
+        {
+            return text;
+        }
+
+        var sb = new StringBuilder(text.Length + 8);
+        foreach (var ch in text)
+        {
+            _ = ch switch
+            {
+                '\r' => sb.Append("\\r"),
+                '\n' => sb.Append("\\n"),
+                '\\' when escapeBackslash => sb.Append("\\\\"),
+                _ => sb.Append(ch),
+            };
+        }
+
+        return sb.ToString();
+    }
+
     /// <summary>Appends one difference: its location and category, then the expected and the actual side, each on
     /// its own line with <paramref name="indent"/>. An unmatched array element has no actual side: the category
     /// already says that nothing in the actual array matched.</summary>
     private static void AppendDifference(StringBuilder sb, JsonDifference difference, string indent)
     {
-        var location = difference.Path.Length is 0 ? "the root" : "'" + difference.Path + "'";
+        var location = difference.Path.Length is 0 ? "the root" : "'" + Name(difference.Path) + "'";
         sb.Append("at ").Append(location).Append(' ').Append(DescribeDifference(difference.Kind));
-        sb.Append('\n').Append(indent).Append("expected: ").Append(difference.Expected);
+        sb.Append('\n').Append(indent).Append("expected: ").Append(Excerpt(difference.Expected));
         if (difference.Kind is not JsonDifferenceKind.ArrayElementUnmatched)
         {
-            sb.Append('\n').Append(indent).Append("actual:   ").Append(difference.Actual);
+            sb.Append('\n').Append(indent).Append("actual:   ").Append(Excerpt(difference.Actual));
         }
     }
 
@@ -566,7 +622,7 @@ public static class JsonFailureMessage
         JsonValueKind.True => "true",
         JsonValueKind.False => "false",
         JsonValueKind.Null => "null",
-        _ => DescribeKind(element.ValueKind), // Object, Array, or the Undefined of a default element
+        _ => DescribeKind(element.ValueKind), // Object or Array
     };
 
     /// <summary>Renders a resolved element for a shape failure: an array reports its length,
@@ -590,8 +646,7 @@ public static class JsonFailureMessage
         JsonValueKind.String => "a String",
         JsonValueKind.Number => "a Number",
         JsonValueKind.True or JsonValueKind.False => "a Boolean",
-        JsonValueKind.Null => "a Null",
-        _ => "an undefined value",
+        _ => "a Null", // Null: a default (Undefined) element is refused before any resolution is made.
     };
 
     /// <summary>Appends <c>, which is not a JSON integer literal</c> to <paramref name="found"/> when the resolution found
@@ -614,17 +669,13 @@ public static class JsonFailureMessage
     /// <summary>Renders a deserialized value by its <see cref="object.ToString"/>; a <see langword="null"/> value
     /// renders as the word null.</summary>
     private static string RenderObject(object? value)
-        => value is null ? "null" : string.Concat(value);
+        => value is null ? "null" : Excerpt(string.Concat(value));
 
-    /// <summary>Caps a response-body string so a large payload cannot bloat the message.</summary>
+    /// <summary>Caps a response-body string so a large payload cannot bloat the message, and puts it on one line.</summary>
     private static string TruncateBody(string body)
-        => body.Length <= MaxResponseBodyLength
-            ? body
-            : body[..MaxResponseBodyLength] + "...";
+        => Excerpt(Cap(body, MaxResponseBodyLength));
 
     /// <summary>Caps a rendered string value so a large payload cannot bloat the message.</summary>
     private static string Truncate(string value)
-        => value.Length <= MaxRenderedStringLength
-            ? value
-            : value[..MaxRenderedStringLength] + "...";
+        => Cap(value, MaxRenderedStringLength);
 }

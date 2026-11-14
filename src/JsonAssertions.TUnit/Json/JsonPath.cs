@@ -48,10 +48,13 @@ public static class JsonPath
     /// <exception cref="ArgumentException"><paramref name="path"/> is <see langword="null"/>, empty or whitespace;
     /// is malformed (a leading, doubled or trailing dot, <c>$.</c> with nothing or an index after it, an empty, unclosed,
     /// negative, non-numeric or too-large index, or a name directly after <c>]</c>); or contains the <c>[*]</c>
-    /// wildcard, which <see cref="ResolveAll"/> expands. The path is checked in full before any navigation.</exception>
+    /// wildcard, which <see cref="ResolveAll"/> expands. The path is checked in full before any navigation. Also thrown
+    /// when <paramref name="element"/> is <see langword="default"/>, which holds no JSON value (the path is checked
+    /// first).</exception>
     public static JsonPathResolution Resolve(JsonElement element, string path)
     {
         var segments = Parse(path);
+        RequireValue(element);
         if (segments.Exists(static segment => segment.Kind is SegmentKind.Wildcard))
         {
             throw new ArgumentException(
@@ -85,8 +88,8 @@ public static class JsonPath
     /// indices; see <see cref="Resolve"/>.</param>
     /// <returns><see langword="true"/> if every segment resolves; <see langword="false"/> if
     /// any segment is missing, out of range, or applied to a value of the wrong kind.</returns>
-    /// <exception cref="ArgumentException"><paramref name="path"/> is invalid; see
-    /// <see cref="Resolve"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="path"/> is invalid, or <paramref name="element"/> is
+    /// <see langword="default"/>; see <see cref="Resolve"/>.</exception>
     public static bool Exists(JsonElement element, string path) => Resolve(element, path).Found;
 
     /// <summary>Reports whether <paramref name="path"/> contains a wildcard array segment
@@ -117,13 +120,25 @@ public static class JsonPath
     /// <c>[*]</c> wildcard segments.</param>
     /// <returns>The resolutions for every concrete path the wildcards expand to, in document order.</returns>
     /// <exception cref="ArgumentException"><paramref name="path"/> is malformed; see <see cref="Resolve"/>. The path is
-    /// checked in full before any navigation.</exception>
+    /// checked in full before any navigation. Also thrown when <paramref name="element"/> is <see langword="default"/>,
+    /// which holds no JSON value.</exception>
     public static IReadOnlyList<JsonPathResolution> ResolveAll(JsonElement element, string path)
     {
         var segments = Parse(path);
+        RequireValue(element);
         var results = new List<JsonPathResolution>();
         Expand(element, segments, 0, new StringBuilder(), results);
         return results;
+    }
+
+    /// <summary>Throws when <paramref name="element"/> is <see langword="default"/>: it holds no JSON value, so even
+    /// <c>$</c> has nothing to resolve to.</summary>
+    private static void RequireValue(JsonElement element)
+    {
+        if (element.ValueKind is JsonValueKind.Undefined)
+        {
+            throw new ArgumentException("The JsonElement is default: it holds no JSON value.", nameof(element));
+        }
     }
 
     /// <summary>Checks <paramref name="path"/> against the grammar without navigating, for options that register a

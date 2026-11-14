@@ -48,9 +48,14 @@ public static class JsonEquivalence
     /// <param name="options">The comparison options.</param>
     /// <returns>The first difference found, or <see langword="null"/> when equivalent.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="expected"/> or <paramref name="actual"/> is
+    /// <see langword="default"/>, which holds no JSON value: two default elements would otherwise compare as
+    /// equivalent.</exception>
     public static JsonDifference? Compare(JsonElement expected, JsonElement actual, JsonEquivalenceOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        RequireValue(expected, nameof(expected));
+        RequireValue(actual, nameof(actual));
 
         var ignored = ResolveIgnoredPaths(expected, actual, options);
         return CompareElement(expected, actual, string.Empty, options, ignored, subset: false, sink: null);
@@ -85,14 +90,27 @@ public static class JsonEquivalence
     /// <param name="options">The comparison options.</param>
     /// <returns>Every difference found; an empty list when <paramref name="actual"/> contains the subset.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="expected"/> or <paramref name="actual"/> is
+    /// <see langword="default"/>, which holds no JSON value: two default elements would otherwise match.</exception>
     public static IReadOnlyList<JsonDifference> ContainsAll(JsonElement expected, JsonElement actual, JsonEquivalenceOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        RequireValue(expected, nameof(expected));
+        RequireValue(actual, nameof(actual));
 
         var ignored = ResolveIgnoredPaths(expected, actual, options);
         var sink = new List<JsonDifference>();
         CompareElement(expected, actual, string.Empty, options, ignored, subset: true, sink);
         return sink;
+    }
+
+    /// <summary>Throws when <paramref name="element"/> is <see langword="default"/>.</summary>
+    private static void RequireValue(JsonElement element, string parameterName)
+    {
+        if (element.ValueKind is JsonValueKind.Undefined)
+        {
+            throw new ArgumentException("The JsonElement is default: it holds no JSON value.", parameterName);
+        }
     }
 
     private static HashSet<string> ResolveIgnoredPaths(JsonElement expected, JsonElement actual, JsonEquivalenceOptions options)
@@ -195,7 +213,7 @@ public static class JsonEquivalence
     private static JsonDifference? CompareExpectedProperties(
         JsonElement expected, JsonElement actual, string path, JsonEquivalenceOptions options, HashSet<string> ignored, bool subset, List<JsonDifference>? sink)
     {
-        foreach (var property in expected.EnumerateObject())
+        foreach (var property in LastOccurrences(expected))
         {
             var difference = CompareProperty(property, actual, path, options, ignored, subset, sink);
             if (difference is not null)
@@ -223,10 +241,41 @@ public static class JsonEquivalence
             : Report(new JsonDifference(childPath, JsonDifferenceKind.MissingProperty, RenderValue(property.Value), "absent"), sink);
     }
 
+    /// <summary>The properties of <paramref name="element"/> with a repeated name reduced to its last occurrence, in
+    /// document order, as <see cref="JsonElement.TryGetProperty(string, out JsonElement)"/> reads the name. Comparing
+    /// every occurrence would match an earlier one against the last, so a document with a repeated name would not be
+    /// equivalent to itself.</summary>
+    private static List<JsonProperty> LastOccurrences(JsonElement element)
+    {
+        var all = new List<JsonProperty>(element.GetPropertyCount());
+        var lastIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var property in element.EnumerateObject())
+        {
+            lastIndex[property.Name] = all.Count;
+            all.Add(property);
+        }
+
+        if (lastIndex.Count == all.Count)
+        {
+            return all;
+        }
+
+        var last = new List<JsonProperty>(lastIndex.Count);
+        for (var i = 0; i < all.Count; i++)
+        {
+            if (lastIndex[all[i].Name] == i)
+            {
+                last.Add(all[i]);
+            }
+        }
+
+        return last;
+    }
+
     private static JsonDifference? CompareUnexpectedProperties(
         JsonElement expected, JsonElement actual, string path, HashSet<string> ignored, List<JsonDifference>? sink)
     {
-        foreach (var property in actual.EnumerateObject())
+        foreach (var property in LastOccurrences(actual))
         {
             var childPath = ChildPath(path, property.Name);
             if (!ignored.Contains(childPath) && !expected.TryGetProperty(property.Name, out _))
@@ -490,7 +539,7 @@ public static class JsonEquivalence
         JsonValueKind.Number => element.GetRawText(),
         JsonValueKind.True => "true",
         JsonValueKind.False => "false",
-        _ => "null", // Null (Undefined cannot occur for a parsed element)
+        _ => "null", // Null (a default element is refused before any comparison)
     };
 
     /// <summary>Drops the white space between the tokens of a container's raw JSON, so an indented document renders on
@@ -518,6 +567,5 @@ public static class JsonEquivalence
         return sb.ToString();
     }
 
-    private static string Truncate(string value)
-        => value.Length <= MaxRenderedLength ? value : value[..MaxRenderedLength] + "...";
+    private static string Truncate(string value) => JsonFailureMessage.Cap(value, MaxRenderedLength);
 }
