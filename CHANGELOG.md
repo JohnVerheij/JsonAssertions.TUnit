@@ -15,6 +15,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **.NET 11 target.** The package now targets `net10.0` and `net11.0`; the public API is identical on both, and each target depends on the same TUnit packages. `System.Text.Json` is the in-box library of the runtime in use.
+
+### Changed
+
+- **Target framework policy.** The family now targets every .NET version in Microsoft support instead of the current LTS plus the current STS; `CONVENTIONS.md` describes the policy.
+- **README samples.** The samples that a reader could not paste into a test project now show the `using` directives they need: the consumer-authored typed assertion (`System.Text.Json`, `JsonAssertions`, `TUnit.Assertions.Attributes`, `TUnit.Assertions.Core`), the `HasJsonResponse<T>` sample (`System.Net`), the `PostAsJsonAsync` samples (`System.Net.Http.Json`) and the `JsonDocument` samples (`System.Text.Json`).
+- **`JsonPath.Resolve`**, **`Exists`** and **`ResolveAll`**, and the `JsonElement` overloads of **`JsonEquivalence.Compare`** and **`ContainsAll`**, now throw `ArgumentException` for a `default(JsonElement)`, which holds no JSON value. Before, `Resolve(default, "$")` was found, and two default elements compared as equivalent. The assertions already failed on a default element and are unchanged. Migration: assign the element before calling.
+
+### Fixed
+
+- **Failure messages** no longer break their line structure on a line break in a value. A property name or path in single quotes (in `resolved as far as`, `did not resolve`, the `differ:` lists, extraction errors, and the `errors.<key>` entry of a ProblemDetails failure) shows a backslash, a carriage return and a line feed as `\\`, `\r` and `\n`. The text a message quotes as found (an exception message, a response body, a deserialized value in `HasJsonResponse`, the sides of a difference) shows a carriage return and a line feed as `\r` and `\n`. A pretty-printed response body now reads on one line.
+- **Truncated text** in failure messages (a string value at 60 characters, a body at 256, an equivalence side at 200) no longer cuts a surrogate pair in two, which left a lone surrogate in the message.
+- **`IsEquivalentJsonTo`** and **`ContainsJson`** no longer compare an earlier occurrence of a repeated property name against the last one, which made `{"a":1,"a":2}` differ from itself. The last occurrence is the property on both sides, as `JsonElement.TryGetProperty` reads it.
+- **`JsonCanonicalizer.Canonicalize`** keeps a repeated property name in document order; the sort was not stable, so the order of the occurrences could change.
+- **XML docs** now list the `ArgumentNullException` of the `JsonValueComparison.MatchesAny` overloads and the `JsonExtractionException` that the `JsonElement` overloads of `GetJsonValue<T>`, `GetJsonString` and `GetJsonElement` throw for a `default` element.
+
 ## [0.7.0] - 2026-11-09: several paths at once, every value of a list, one failure-message rule, stricter paths and numbers
 
 Minor release. Adds `HasJsonProperties` and `GetJsonValues<T>`, rewrites every failure message to one rule, and makes paths, numbers, ProblemDetails, default elements and cancellation strict, each loudly (a check that passed by accident now fails or throws). Requires TUnit 1.81.10: raise TUnit and this package together.

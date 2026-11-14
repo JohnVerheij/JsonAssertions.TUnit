@@ -91,6 +91,7 @@ public static class JsonValueComparison
     /// <summary>Reports whether <paramref name="element"/> is a JSON string equal (ordinal)
     /// to any of <paramref name="candidates"/>. <see langword="false"/> when the element is
     /// not a JSON string, or when none of the candidates matches.</summary>
+    /// <exception cref="ArgumentNullException"><paramref name="candidates"/> is <see langword="null"/>.</exception>
     public static bool MatchesAny(JsonElement element, params string[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -106,6 +107,7 @@ public static class JsonValueComparison
     /// <summary>Reports whether <paramref name="element"/> is a JSON number equal to any of
     /// <paramref name="candidates"/>. Element values beyond <see cref="double"/> precision are
     /// out of scope for this overload, and a literal beyond <see cref="double"/> range never matches.</summary>
+    /// <exception cref="ArgumentNullException"><paramref name="candidates"/> is <see langword="null"/>.</exception>
     [SuppressMessage(
         "Major Bug",
         "S1244:Do not check floating point equality with exact values",
@@ -128,6 +130,7 @@ public static class JsonValueComparison
     /// holds a JSON integer literal in <see cref="int"/> range. A
     /// fractional or out-of-range number, any other string, or any other kind returns
     /// <see langword="false"/>.</summary>
+    /// <exception cref="ArgumentNullException"><paramref name="candidates"/> is <see langword="null"/>.</exception>
     public static bool MatchesAny(JsonElement element, params int[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -146,6 +149,7 @@ public static class JsonValueComparison
     /// holds a JSON integer literal in <see cref="uint"/> range. A
     /// fractional, negative, or out-of-range number, any other string, or any other kind
     /// returns <see langword="false"/>.</summary>
+    /// <exception cref="ArgumentNullException"><paramref name="candidates"/> is <see langword="null"/>.</exception>
     public static bool MatchesAny(JsonElement element, params uint[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -164,6 +168,7 @@ public static class JsonValueComparison
     /// holds a JSON integer literal in <see cref="long"/> range. A
     /// fractional or out-of-range number, any other string, or any other kind returns
     /// <see langword="false"/>.</summary>
+    /// <exception cref="ArgumentNullException"><paramref name="candidates"/> is <see langword="null"/>.</exception>
     public static bool MatchesAny(JsonElement element, params long[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -182,6 +187,7 @@ public static class JsonValueComparison
     /// holds a JSON integer literal in <see cref="ulong"/> range. A
     /// fractional, negative, or out-of-range number, any other string, or any other kind
     /// returns <see langword="false"/>.</summary>
+    /// <exception cref="ArgumentNullException"><paramref name="candidates"/> is <see langword="null"/>.</exception>
     public static bool MatchesAny(JsonElement element, params ulong[] candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -267,7 +273,7 @@ public static class JsonValueComparison
     /// are not part of it.</summary>
     internal static bool IsJsonIntegerLiteral(string text)
     {
-        var digits = text.AsSpan(text.StartsWith('-') ? 1 : 0);
+        var digits = text.AsSpan(text.AsSpan().StartsWith('-') ? 1 : 0);
         return digits switch
         {
             [] => false,

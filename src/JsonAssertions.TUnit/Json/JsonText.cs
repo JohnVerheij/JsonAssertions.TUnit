@@ -32,5 +32,5 @@ internal static class JsonText
         return json.AsSpan(Start(json));
     }
 
-    private static int Start(string json) => json.StartsWith(ByteOrderMark) ? 1 : 0;
+    private static int Start(string json) => json.AsSpan().StartsWith(ByteOrderMark) ? 1 : 0;
 }

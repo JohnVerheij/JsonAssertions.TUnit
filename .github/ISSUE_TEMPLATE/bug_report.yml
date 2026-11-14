@@ -30,7 +30,7 @@ body:
     attributes:
       label: .NET SDK version
       description: Output of `dotnet --version`
-      placeholder: "10.0.100"
+      placeholder: "11.0.100"
     validations:
       required: true
 
