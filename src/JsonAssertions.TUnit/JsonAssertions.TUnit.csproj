@@ -11,7 +11,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>JsonAssertions.TUnit</PackageId>
     <ProductName>JsonAssertions.TUnit</ProductName>
-    <Version>0.7.0</Version>
+    <Version>0.8.0</Version>
     <Authors>John Verheij</Authors>
     <Copyright>Copyright (c) 2026 John Verheij</Copyright>
     <Description>TUnit-native JSON assertions for .NET tests. Fluent entry points (generated via TUnit's [GenerateAssertion]) assert paths, values, and shapes against a JSON string, a System.Text.Json JsonElement, or an HttpResponseMessage body, and a failure says where the path stopped. Paths take zero-based indices (items[0].id), the [*] wildcard, and the JSONPath root reference ($); one assertion can check several paths. Also ships whole-document equivalence and subset matching with ignored paths and unordered arrays, typed extraction of one value or every value of a list, RFC 7807 ProblemDetails and ValidationProblemDetails assertions, and source-generated JsonSerializerContext checks (HasJsonTypeInfoFor, RoundtripsCleanlyVia). AOT-compatible, trimmable, no runtime reflection.</Description>
@@ -39,7 +39,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.6.2</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.7.0</PackageValidationBaselineVersion>
     <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
     <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
     <ApiCompatGenerateSuppressionFile>true</ApiCompatGenerateSuppressionFile>

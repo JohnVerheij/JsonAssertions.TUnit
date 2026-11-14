@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-15: .NET 11, failure-text, truncation and canonicalization fixes
+
 ### Added
 
 - **.NET 11 target.** The package now targets `net10.0` and `net11.0`; the public API is identical on both, and each target depends on the same TUnit packages. `System.Text.Json` is the in-box library of the runtime in use.
@@ -252,7 +254,8 @@ The 0.0.1 scope is intentionally narrow. The release exists to establish the rep
 
 Both namespaces ship in the single `JsonAssertions.TUnit` assembly. The two-namespace split keeps the same consumer feel as the rest of the assertion family (a framework-agnostic core plus a TUnit adapter) and future-proofs a package split if the bare `JsonAssertions` identifier ever becomes available.
 
-[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.7.0...HEAD
+[unreleased]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/JohnVerheij/JsonAssertions.TUnit/compare/v0.6.0...v0.6.1
