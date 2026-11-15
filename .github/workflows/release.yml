@@ -23,6 +23,7 @@ jobs:
     with:
       package: JsonAssertions
       has-core: false
+      readme-samples: enforce
       release: true
     permissions:
       contents: read

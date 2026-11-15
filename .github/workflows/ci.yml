@@ -24,6 +24,7 @@ jobs:
     with:
       package: JsonAssertions
       has-core: false
+      readme-samples: enforce
     permissions:
       contents: read
       id-token: write   # Codecov upload through OIDC

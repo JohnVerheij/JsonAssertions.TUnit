@@ -199,7 +199,7 @@ internal static class RandomJsonPairs
                 var forms = Numbers[row];
                 (_numberRow, _raw) = (row, forms[random.Next(forms.Length)]);
             }
-            else if (_kind is JsonNodeKind.Scalar && _raw.StartsWith('"'))
+            else if (_kind is JsonNodeKind.Scalar && _raw.AsSpan().StartsWith('"'))
             {
                 _raw = string.Equals(_raw, "\"x\"", StringComparison.Ordinal) ? "\"y\"" : "\"x\"";
             }

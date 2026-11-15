@@ -303,7 +303,7 @@ public static class JsonValueAssertions
 
                     if (!predicate(expanded.Element))
                     {
-                        return AssertionResult.Failed(JsonFailureMessage.Found(expanded) + " at '" + expanded.ResolvedPrefix + "'");
+                        return AssertionResult.Failed(JsonFailureMessage.Found(expanded) + " at '" + JsonFailureMessage.Name(expanded.ResolvedPrefix) + "'");
                     }
                 }
 

@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -10,8 +11,9 @@ namespace JsonAssertions;
 
 /// <summary>
 /// Produces a deterministic, structural canonical form of a JSON document: object keys sorted
-/// ordinally, stable two-space indentation, LF line endings, and every value preserved (so a new
-/// or removed field surfaces as a text diff), with optional JSON-path scrubbing of volatile fields.
+/// ordinally (a name that appears twice keeps its document order), stable two-space indentation, LF line endings,
+/// and every value preserved (so a new or removed field surfaces as a text diff), with optional JSON-path scrubbing
+/// of volatile fields.
 /// Unlike <see cref="JsonRenderers.ReformatJson{T}"/> this needs no typed <c>JsonSerializerContext</c>
 /// and keeps unknown properties, which is what makes it suitable for pinning the whole shape of a
 /// response as a snapshot baseline.
@@ -108,13 +110,8 @@ public static class JsonCanonicalizer
 
     private static void WriteCanonicalObject(Utf8JsonWriter writer, JsonElement element, string path, HashSet<string> scrubPaths, string scrubToken)
     {
-        var properties = new List<JsonProperty>();
-        foreach (var property in element.EnumerateObject())
-        {
-            properties.Add(property);
-        }
-
-        properties.Sort(static (a, b) => string.CompareOrdinal(a.Name, b.Name));
+        // OrderBy is stable: a name that appears twice keeps its document order (List.Sort is not stable).
+        var properties = element.EnumerateObject().OrderBy(static property => property.Name, StringComparer.Ordinal);
 
         writer.WriteStartObject();
         foreach (var property in properties)

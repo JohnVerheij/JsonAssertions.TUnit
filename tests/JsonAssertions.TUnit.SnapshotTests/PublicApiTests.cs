@@ -45,7 +45,7 @@ internal sealed class PublicApiTests
         // platform's native EOL while the committed .expected.txt baseline is always LF
         // (per .gitattributes), and Windows local runs would diff against the CI-accepted
         // baseline.
-        var publicApi = assembly.GeneratePublicApi().ReplaceLineEndings("\n");
+        var publicApi = assembly.GeneratePublicApi(new ApiGeneratorOptions { ExcludeAttributes = ["System.Runtime.Versioning.TargetFrameworkAttribute"] }).ReplaceLineEndings("\n");
 
         await Assert.That(publicApi).MatchesSnapshot();
     }
